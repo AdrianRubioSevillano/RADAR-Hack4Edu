@@ -162,8 +162,12 @@ function wrong(id: OptionId, text: string, value: CanonicalRational | null, misc
 // slip y guess son SUPUESTOS no calibrados: slip 0.05, 0.10 o 0.20 según la
 // dificultad; guess 0.25 en opción múltiple (0.30 con un distractor débil) y
 // bajo y explícito en respuesta numérica. Ver docs/engine/BANCO.md.
-const NOT_CALIBRATED =
-  'Nivel previsto 1.º–2.º ESO, pendiente de revisión docente. slip y guess son SUPUESTOS no calibrados.';
+const NOT_CALIBRATED = [
+  'Nivel previsto 1.º–2.º ESO, pendiente de revisión docente. slip y guess son SUPUESTOS no calibrados.',
+  'R_q es una hipótesis de modelado no validada: DINA supone que no dominar cualquiera de las competencias requeridas reduce la probabilidad de acierto a guess.',
+  'La asignación puede fallar si existen estrategias alternativas.',
+  'No hay validación con alumnos ni revisión docente.',
+].join(' ');
 
 export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
   questions: [
@@ -395,7 +399,7 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
       guess: 0.02,
       correctAnswer: '-7/12',
       explanation: 'Con denominador común 12: 3/12 - 10/12 = -7/12.',
-      assumptionNote: `${NOT_CALIBRATED} NEG es secundaria porque el resultado es negativo.`,
+      assumptionNote: `${NOT_CALIBRATED} SUPUESTO razonado: se incluye NEG porque se supone que hay que obtener un resultado negativo.`,
     },
     {
       id: 'FRA-05',
@@ -478,7 +482,7 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
       guess: 0.02,
       correctAnswer: '-14/1',
       explanation: 'La multiplicación va primero: 3·(-4) = -12 y -2 + (-12) = -14.',
-      assumptionNote: `${NOT_CALIBRATED} NEG es secundaria porque hay que operar con enteros negativos.`,
+      assumptionNote: `${NOT_CALIBRATED} SUPUESTO razonado: se incluye NEG porque se supone que hay que operar con enteros negativos.`,
     },
     {
       id: 'JER-05',
@@ -497,7 +501,7 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
       ],
       correctAnswer: 'b',
       explanation: 'La multiplicación va primero: 1/3 · 3/4 = 1/4 y 1/2 + 1/4 = 3/4.',
-      assumptionNote: `${NOT_CALIBRATED} FRA es secundaria porque hay que operar con fracciones, aunque no sea ancestro de JER.`,
+      assumptionNote: `${NOT_CALIBRATED} SUPUESTO razonado: se incluye FRA porque se supone que hay que operar con fracciones, aunque FRA no sea ancestro de JER.`,
     },
     {
       id: 'ALG-01',
@@ -567,7 +571,7 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
       ],
       correctAnswer: 'd',
       explanation: 'El signo menos cambia el signo de cada término: 3x - x + 4 = 2x + 4.',
-      assumptionNote: `${NOT_CALIBRATED} NEG es secundaria porque hay que restar un término negativo.`,
+      assumptionNote: `${NOT_CALIBRATED} SUPUESTO razonado: se incluye NEG porque se supone que hay que restar un término negativo.`,
     },
     {
       id: 'ALG-05',
@@ -580,7 +584,7 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
       guess: 0.02,
       correctAnswer: '5/6',
       explanation: 'Los coeficientes son 1/2 y 1/3, y su suma es 5/6.',
-      assumptionNote: `${NOT_CALIBRATED} FRA es secundaria porque hay que sumar fracciones.`,
+      assumptionNote: `${NOT_CALIBRATED} SUPUESTO razonado: se incluye FRA porque se supone que hay que sumar fracciones.`,
     },
     {
       id: 'ECU-01',
@@ -619,7 +623,7 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
       format: 'multipleChoice',
       statement: 'Resuelve: 3(x - 2) = 12.',
       primarySkill: 'ECU',
-      secondarySkills: ['ALG'],
+      secondarySkills: [],
       difficulty: 2,
       slip: 0.1,
       guess: 0.25,
@@ -630,21 +634,21 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
         wrong('d', '18', '18/1', 'Llega a 3x = 18 y olvida dividir entre 3.'),
       ],
       correctAnswer: 'a',
-      explanation: 'Propiedad distributiva: 3x - 6 = 12. Entonces 3x = 18 y x = 6.',
-      assumptionNote: `${NOT_CALIBRATED} ALG es secundaria porque hay que aplicar la propiedad distributiva.`,
+      explanation: 'Una solución posible usa la propiedad distributiva: 3x - 6 = 12. Entonces 3x = 18 y x = 6.',
+      assumptionNote: `${NOT_CALIBRATED} SUPUESTO razonado: no se incluye ALG porque puede resolverse dividiendo ambos miembros entre 3 y despejando después, así que desarrollar el paréntesis no se considera imprescindible.`,
     },
     {
       id: 'ECU-04',
       format: 'numeric',
       statement: 'Resuelve: 5x + 3 = 2x - 9.',
       primarySkill: 'ECU',
-      secondarySkills: ['NEG'],
+      secondarySkills: ['NEG', 'ALG'],
       difficulty: 2,
       slip: 0.1,
       guess: 0.02,
       correctAnswer: '-4/1',
       explanation: 'Se agrupan términos: 3x = -12. Al dividir entre 3, x = -4.',
-      assumptionNote: `${NOT_CALIBRATED} NEG es secundaria porque la solución y los pasos intermedios son negativos.`,
+      assumptionNote: `${NOT_CALIBRATED} Hipótesis no validada: se incluyen NEG y ALG porque se supone necesario operar con negativos y reducir términos semejantes al reunir las incógnitas.`,
     },
     {
       id: 'ECU-05',
@@ -663,7 +667,7 @@ export const RADAR_QUESTION_BANK: QuestionBank = freezeDeep({
       ],
       correctAnswer: 'd',
       explanation: 'Se resta 1/3: x/2 = 5/6 - 2/6 = 1/2. Al multiplicar por 2, x = 1.',
-      assumptionNote: `${NOT_CALIBRATED} FRA es secundaria porque hay que operar con fracciones.`,
+      assumptionNote: `${NOT_CALIBRATED} SUPUESTO razonado: se incluye FRA porque se supone que hay que operar con fracciones.`,
     },
   ],
 });

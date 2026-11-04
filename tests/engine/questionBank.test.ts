@@ -85,6 +85,10 @@ function expectBankError(
   expect(caught).toMatchObject({ name: 'QuestionBankError', code, questionId });
 }
 
+function secondarySkillsOf(id: string): readonly string[] | undefined {
+  return questions.find((question) => question.id === id)?.secondarySkills;
+}
+
 function isDeepFrozen(value: unknown): boolean {
   if (typeof value !== 'object' || value === null) return true;
   return Object.isFrozen(value) && Object.values(value).every(isDeepFrozen);
@@ -123,20 +127,31 @@ describe('banco RADAR incluido', () => {
     const multiSkill = questions.filter((question) => question.secondarySkills.length > 0);
 
     expect(multiSkill.length).toBeGreaterThanOrEqual(6);
+    expect(multiSkill.map((question) => question.id)).toEqual([
+      'FRA-04',
+      'JER-04',
+      'JER-05',
+      'ALG-04',
+      'ALG-05',
+      'ECU-04',
+      'ECU-05',
+    ]);
   });
 
-  it('no copia automáticamente los ancestros como secundarias', () => {
-    for (const question of questions) {
-      const required = ancestors(KNOWLEDGE_GRAPH, question.primarySkill);
-      if (required.length > 1) {
-        expect([...question.secondarySkills].sort()).not.toEqual([...required].sort());
-      }
-    }
-    const withoutSecondaries = questions.filter(
-      (question) =>
-        question.secondarySkills.length === 0 && ancestors(KNOWLEDGE_GRAPH, question.primarySkill).length > 0,
-    );
-    expect(withoutSecondaries.length).toBeGreaterThan(0);
+  it('fija las competencias supuestas de ECU-03 y ECU-04', () => {
+    expect(secondarySkillsOf('ECU-03')).toEqual([]);
+    expect(secondarySkillsOf('ECU-04')).toEqual(['NEG', 'ALG']);
+  });
+
+  it('asigna las secundarias ítem a ítem, sin derivarlas de los ancestros', () => {
+    expect(ancestors(KNOWLEDGE_GRAPH, 'ECU')).toContain('ALG');
+    expect(secondarySkillsOf('ECU-01')).toEqual([]);
+
+    expect(ancestors(KNOWLEDGE_GRAPH, 'ALG')).toEqual(['OPS', 'FRA', 'NEG', 'JER']);
+    expect(secondarySkillsOf('ALG-04')).toEqual(['NEG']);
+
+    expect(ancestors(KNOWLEDGE_GRAPH, 'JER')).not.toContain('FRA');
+    expect(secondarySkillsOf('JER-05')).toEqual(['FRA']);
   });
 
   it('cubre las tres dificultades en cada competencia', () => {
@@ -160,6 +175,23 @@ describe('banco RADAR incluido', () => {
       expect(question.assumptionNote).toContain('SUPUESTOS no calibrados');
       expect(question.assumptionNote).toContain('pendiente de revisión docente');
     }
+  });
+
+  it('identifica R_q como hipótesis no validada en todas las notas', () => {
+    for (const question of questions) {
+      expect(question.assumptionNote).toContain('R_q es una hipótesis de modelado no validada');
+      expect(question.assumptionNote).toContain('reduce la probabilidad de acierto a guess');
+      expect(question.assumptionNote).toContain('estrategias alternativas');
+      expect(question.assumptionNote).toContain('No hay validación con alumnos ni revisión docente');
+    }
+  });
+
+  it('razona las secundarias como supuestos, no como requisitos demostrados', () => {
+    for (const question of questions.filter((item) => item.secondarySkills.length > 0)) {
+      expect(question.assumptionNote).toMatch(/SUPUESTO razonado:|Hipótesis no validada:/);
+      expect(question.assumptionNote).not.toContain('es secundaria porque');
+    }
+    expect(questions.find((question) => question.id === 'ECU-04')?.assumptionNote).toContain('Hipótesis no validada:');
   });
 
   it('incluye los dos formatos', () => {
@@ -220,6 +252,7 @@ describe('banco RADAR incluido', () => {
           ? question.correctAnswer
           : question.options.find((option) => option.id === question.correctAnswer)?.text;
       expect(row).toContain(`\`${solution}\``);
+      expect(row).toContain(`| ${question.primarySkill} | ${question.secondarySkills.join(', ') || '—'} |`);
     }
   });
 });
@@ -238,6 +271,23 @@ describe('validateQuestionBank acepta', () => {
     const question = withOption(3, { text: 'tres cuartos', value: '3/4' });
 
     expect(() => validateQuestionBank(bankOf(question), KNOWLEDGE_GRAPH)).not.toThrow();
+  });
+
+  it('un ítem que declara todos sus ancestros como secundarias', () => {
+    const secondarySkills = ancestors(KNOWLEDGE_GRAPH, 'ALG');
+    const question = { ...validChoice, primarySkill: 'ALG', secondarySkills };
+
+    expect(() => validateQuestionBank(bankOf(question), KNOWLEDGE_GRAPH)).not.toThrow();
+  });
+
+  it('las secundarias tal como están, sin completarlas ni recortarlas', () => {
+    const none = { ...validChoice, id: 'Q3', primarySkill: 'ECU', secondarySkills: [] };
+    const some = { ...validChoice, id: 'Q4', primarySkill: 'ECU', secondarySkills: ['FRA'] };
+    const bank = bankOf(none, some);
+
+    validateQuestionBank(bank, KNOWLEDGE_GRAPH);
+
+    expect(bank.questions.map((question) => question.secondarySkills)).toEqual([[], ['FRA']]);
   });
 
   it('parámetros extremos que cumplen la restricción, sin modificarlos', () => {

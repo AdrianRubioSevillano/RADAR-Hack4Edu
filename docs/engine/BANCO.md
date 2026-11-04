@@ -1,6 +1,6 @@
 # Banco de preguntas RADAR
 
-Banco incluido en `src/engine/questionBank.ts` como `RADAR_QUESTION_BANK`: 30 preguntas, cinco por competencia principal, 18 de opción múltiple y 12 numéricas. 8 son multicompetencia.
+Banco incluido en `src/engine/questionBank.ts` como `RADAR_QUESTION_BANK`: 30 preguntas, cinco por competencia principal, 18 de opción múltiple y 12 numéricas. 7 son multicompetencia.
 
 El nivel previsto es 1.º–2.º ESO, **pendiente de revisión docente**. El banco no tiene validación curricular ni pedagógica, y no se ha comprobado su precisión diagnóstica.
 
@@ -37,8 +37,8 @@ La columna Solución da el id y el texto de la opción correcta, o la respuesta 
 | ALG-05 | Simplifica x/2 + x/3 y escribe el coeficiente de x del resultado. | ALG | FRA | Numérica | 3 | `5/6` | 0.20 | 0.02 |
 | ECU-01 | Resuelve: 2x + 3 = 11. | ECU | — | Opción múltiple | 1 | c: `4` | 0.05 | 0.25 |
 | ECU-02 | Resuelve: 3x - 4 = 17. | ECU | — | Numérica | 1 | `7/1` | 0.05 | 0.02 |
-| ECU-03 | Resuelve: 3(x - 2) = 12. | ECU | ALG | Opción múltiple | 2 | a: `6` | 0.10 | 0.25 |
-| ECU-04 | Resuelve: 5x + 3 = 2x - 9. | ECU | NEG | Numérica | 2 | `-4/1` | 0.10 | 0.02 |
+| ECU-03 | Resuelve: 3(x - 2) = 12. | ECU | — | Opción múltiple | 2 | a: `6` | 0.10 | 0.25 |
+| ECU-04 | Resuelve: 5x + 3 = 2x - 9. | ECU | NEG, ALG | Numérica | 2 | `-4/1` | 0.10 | 0.02 |
 | ECU-05 | Resuelve: x/2 + 1/3 = 5/6. | ECU | FRA | Opción múltiple | 3 | d: `1` | 0.20 | 0.25 |
 
 ## Distractores
@@ -116,11 +116,18 @@ Ninguno de estos valores está calibrado con datos reales.
 
 ### Criterio para las competencias secundarias
 
-Una competencia es secundaria si un fallo en ella bastaría, por sí solo, para fallar el ítem. Los ancestros del grafo no se copian de forma automática.
+Hipótesis de modelado no validada: una competencia se incluye en `R_q` si se supone que, sin dominarla, la probabilidad de acierto se reduce a `g_q` (supuesto conjuntivo de DINA). No está comprobada con datos de alumnos ni con revisión docente, y puede no cumplirse si el ítem admite estrategias alternativas. Los ancestros del grafo no se copian de forma automática.
 
 Los cálculos elementales no cuentan como exigencia de `OPS`. Por ejemplo, `(-3)·(-4)` usa un producto de una cifra, pero su dificultad es la regla de los signos. Es una decisión de modelado que debe revisar un docente, porque `R_q` determina qué evidencia aporta cada respuesta.
 
-Una competencia secundaria puede no ser ancestro de la principal. `FRA` es secundaria en JER-05 y no es ancestro de `JER`.
+Una competencia secundaria puede no ser ancestro de la principal. `FRA` es secundaria en JER-05 y no es ancestro de `JER`. Un ítem también puede necesitar todos sus ancestros: la validación no completa ni recorta `secondarySkills`.
+
+Cada `assumptionNote` recoge esta hipótesis, y las notas de los ítems multicompetencia dan su razonamiento como SUPUESTO, no como requisito pedagógico demostrado.
+
+Dos asignaciones de `ALG` son decisiones provisionales, también sin validar:
+
+- **ECU-03** no incluye `ALG`. Puede resolverse dividiendo ambos miembros entre 3 y despejando después, así que desarrollar el paréntesis no se considera imprescindible. La explicación del banco es una solución posible, no la única.
+- **ECU-04** incluye `NEG` y `ALG`. Se supone necesario operar con negativos y reducir términos semejantes al reunir las incógnitas.
 
 ## Respuestas numéricas
 
@@ -133,3 +140,11 @@ La forma canónica no sustituye a los ids de opción: en opción múltiple, `cor
 - `validateQuestionBank(bank, graph)` hace la validación estructural de cualquier banco. Un banco vacío es válido. Las exigencias de 30 preguntas, cinco por competencia y seis multicompetencia se comprueban en los tests solo para el banco RADAR.
 - `tests/engine/questionBank.math.test.ts` recalcula cada respuesta con aritmética racional exacta a partir de los datos del enunciado, sin mirar `correctAnswer`. En los ítems algebraicos compara coeficiente a coeficiente, lo que demuestra la equivalencia para todo valor de `x`.
 - Los tests comprueban que cada distractor tiene un error descrito y que no coincide con la solución. No recalculan que el procedimiento descrito produzca exactamente ese valor.
+
+## Límite del validador
+
+`validateQuestionBank` detecta las opciones duplicadas de dos formas: por texto idéntico tras recortar los espacios exteriores, y por valor racional equivalente, como `1/2` y `2/4`.
+
+No demuestra la equivalencia de expresiones algebraicas arbitrarias. Dos opciones como `2x + 4` y `4 + 2x` pasarían la validación, porque tienen textos distintos y ningún valor racional.
+
+Las opciones algebraicas del banco incluido se comprueban con los tests simbólicos de `tests/engine/questionBank.math.test.ts`, que solo cubren ALG-01, ALG-03 y ALG-04. Un banco externo requiere una revisión equivalente antes de usarse.
