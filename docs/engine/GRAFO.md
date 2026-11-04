@@ -1,6 +1,6 @@
 # Grafo de competencias y configuración
 
-Este documento cubre el grafo y la configuración. El banco de preguntas se describe en `BANCO.md`. El motor matemático aún no existe.
+Este documento cubre el grafo y la configuración. Están implementados el grafo, el banco de preguntas (`BANCO.md`) y la inferencia bayesiana exacta DINA (`MATEMATICAS.md`). La selección adaptativa y las fases posteriores siguen pendientes.
 
 ## API
 
