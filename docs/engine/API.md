@@ -28,6 +28,7 @@ jointEntropy(joint: JointDistribution): number
 
 - `correctProbability` es la función pura DINA de §2.7. Solo recibe `α`, requisitos y slip/guess.
 - `updatePosterior` es de bajo nivel: recibe la evidencia ya decidida. No corrige respuestas de alumnos ni gestiona el historial. Eso corresponde a `submitAnswer`, en la Fase 3.
+- `marginals`, `masteryProbability` y `jointEntropy` interpretan normalizada una distribución aceptada que sume 1 solo dentro de la tolerancia, sin modificarla.
 
 ## Estado diagnóstico
 

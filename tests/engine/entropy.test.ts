@@ -60,4 +60,35 @@ describe('jointEntropy', () => {
 
     expect(jointEntropy(joint)).toBe(1);
   });
+
+  describe.each([[1 + 5e-10], [1 - 5e-10]])('con masas aceptadas escaladas por %d', (factor) => {
+    const scaled = (joint: JointDistribution): JointDistribution => joint.map((mass) => mass * factor);
+
+    it('una masa puntual tiene entropía 0', () => {
+      expect(jointEntropy(scaled(distribution({ 0: 1 })))).toBe(0);
+      expect(jointEntropy(scaled(distribution({ 37: 1 })))).toBe(0);
+    });
+
+    it('la uniforme tiene entropía 6', () => {
+      expectClose(jointEntropy(scaled(Array.from({ length: 64 }, () => 1 / 64))), 6);
+    });
+
+    it('[0.5, 0.25, 0.25, 0, ...] tiene entropía 1.5', () => {
+      expectClose(jointEntropy(scaled(distribution({ 0: 0.5, 1: 0.25, 2: 0.25 }))), 1.5);
+    });
+
+    it('conserva la entrada congelada', () => {
+      const masses = scaled(distribution({ 0: 0.5, 1: 0.25, 2: 0.25 }));
+      const joint = Object.freeze([...masses]);
+
+      expectClose(jointEntropy(joint), 1.5);
+      expect(joint).toEqual(masses);
+    });
+  });
+
+  it.each([[1 + 2e-9], [1 - 2e-9]])('sigue rechazando una suma fuera de tolerancia: factor %d', (factor) => {
+    const joint = distribution({ 0: 0.5, 1: 0.25, 2: 0.25 }).map((mass) => mass * factor);
+
+    expectInferenceError(() => jointEntropy(joint), 'INVALID_DISTRIBUTION');
+  });
 });

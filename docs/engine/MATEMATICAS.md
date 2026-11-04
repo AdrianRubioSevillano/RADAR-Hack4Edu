@@ -91,7 +91,9 @@ Dividir entre la masa total evita que el redondeo dé valores mayores que 1. No 
 Ambas están en bits, con `0·log(0) = 0`.
 
 - `H_b(p) = −p·log2(p) − (1 − p)·log2(1 − p)`.
-- `H(π) = −Σ_α π(α)·log2(π(α))`.
+- `H(π) = −Σ_α p(α)·log2(p(α))`, con `p(α) = π(α) / Σ_β π(β)`.
+
+La entropía conjunta usa las masas normalizadas por la masa total. Sin esa división, una distribución aceptada que suma `1 + 5e-10` daría entropías fuera de `[0, 6]`, como `-7.2e-10` en una masa puntual. El resultado no se recorta a ese intervalo.
 
 ## Tolerancias y umbrales
 
@@ -100,6 +102,6 @@ Ambas están en bits, con `0·log(0) = 0`.
 | `1e-9` | Tolerancia numérica de `\|Σπ − 1\|` al aceptar una distribución. Fuera de ella se rechaza, no se corrige. |
 | `1e-300` | Masa total mínima para renormalizar (§2.3). Por debajo, o si no es finita, se lanza `INVALID_NORMALIZATION`. |
 
-Una distribución dentro de la tolerancia se acepta sin modificar. La actualización la renormaliza como cualquier otra.
+Una distribución dentro de la tolerancia se acepta sin modificar. La actualización la renormaliza como cualquier otra, y las consultas y `jointEntropy` la interpretan normalizada. Nunca se muta la entrada ni se recortan probabilidades.
 
 No hay clipping global: `0` y `1` se conservan, y un estado con masa cero sigue en cero tras cualquier evidencia.

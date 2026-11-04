@@ -14,7 +14,10 @@ export function binaryEntropy(probability: number): number {
   return surprisalTerm(probability) + surprisalTerm(1 - probability);
 }
 
+// Las masas aceptadas pueden sumar 1 solo dentro de la tolerancia: se usa la
+// probabilidad normalizada de cada estado, sin modificar la entrada.
 export function jointEntropy(joint: JointDistribution): number {
   assertValidJoint(joint);
-  return joint.reduce((entropy, mass) => entropy + surprisalTerm(mass), 0);
+  const total = joint.reduce((sum, mass) => sum + mass, 0);
+  return joint.reduce((entropy, mass) => entropy + surprisalTerm(mass / total), 0);
 }
