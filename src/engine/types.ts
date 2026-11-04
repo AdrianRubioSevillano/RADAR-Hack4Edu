@@ -97,3 +97,54 @@ export type QuestionBankErrorCode =
   | 'UNKNOWN_CORRECT_OPTION'
   | 'NON_CANONICAL_ANSWER'
   | 'UNEXPECTED_OPTIONS';
+
+// Vector α de seis posiciones en el orden de SKILL_ORDER.
+export type MasteryVector = readonly (0 | 1)[];
+
+// Distribución conjunta π(α): 64 masas. El índice m codifica el estado: la
+// competencia en la posición k de SKILL_ORDER está dominada si el bit k de m vale 1.
+export type JointDistribution = readonly number[];
+
+export type DinaQuestion = Pick<Question, 'primarySkill' | 'secondarySkills' | 'slip' | 'guess'>;
+
+export interface CompatiblePriorConfig {
+  readonly epsilon: number;
+}
+
+export interface PriorConfig {
+  // Marginales p0_k; las competencias que falten usan 0.5.
+  readonly marginals?: Readonly<Record<SkillId, number>>;
+  // Prior compatible con prerrequisitos; desactivado si falta o es null.
+  readonly compatibility?: CompatiblePriorConfig | null;
+}
+
+export interface EffectivePriorConfig {
+  readonly marginals: Readonly<Record<SkillId, number>>;
+  readonly compatibility: CompatiblePriorConfig | null;
+}
+
+// Sin historial todavía: la Fase 3 añadirá el registro de respuestas.
+export interface DiagnosticState {
+  readonly studentId: string;
+  // Orden explícito de codificación de `joint`, igual a SKILL_ORDER.
+  readonly skillOrder: readonly SkillId[];
+  readonly joint: JointDistribution;
+  // Copia de la configuración efectiva, para reutilizar el mismo prior.
+  readonly priorConfig: EffectivePriorConfig;
+}
+
+export type InferenceErrorCode =
+  | 'INVALID_STATE_INDEX'
+  | 'INVALID_MASTERY'
+  | 'UNKNOWN_SKILL'
+  | 'INVALID_SKILL_SET'
+  | 'INVALID_PARAMETERS'
+  | 'INVALID_QUESTION'
+  | 'INVALID_EVIDENCE'
+  | 'INVALID_DISTRIBUTION'
+  | 'INVALID_NORMALIZATION'
+  | 'INVALID_PRIOR'
+  | 'MISSING_GRAPH'
+  | 'INVALID_GRAPH'
+  | 'INVALID_STUDENT_ID'
+  | 'INVALID_PROBABILITY';

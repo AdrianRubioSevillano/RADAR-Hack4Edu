@@ -2,7 +2,7 @@
 
 `src/shared/types.ts` no existe todavía. Mientras tanto, estos tipos viven en `src/engine/types.ts` y se exportan desde `src/engine/index.ts`.
 
-Esta propuesta cubre lo implementado hasta la Fase 1B: grafo y banco de preguntas. Los tipos de fases posteriores se añadirán cuando existan.
+Esta propuesta cubre lo implementado hasta la Fase 2: grafo, banco de preguntas e inferencia. Los tipos de fases posteriores se añadirán cuando existan.
 
 ## Tipos que deberían pasar a ser compartidos
 
@@ -64,6 +64,29 @@ export interface QuestionBank {
 export type Result<T, E> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
+
+export type JointDistribution = readonly number[];
+
+export interface CompatiblePriorConfig {
+  readonly epsilon: number;
+}
+
+export interface PriorConfig {
+  readonly marginals?: Readonly<Record<SkillId, number>>;
+  readonly compatibility?: CompatiblePriorConfig | null;
+}
+
+export interface EffectivePriorConfig {
+  readonly marginals: Readonly<Record<SkillId, number>>;
+  readonly compatibility: CompatiblePriorConfig | null;
+}
+
+export interface DiagnosticState {
+  readonly studentId: string;
+  readonly skillOrder: readonly SkillId[];
+  readonly joint: JointDistribution;
+  readonly priorConfig: EffectivePriorConfig;
+}
 ```
 
 | Tipo | Motivo |
@@ -78,6 +101,9 @@ export type Result<T, E> =
 | `MultipleChoiceQuestion`, `NumericQuestion`, `Question` | La unión discriminada por `format` indica qué control pintar, sin campos opcionales ambiguos. |
 | `QuestionBank` | Es el argumento explícito de las funciones del motor. |
 | `Result` | Es el tipo de retorno de `submitAnswer` en §3 y de `normalizeRational`. |
+| `JointDistribution` | Forma parte del estado, que la interfaz guarda y devuelve al motor. |
+| `CompatiblePriorConfig`, `PriorConfig`, `EffectivePriorConfig` | La interfaz puede configurar el prior y conservar la copia efectiva. |
+| `DiagnosticState` | Es el estado por alumno que la interfaz guarda entre llamadas. |
 
 ## Decisiones que conviene revisar con el integrador
 
@@ -87,7 +113,12 @@ export type Result<T, E> =
 - `QuestionOption` añade `value` y `misconception`, que tampoco aparecen en §4. Ambos usan `null` explícito en lugar de ser opcionales.
 - `Question` incluye `correctAnswer`, `slip`, `guess` y `misconception`. Si la interfaz manda las preguntas a un cliente de alumno, puede convenir un tipo de presentación sin esos campos.
 - Todos los tipos públicos son serializables como JSON. `BigInt` solo se usa dentro de `src/engine/rational.ts`.
+- `JointDistribution` depende de la codificación de `docs/engine/MATEMATICAS.md`. La interfaz no debería interpretar sus índices: para eso están `marginals` y `masteryProbability`.
+- `DiagnosticState` aún no tiene historial. La Fase 3 añadirá un campo nuevo, así que la interfaz debe conservar el objeto entero y no reconstruirlo campo a campo.
+- `PriorConfig.compatibility` acepta `null` para que `EffectivePriorConfig` sea también una configuración válida.
 
 ## Tipos que se quedan en el motor
 
-`KnowledgeGraphErrorCode`, `QuestionBankErrorCode`, `RationalErrorCode`, `KnowledgeGraphError` y `QuestionBankError` no necesitan ser compartidos salvo que la interfaz quiera distinguir códigos de error. Las dos clases de error no pueden vivir en un archivo solo de tipos.
+`KnowledgeGraphErrorCode`, `QuestionBankErrorCode`, `RationalErrorCode`, `InferenceErrorCode`, `KnowledgeGraphError`, `QuestionBankError` e `InferenceError` no necesitan ser compartidos salvo que la interfaz quiera distinguir códigos de error. Las tres clases de error no pueden vivir en un archivo solo de tipos.
+
+`MasteryVector` y `DinaQuestion` son tipos internos del modelo, que la interfaz no necesita.

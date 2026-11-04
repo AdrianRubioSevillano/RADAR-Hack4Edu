@@ -23,6 +23,7 @@ export const sub = (a: Exact, b: Exact): Exact => q(a.n * b.d - b.n * a.d, a.d *
 export const mul = (a: Exact, b: Exact): Exact => q(a.n * b.n, a.d * b.d);
 export const div = (a: Exact, b: Exact): Exact => q(a.n * b.d, a.d * b.n);
 export const show = (value: Exact): string => `${value.n}/${value.d}`;
+export const toNumber = (value: Exact): number => Number(value.n) / Number(value.d);
 
 // Polinomio como mapa de monomio a coeficiente; '1' es el término independiente.
 export type Poly = ReadonlyMap<string, Exact>;
