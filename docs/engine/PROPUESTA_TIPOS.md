@@ -395,3 +395,5 @@ export interface InterventionPlanComparison {
 `RationalErrorCode`, `KnowledgeGraphError`, `QuestionBankError` e `InferenceError` no necesitan ser compartidos. Las tres clases de error no pueden vivir en un archivo solo de tipos.
 
 `MasteryVector` y `DinaQuestion` son tipos internos del modelo, que la interfaz no necesita.
+
+Los tipos de `src/simulation` tampoco se proponen como compartidos: contienen verdad simulada. Una demo solo debería recibir `ObservableStudent`, mediante `observableStudents`.

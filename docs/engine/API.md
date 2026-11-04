@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 5A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -363,3 +363,65 @@ isCanonicalRational(value: string): boolean
 ```
 
 Los detalles están en `GRAFO.md` y `BANCO.md`.
+
+## Simulación
+
+`src/simulation/index.ts`. Solo para demo y benchmarks: `src/engine` no lo importa.
+
+```ts
+createSyntheticClass(seed: number, studentCount: number, knowledgeGraph: KnowledgeGraph, config?: SimulationConfig): SyntheticClass
+observableStudents(syntheticClass: SyntheticClass): readonly ObservableStudent[]
+
+mulberry32(seed: number): UniformStream
+deriveStreamSeed(seed: number, label: string): number
+createStream(seed: number, label: string): UniformStream
+```
+
+```ts
+interface SimulationConfig {
+  readonly groups?: readonly SyntheticGroupConfig[];  // al menos uno
+  readonly prerequisiteFactor?: number;               // en [0, 1]; 0.5 por defecto
+}
+
+interface SyntheticGroupConfig {
+  readonly id: string;
+  readonly masteryProbabilities: Readonly<Record<SkillId, number>>;  // las seis competencias
+}
+
+interface SyntheticClass {
+  readonly generator: GeneratorInfo;  // { algorithm: 'mulberry32', version: 1 }
+  readonly seed: number;
+  readonly studentCount: number;
+  readonly config: EffectiveSimulationConfig;
+  readonly skillOrder: readonly SkillId[];
+  readonly students: readonly SyntheticStudent[];
+}
+
+interface SyntheticStudent {
+  readonly studentId: string;
+  readonly displayName: string;
+  readonly groupId: string;           // verdad privada
+  readonly trueMastery: MasteryVector;  // verdad privada, en el orden de skillOrder
+}
+
+interface ObservableStudent {
+  readonly studentId: string;
+  readonly displayName: string;
+}
+```
+
+- `seed` es un entero uint32, incluido 0. `studentCount` es un entero seguro no negativo, y la clase vacía es válida.
+- `SyntheticClass` contiene verdad simulada: no debe pasarse a inicialización diagnóstica, selección, posterior ni recomendaciones. Hacia fuera solo sale `observableStudents`.
+- Los grupos por defecto `G1`, `G2` y `G3` son SUPUESTOS de demo, no grupos educativos validados ni estimaciones observadas.
+- `UniformStream` es la única pieza con estado: cada flujo guarda el suyo y avanza al llamarlo. No hay estado global.
+- `STREAMS` nombra los flujos de §2.7 y `GENERATOR` declara algoritmo y versión.
+
+| `SimulationError.code` | Causa |
+|---|---|
+| `INVALID_SEED` | La semilla no es un entero uint32. |
+| `INVALID_STREAM_LABEL` | La etiqueta del flujo no es un texto no vacío. |
+| `INVALID_STUDENT_COUNT` | El tamaño no es un entero seguro no negativo. |
+| `INVALID_SIMULATION_CONFIG` | Grupos, ids, probabilidades o factor inválidos. |
+| `INVALID_SYNTHETIC_CLASS` | `observableStudents` recibe algo sin la forma esperada. |
+
+Un grafo sin las seis competencias lanza `InferenceError` con `INVALID_GRAPH`. Un grafo con estructura inválida lanza `KnowledgeGraphError`.

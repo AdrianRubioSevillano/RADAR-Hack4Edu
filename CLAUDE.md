@@ -188,6 +188,16 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
 - PRNG con semilla. Igual configuración, versión y semilla ⇒ mismos resultados deterministas. Los tiempos y metadatos variables se guardan aparte y se excluyen de las comprobaciones de igualdad.
 - Flujos aleatorios separados para población, respuestas, orden aleatorio, intervención y bootstrap. Cambiar el orden de ejecución de los métodos no altera los datos asignados a cada uno.
 - Clase por defecto de 30 alumnos con ids ficticios (`S01`…`S30`), en 2–3 grupos con probabilidades de dominio distintas (SUPUESTO). El estado real se genera en orden topológico determinista. Si falta al menos un ancestro de la competencia, su probabilidad de dominio se reduce una sola vez con un factor configurable finito en `[0,1]` (SUPUESTO no calibrado); sin ancestros no hay reducción. Documentar que esto se parece a la estructura del grafo y que el prior del motor, por defecto, NO la usa.
+- Decisiones de la Fase 5A (población sintética):
+  - `seed` es un entero uint32, incluido 0; `studentCount` es un entero seguro no negativo, y la clase vacía es válida. Lo demás se rechaza con error tipado.
+  - Ids `S01`, `S02`… `S99`, `S100`…: ampliar la clase no cambia los ids existentes.
+  - Grupos por defecto (SUPUESTOS): tres, con probabilidad base de dominio 0.85, 0.60 y 0.35 en cada competencia. Son una configuración de demo, no grupos educativos validados ni estimaciones observadas.
+  - Asignación equilibrada determinista: el alumno de índice `i` va al grupo `i mod nº de grupos`.
+  - Grupos configurables: al menos uno, con ids únicos y probabilidades explícitas de las seis competencias.
+  - Factor reductor por prerrequisitos: 0.5 por defecto, configurable en `[0,1]`, SUPUESTO. Se comprueban todos los ancestros, no solo los prerrequisitos directos, y se aplica una sola vez aunque falten varios.
+  - PRNG mulberry32, sin dependencias, con algoritmo y versión documentados. Cada flujo se deriva de la semilla y de una etiqueta.
+  - `SyntheticClass` puede contener la verdad privada, solo en tipos de `src/simulation`. Una proyección explícita de alumnos observables entrega únicamente ids y nombres ficticios: sin `α`, grupo generador, probabilidades reales ni otros datos latentes.
+  - Se exigen las seis competencias. Sin `Math.random`, reloj, ids aleatorios ni estado global compartido.
 - Respuestas generadas con el mismo modelo DINA y los **parámetros reales del simulador**, que pueden diferir de los que asume el motor (escenario de mala especificación).
 - El estado real `α` vive solo en `src/simulation`. Única excepción: `src/simulation` puede pasarlo a funciones puras DINA de `src/engine` para calcular probabilidades de respuesta.
   - Esas funciones reciben solo `α`, requisitos y slip/guess. No reciben `SyntheticClass` ni estado global, y no mutan sus entradas.
@@ -310,7 +320,7 @@ interface PostInterventionInput {
 ```
 src/engine/       graph.ts, questionBank.ts, bayes.ts, entropy.ts, selection.ts,
                   classDiagnostic.ts, interventions.ts, planComparison.ts, types.ts, index.ts
-src/simulation/   rng.ts, syntheticClass.ts, responder.ts, postIntervention.ts, index.ts
+src/simulation/   rng.ts, syntheticClass.ts, responder.ts, postIntervention.ts, types.ts, index.ts
 src/benchmarks/   methods.ts, metrics.ts, stats.ts, runBenchmark.ts, index.ts
 tests/engine|simulation|benchmarks/  *.test.ts
 docs/engine/      MATEMATICAS.md, API.md, INTEGRACION_REACT.md, LIMITACIONES.md,

@@ -275,6 +275,48 @@ Esto detecta detalle manipulado o incoherente, **no prueba que el diagnóstico p
 
 Los alumnos se ordenan por id antes de sumar y las competencias siguen `SKILL_ORDER`, de modo que el orden de entrada no cambia el resultado.
 
+## Población sintética
+
+Solo para demo y benchmarks (§2.7). Los perfiles son una configuración de demo, no grupos educativos validados ni estimaciones observadas.
+
+**PRNG, versión 1.** mulberry32: estado de 32 bits, salida `entero uint32 / 2^32`, en `[0, 1)`. No es criptográfico.
+
+**Derivación de flujos.** Cada flujo se identifica con una etiqueta:
+
+```
+h0     = seed XOR 0x811c9dc5
+h(j+1) = (h(j) XOR byte_j) · 0x01000193 mod 2^32     (FNV-1a sobre los bytes UTF-8 de la etiqueta)
+semilla del flujo = fmix32(h_final)                  (finalizador de MurmurHash3)
+```
+
+Los flujos base son `population`, `responses`, `randomOrder`, `intervention` y `bootstrap`. Un flujo depende solo de la semilla y de su etiqueta, de modo que consumir uno no altera los demás. Para una etiqueta fija, semillas distintas dan semillas de flujo distintas.
+
+Cualquier cambio de resultados para una misma configuración y semilla exige subir `GENERATOR.version`. Los tests fijan vectores de una réplica independiente.
+
+**Generación.** El alumno de índice `i`, con `i` desde 0:
+
+1. Recibe el id `S01`, `S02`… `S99`, `S100`… y el grupo `i mod G`.
+2. Usa su propio flujo, `population/<id>`: ampliar la clase no cambia a los alumnos existentes.
+3. Recorre las competencias en orden topológico, consumiendo un uniforme `u` por competencia, también si su probabilidad es 0 o 1.
+4. Domina `k` si `u < p_k`, con:
+
+```
+p_k = base_gk · f   si falta al menos un ancestro de k en el estado ya generado
+p_k = base_gk       en otro caso, y siempre si k no tiene ancestros
+```
+
+Se comprueban todos los ancestros, no solo los prerrequisitos directos, y `f` se aplica una sola vez aunque falten varios.
+
+**Valores por defecto, SUPUESTOS no calibrados.** Tres grupos con `base = 0.85`, `0.60` y `0.35` en cada competencia, y `f = 0.5`.
+
+**Relación con el motor.** Esta población se parece a la estructura del grafo, y el prior del motor, por defecto, **no** la usa: asume marginales independientes. Por eso el motor parte de un modelo distinto del que genera los datos.
+
+**Límites.**
+
+- `SyntheticClass` contiene la verdad. `observableStudents` solo entrega id y nombre ficticio.
+- La asignación `i mod G` es pública: quien conozca la regla y `G` deduce el grupo a partir del id. El motor no usa los ids para inferir, pero un análisis de resultados por id no sería ciego al grupo.
+- Todas las semillas recorren el mismo ciclo de `2^32` estados de mulberry32. Dos flujos podrían solaparse, y 32 bits no garantizan independencia estadística entre flujos.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |

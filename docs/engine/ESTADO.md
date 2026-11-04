@@ -1,6 +1,6 @@
 # Estado del motor RADAR
 
-Traspaso al cerrar la Fase 4C. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+Traspaso al cerrar la Fase 5A. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
 
 ## Implementado
 
@@ -10,8 +10,9 @@ Traspaso al cerrar la Fase 4C. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - **Fase 4A:** `getClassDiagnostic`.
 - **Fase 4B:** `rankInterventions`: ranking y plan exacto con presupuesto.
 - **Fase 4C:** `compareInterventionPlans`: plan colectivo frente a plan por necesidad pendiente, con detalle por alumno y competencia.
+- **Fase 5A:** `src/simulation`: PRNG mulberry32 con flujos etiquetados, `createSyntheticClass` y `observableStudents`.
 
-**Verificación:** typecheck limpio y 844 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+**Verificación:** typecheck limpio y 957 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
 
 ## Decisiones y limitaciones vigentes
 
@@ -28,10 +29,13 @@ Traspaso al cerrar la Fase 4C. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - La validación del detalle detecta incoherencias, no prueba que el diagnóstico proceda de respuestas reales. Sin conjuntas, la preparación solo se contrasta con las cotas de Fréchet.
 - `coverage` mide descendientes del grafo ponderados por importancia y necesidad, **no alumnos atendidos**.
 - `validateQuestionBank` no detecta opciones algebraicas equivalentes con textos distintos.
+- Los grupos sintéticos y el factor por prerrequisitos son SUPUESTOS de demo, no grupos educativos validados.
+- La verdad simulada solo vive en `src/simulation`. La regla `i mod G` es pública: el id permite deducir el grupo generador.
+- mulberry32 no es criptográfico, y sus flujos comparten un ciclo de `2^32` estados: no hay independencia estadística garantizada.
 
 ## Próximo trabajo
 
-- Fase 5: simulación reproducible.
+- Fase 5B: respuestas simuladas con números aleatorios comunes.
 - Fase 6: evaluación postintervención.
 - Fase 7: benchmarks e informes.
 
