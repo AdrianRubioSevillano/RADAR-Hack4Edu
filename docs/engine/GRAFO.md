@@ -1,6 +1,6 @@
 # Grafo de competencias y configuración
 
-Estado: Fase 1A. Solo están implementados la infraestructura y el grafo. El motor matemático aún no existe.
+Este documento cubre el grafo y la configuración. El banco de preguntas se describe en `BANCO.md`. El motor matemático aún no existe.
 
 ## API
 
@@ -45,7 +45,7 @@ Los nodos solo contienen propiedades estáticas. Las estimaciones diagnósticas 
 | `tsconfig.engine.json` | TypeScript estricto para `src/engine`, `tests/engine` y `vitest.config.ts`. |
 | `vitest.config.ts` | Tests en `tests/**/*.test.ts`, en entorno Node. |
 
-`tsconfig.engine.json` activa `erasableSyntaxOnly`, que hace fallar el typecheck si aparece `enum`, `namespace` o parameter properties.
+`tsconfig.engine.json` activa `erasableSyntaxOnly`, que rechaza la sintaxis de TypeScript que necesita transformación: `enum`, parameter properties y `namespace` con código ejecutable. No rechaza cualquier `namespace`, porque uno que solo declara tipos sigue compilando. La prohibición del proyecto es la de §8 de `CLAUDE.md`, que va más allá de esta opción.
 
 ```bash
 npm test
