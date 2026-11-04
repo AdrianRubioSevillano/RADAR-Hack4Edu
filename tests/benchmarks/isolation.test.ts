@@ -39,6 +39,12 @@ describe('src/benchmarks', () => {
     }
   });
 
+  it('la API pública no importa módulos de Node: debe poder usarse en el navegador', () => {
+    for (const source of BENCHMARKS) {
+      expect(source).not.toMatch(/from 'node:|\bprocess\.|require\(/);
+    }
+  });
+
   it('fuera del coordinador no usa reloj', () => {
     for (const source of WITHOUT_COORDINATOR) {
       expect(source).not.toMatch(/\bDate\b|performance\./);

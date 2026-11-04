@@ -10,7 +10,13 @@ import type {
   QuestionId,
   SkillId,
 } from '../engine/index.ts';
-import type { GeneratorInfo, RealItemParameters, ResponseUniformTable, SyntheticClass } from '../simulation/index.ts';
+import type {
+  GeneratorInfo,
+  RealItemParameters,
+  ResponseUniformTable,
+  SimulationConfig,
+  SyntheticClass,
+} from '../simulation/index.ts';
 
 export type BenchmarkErrorCode =
   | 'INVALID_METRICS_CONFIG'
@@ -22,7 +28,9 @@ export type BenchmarkErrorCode =
   | 'INVALID_RESPONSE_TABLE'
   | 'INVALID_REAL_PARAMETERS'
   | 'ANSWER_REJECTED'
-  | 'SELECTION_FAILED';
+  | 'SELECTION_FAILED'
+  | 'INVALID_BENCHMARK_CONFIG'
+  | 'ALL_BUDGET_MISMATCH';
 
 export interface DiagnosticMetricsConfig {
   // Umbral de detección de dificultad, en [0, 1]; 0.5 por defecto.
@@ -277,4 +285,135 @@ export interface DiagnosticMethodRun {
   readonly results: DiagnosticMethodResults;
   // null si no se pidió medir.
   readonly timing: DiagnosticMethodTiming | null;
+}
+
+export type BenchmarkScenarioId = 'wellSpecified' | 'misspecified' | 'homogeneous';
+
+export type BenchmarkMetric = 'mae' | 'brier' | 'logLoss' | 'precision' | 'recall' | 'f1' | 'accuracy';
+
+export interface BenchmarkConfig {
+  // Entero uint32; 2026 por defecto.
+  readonly baseSeed?: number;
+  // Entero positivo; 30 por defecto.
+  readonly studentCount?: number;
+  // Réplicas; entero positivo; 30 por defecto.
+  readonly seedCount?: number;
+  // Debe incluir 'all'; [4, 6, 9, 12, 'all'] por defecto.
+  readonly budgets?: readonly QuestionBudget[];
+  // Debe incluir A y B; A, B y C por defecto.
+  readonly methods?: readonly DiagnosticMethod[];
+  // Entero positivo; 2000 por defecto.
+  readonly resamples?: number;
+  // Prior por defecto del motor si falta.
+  readonly priorConfig?: PriorConfig;
+  // Los tres por defecto.
+  readonly scenarios?: readonly BenchmarkScenarioId[];
+  readonly measureTiming?: boolean;
+}
+
+export interface EffectiveBenchmarkConfig {
+  readonly baseSeed: number;
+  readonly studentCount: number;
+  readonly seedCount: number;
+  readonly budgets: readonly QuestionBudget[];
+  readonly methods: readonly DiagnosticMethod[];
+  readonly resamples: number;
+  readonly priorConfig: EffectivePriorConfig;
+  readonly scenarios: readonly BenchmarkScenarioId[];
+  readonly bankSize: number;
+  readonly questionIds: readonly QuestionId[];
+  readonly occasion: string;
+  readonly allBudgetTolerance: number;
+  readonly generator: GeneratorInfo;
+}
+
+export interface BenchmarkScenarioDefinition {
+  readonly id: BenchmarkScenarioId;
+  readonly description: string;
+  // Configuración de la población; null: la de por defecto.
+  readonly population: SimulationConfig | null;
+  // Iguales en todos los ítems; null: los del banco. Nunca llegan al motor.
+  readonly realParameters: RealItemParameters | null;
+}
+
+export interface ReplicaMethodResult {
+  readonly method: DiagnosticMethod;
+  readonly requestedBudget: QuestionBudget;
+  readonly effectiveBudget: number;
+  readonly questionsUsed: QuestionUsage;
+  // Agregado sobre los pares de esta réplica.
+  readonly metrics: MetricSummary;
+}
+
+export interface BenchmarkReplica {
+  // Semilla de población y de respuestas de esta réplica.
+  readonly seed: number;
+  readonly randomOrderSeed: number;
+  readonly results: readonly ReplicaMethodResult[];
+}
+
+export interface MethodBudgetSummary {
+  readonly method: DiagnosticMethod;
+  readonly requestedBudget: QuestionBudget;
+  readonly effectiveBudget: number;
+  // Media de preguntas por alumno en cada semilla.
+  readonly questionsUsed: SeedSeriesSummary;
+  readonly metrics: Readonly<Record<BenchmarkMetric, SeedSeriesSummary>>;
+}
+
+export interface MetricComparison {
+  readonly requestedBudget: QuestionBudget;
+  readonly metric: BenchmarkMetric;
+  // B - A.
+  readonly comparison: PairedComparison;
+}
+
+// Una comprobación fallida lanza ALL_BUDGET_MISMATCH: aquí solo constan las superadas.
+export interface AllBudgetCheck {
+  readonly passed: true;
+  readonly tolerance: number;
+  readonly replicasChecked: number;
+  readonly maxPosteriorDifference: number;
+  readonly maxMetricDifference: number;
+}
+
+export interface BenchmarkScenarioResult {
+  readonly definition: BenchmarkScenarioDefinition;
+  readonly replicas: readonly BenchmarkReplica[];
+  readonly summaries: readonly MethodBudgetSummary[];
+  readonly comparisons: readonly MetricComparison[];
+  readonly allBudgetCheck: AllBudgetCheck;
+}
+
+// Bloque determinista: mismas entradas, mismo contenido.
+export interface BenchmarkResults {
+  readonly benchmarkVersion: number;
+  // 'test' si no usa la configuración por defecto.
+  readonly kind: 'full' | 'test';
+  readonly config: EffectiveBenchmarkConfig;
+  readonly replicaSeeds: readonly number[];
+  readonly bootstrapSeed: number;
+  readonly scenarios: readonly BenchmarkScenarioResult[];
+  readonly disclaimer: string;
+}
+
+export interface ScenarioMethodTiming {
+  readonly scenario: BenchmarkScenarioId;
+  readonly method: DiagnosticMethod;
+  readonly preparationMs: number;
+  readonly selectionMs: number;
+  readonly selectionCount: number;
+  readonly meanSelectionMs: number | null;
+}
+
+export interface BenchmarkTiming {
+  readonly byScenarioAndMethod: readonly ScenarioMethodTiming[];
+  readonly definition: string;
+  readonly disclaimer: string;
+}
+
+export interface BenchmarkReport {
+  readonly results: BenchmarkResults;
+  // null si no se pidió medir.
+  readonly timing: BenchmarkTiming | null;
 }

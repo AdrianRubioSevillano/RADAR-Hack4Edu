@@ -44,7 +44,7 @@ function isMethod(value: unknown): value is DiagnosticMethod {
 }
 
 // Orden canónico: números ascendentes y después 'all'.
-function canonicalBudgets(budgets: readonly QuestionBudget[]): readonly QuestionBudget[] {
+export function canonicalBudgets(budgets: readonly QuestionBudget[]): readonly QuestionBudget[] {
   if (!Array.isArray(budgets) || budgets.length === 0) {
     throw inputError('budgets debe ser una lista no vacía');
   }

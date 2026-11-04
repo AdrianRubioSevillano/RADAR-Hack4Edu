@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --project tsconfig.engine.json"
+    "typecheck": "tsc --project tsconfig.engine.json",
+    "bench": "node scripts/bench.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

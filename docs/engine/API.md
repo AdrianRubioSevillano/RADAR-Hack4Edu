@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, de `src/simulation/index.ts`, hasta la Fase 6B, y de `src/benchmarks/index.ts`, hasta la Fase 7C. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, de `src/simulation/index.ts`, hasta la Fase 6B, y de `src/benchmarks/index.ts`, hasta la Fase 7D. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -654,6 +654,8 @@ interface MetricSummary {
 | `INVALID_REAL_PARAMETERS` | `realParametersByQuestion` cita preguntas desconocidas o valores que no son objetos. |
 | `ANSWER_REJECTED` | `submitAnswer` rechaza una respuesta sintética. |
 | `SELECTION_FAILED` | No hay pregunta para un paso que debería tenerla. |
+| `INVALID_BENCHMARK_CONFIG` | Semilla base, tamaños, métodos, escenarios o medición inválidos, o presupuestos sin `all`. |
+| `ALL_BUDGET_MISMATCH` | Con `all`, los posteriores o las métricas de los métodos difieren en más de `1e-9`. |
 
 Un estado inválido lanza `InferenceError` (`INVALID_STATE`, `INVALID_DISTRIBUTION`, `INVALID_HISTORY`) y una clase inválida, `SimulationError` con `INVALID_SYNTHETIC_CLASS`. La validación de estados no comprueba el historial contra un banco, porque esta función no lo recibe.
 
@@ -773,3 +775,68 @@ interface DiagnosticMethodTiming {
 - Los alumnos salen ordenados por id.
 - `preparationMs` mide `fixedQuestionOrder` en A y las permutaciones en C; en B vale 0. `selectionMs` mide obtener cada pregunta: `selectNextQuestion` en B y leer el orden en A y C. No incluye simular, registrar ni calcular métricas. No son una comparación definitiva de rendimiento.
 - Una clase, tabla, banco, grafo o prior inválidos lanzan los errores de sus módulos. Los uniformes se validan en cada consulta de `simulateResponse`.
+
+## Experimento
+
+`src/benchmarks/index.ts`. Sin módulos de Node: se puede usar en el navegador. Las escrituras están en `scripts/bench.ts`.
+
+```ts
+runBenchmark(config?: BenchmarkConfig): BenchmarkReport
+renderBenchmarkMarkdown(results: BenchmarkResults): string
+```
+
+```ts
+interface BenchmarkConfig {
+  readonly baseSeed?: number;      // uint32; DEFAULT_BENCHMARK_BASE_SEED = 2026
+  readonly studentCount?: number;  // 30
+  readonly seedCount?: number;     // 30
+  readonly budgets?: readonly QuestionBudget[];   // [4, 6, 9, 12, 'all']; debe incluir 'all'
+  readonly methods?: readonly DiagnosticMethod[]; // A, B y C; debe incluir A y B
+  readonly resamples?: number;     // 2000
+  readonly priorConfig?: PriorConfig;
+  readonly scenarios?: readonly BenchmarkScenarioId[];  // 'wellSpecified' | 'misspecified' | 'homogeneous'
+  readonly measureTiming?: boolean;
+}
+
+interface BenchmarkReport {
+  readonly results: BenchmarkResults;       // determinista
+  readonly timing: BenchmarkTiming | null;  // null si no se pide
+}
+
+interface BenchmarkResults {
+  readonly benchmarkVersion: number;
+  readonly kind: 'full' | 'test';
+  readonly config: EffectiveBenchmarkConfig;
+  readonly replicaSeeds: readonly number[];
+  readonly bootstrapSeed: number;
+  readonly scenarios: readonly BenchmarkScenarioResult[];
+  readonly disclaimer: string;
+}
+
+interface BenchmarkScenarioResult {
+  readonly definition: BenchmarkScenarioDefinition;  // id, description, population, realParameters
+  readonly replicas: readonly BenchmarkReplica[];    // seed, randomOrderSeed, results
+  readonly summaries: readonly MethodBudgetSummary[];  // por presupuesto y método
+  readonly comparisons: readonly MetricComparison[];   // B - A, por presupuesto y métrica
+  readonly allBudgetCheck: AllBudgetCheck;
+}
+```
+
+- `kind` es `test` si la ejecución no usa la configuración completa: esas ejecuciones no son resultados experimentales.
+- `replicas` guarda las métricas globales de cada método y presupuesto, con las que se recalculan `summaries` y `comparisons`. No guarda estados ni trayectorias: se regeneran con la configuración.
+- `allBudgetCheck` solo consta si se supera: si no, la ejecución lanza `ALL_BUDGET_MISMATCH`.
+- `results` no contiene verdad simulada, uniformes, fechas ni tiempos.
+
+**CLI.**
+
+```bash
+npm run bench
+```
+
+Escribe en `docs/engine/` tres archivos: `RESULTADOS_BENCHMARK.json` y `RESULTADOS_BENCHMARK.md`, deterministas, y `RESULTADOS_BENCHMARK_TIEMPOS.json`, con tiempos y metadatos variables.
+
+```bash
+npm run bench -- --check
+```
+
+Regenera el bloque determinista y lo compara byte a byte con los dos primeros archivos, sin escribir. Termina con error si difieren.

@@ -1,8 +1,20 @@
 export { BenchmarkError, computeDiagnosticMetrics } from './metrics.ts';
 export { runDiagnosticMethod } from './methods.ts';
+export { renderBenchmarkMarkdown } from './report.ts';
+export { DEFAULT_BENCHMARK_BASE_SEED, runBenchmark } from './runBenchmark.ts';
 export { comparePairedSeeds, summarizeSeedValues } from './stats.ts';
 export type {
+  AllBudgetCheck,
+  BenchmarkConfig,
   BenchmarkErrorCode,
+  BenchmarkMetric,
+  BenchmarkReplica,
+  BenchmarkReport,
+  BenchmarkResults,
+  BenchmarkScenarioDefinition,
+  BenchmarkScenarioId,
+  BenchmarkScenarioResult,
+  BenchmarkTiming,
   BootstrapProvenance,
   ConfidenceInterval,
   DiagnosticMethod,
@@ -14,11 +26,14 @@ export type {
   DiagnosticMetrics,
   DiagnosticMetricsConfig,
   DifficultyConfusion,
+  EffectiveBenchmarkConfig,
   EffectiveDiagnosticMetricsConfig,
   ExcludedPair,
   ImprovementDirection,
+  MetricComparison,
   MetricDefinitions,
   MethodBudgetResult,
+  MethodBudgetSummary,
   MethodStep,
   MethodStudentTrajectory,
   MetricSummary,
@@ -28,6 +43,8 @@ export type {
   PairedDifference,
   QuestionBudget,
   QuestionUsage,
+  ReplicaMethodResult,
+  ScenarioMethodTiming,
   SeedObservation,
   SeedSeriesConfig,
   SeedSeriesSummary,

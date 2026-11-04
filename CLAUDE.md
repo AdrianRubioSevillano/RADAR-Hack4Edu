@@ -295,6 +295,18 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
   - Salida separada: resultados deterministas, sin fechas ni tiempos, y mediciones de tiempo, `null` si no se piden. Con tiempos, `performance.now` mide por separado la preparación del orden y la selección de cada pregunta; no son una comparación definitiva de rendimiento.
 - Escenarios: (1) bien especificado; (2) mala especificación (slip/guess reales distintos de los asumidos); (3) presupuesto = todas las preguntas; (4) clase homogénea. Se reporta todo, también donde B empata o pierde.
 - Escenario 3: mismos prior, banco y respuestas comunes, sin parada anticipada; todos los métodos consumen todas las preguntas. Se comparan posteriores y métricas deterministas con tolerancia absoluta `1e-9`, excluyendo los tiempos.
+- Concreciones de la Fase 7D (experimento): `runBenchmark(config: BenchmarkConfig): BenchmarkReport`.
+  - Por defecto: 30 alumnos, 30 semillas, presupuestos `[4, 6, 9, 12, "all"]`, métodos A, B y C, prior por defecto, 2000 remuestreos y semilla base 2026, fijada antes de ver resultados.
+  - Semillas de réplica: `deriveStreamSeed(base, "benchmark/replica/<i>")`, saltando repetidas, de modo que son únicas y las primeras no cambian al pedir más. Son las mismas en todos los escenarios. Semilla del orden aleatorio: `deriveStreamSeed(réplica, "randomOrder")`. Semilla de bootstrap: `deriveStreamSeed(base, "bootstrap")`.
+  - Por escenario y réplica se crea una sola clase y una sola tabla `pretest`, compartidas entre métodos, con banco asumido, prior y presupuestos idénticos. El método no forma parte de las etiquetas de población ni de respuestas.
+  - Bien especificado (`wellSpecified`): población por defecto y parámetros reales iguales a los del banco.
+  - Mala especificación (`misspecified`): misma población y semillas, con slip real 0.25 y guess real 0.20 en todos los ítems. SUPUESTOS, no valores calibrados. El banco asumido no cambia.
+  - Población homogénea (`homogeneous`): un único grupo con probabilidad base 0.6 en cada competencia y factor 0.5. Significa misma distribución generadora, no que todos los alumnos tengan el mismo conocimiento.
+  - Todas las preguntas: comprobación explícita a partir del presupuesto `all` de cada escenario, sin volver a ejecutar una réplica idéntica. Con tolerancia absoluta `1e-9` coinciden posteriores y métricas de los métodos; si falla se lanza un error. Por eso `all` es obligatorio.
+  - Se guardan por réplica las métricas globales de cada método y presupuesto, suficientes para recalcular los resúmenes. Los estados no se guardan: ocuparían decenas de megabytes y se regeneran con la configuración.
+  - Series: `<escenario>/budget=<b>/method=<m>/<métrica>` y `<escenario>/budget=<b>/B-A/<métrica>`. Menor es mejor en MAE, Brier y log‑loss; mayor es mejor en precisión, recall, F1 y exactitud.
+  - Una ejecución que no usa la configuración por defecto se marca como prueba (`kind: "test"`). El informe experimental procede de `kind: "full"`.
+  - `npm run bench` escribe además `docs/engine/RESULTADOS_BENCHMARK_TIEMPOS.json`, con tiempos y metadatos variables. `npm run bench -- --check` regenera el bloque determinista y lo compara, sin escribir. Las importaciones de Node y las escrituras viven en `scripts/bench.ts`.
 - Salida: `docs/engine/RESULTADOS_BENCHMARK.md` y `.json`, generados por `npm run bench`, con la semilla base y la configuración. Tiempos y metadatos variables van separados de los resultados deterministas.
 
 ## 3. API pública por módulo
@@ -375,7 +387,7 @@ src/engine/       graph.ts, questionBank.ts, bayes.ts, entropy.ts, selection.ts,
                   classDiagnostic.ts, interventions.ts, planComparison.ts, types.ts, index.ts
 src/simulation/   rng.ts, syntheticClass.ts, responder.ts, postIntervention.ts, postInterventionReport.ts,
                   types.ts, index.ts
-src/benchmarks/   methods.ts, metrics.ts, stats.ts, runBenchmark.ts, types.ts, index.ts
+src/benchmarks/   methods.ts, metrics.ts, stats.ts, runBenchmark.ts, report.ts, types.ts, index.ts
 tests/engine|simulation|benchmarks/  *.test.ts
 docs/engine/      MATEMATICAS.md, API.md, INTEGRACION_REACT.md, LIMITACIONES.md,
                   RESULTADOS_BENCHMARK.md, PROPUESTA_TIPOS.md

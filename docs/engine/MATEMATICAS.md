@@ -524,6 +524,34 @@ La etiqueta no incluye presupuesto ni resultados: cada alumno conserva su orden 
 
 **Límites.** Una réplica no permite comparar métodos: la comparación necesita varias semillas y la estadística emparejada. B elige con los parámetros asumidos; con mala especificación su criterio deja de coincidir con los datos. Los tiempos son de una ejecución y dependen de la máquina.
 
+## Experimento
+
+`runBenchmark` aplica §2.9 y reutiliza la ejecución de métodos, las métricas y la estadística. Las cifras están en `RESULTADOS_BENCHMARK.md`, generado por script.
+
+**Semillas.** Con `b` la semilla base, 2026 por defecto:
+
+```
+réplica i       = deriveStreamSeed(b, "benchmark/replica/<i>"), saltando repetidas
+orden aleatorio = deriveStreamSeed(réplica, "randomOrder")
+bootstrap       = deriveStreamSeed(b, "bootstrap")
+```
+
+La semilla de réplica fija la población y los uniformes de respuesta. Las réplicas son las mismas en todos los escenarios, así que bien especificado y mala especificación comparten población y uniformes: solo difieren los parámetros reales.
+
+**Escenarios.** SUPUESTOS de demo, fijados antes de ver resultados.
+
+| Escenario | Población | Parámetros reales |
+|---|---|---|
+| `wellSpecified` | Por defecto | Los del banco |
+| `misspecified` | Por defecto | `slip = 0.25` y `guess = 0.20` en todos los ítems |
+| `homogeneous` | Un grupo: base 0.6, factor 0.5 | Los del banco |
+
+Población homogénea significa misma distribución generadora, no el mismo conocimiento: los alumnos siguen difiriendo. La comprobación de todas las preguntas no es un escenario aparte: sale del presupuesto `all` de cada uno, sin repetir réplicas.
+
+**Agregación.** Cada métrica se resume entre semillas por escenario, presupuesto y método, y B − A se compara por semilla. La métrica de cada semilla agrega los pares de esa réplica. Una métrica no definida en una semilla queda excluida, sin contar como 0.
+
+**Lectura.** El informe clasifica dónde cae cada intervalo de B − A. Es descriptivo: no es un contraste de hipótesis, no corrige por multiplicidad y las métricas están correlacionadas. Con `all`, B − A es cero salvo redondeo por construcción.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |

@@ -1,0 +1,89 @@
+{
+  "note": "Tiempos y metadatos variables de una ejecución: no forman parte de los resultados deterministas.",
+  "execution": {
+    "startedAt": "2026-11-04T17:08:00.565Z",
+    "finishedAt": "2026-11-04T17:10:25.755Z",
+    "durationMs": 145185.515333,
+    "nodeVersion": "v26.0.0",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "timing": {
+    "byScenarioAndMethod": [
+      {
+        "scenario": "wellSpecified",
+        "method": "A",
+        "preparationMs": 3.8138769999842452,
+        "selectionMs": 3.4943940000391933,
+        "selectionCount": 27000,
+        "meanSelectionMs": 0.0001294220000014516
+      },
+      {
+        "scenario": "wellSpecified",
+        "method": "B",
+        "preparationMs": 0,
+        "selectionMs": 36981.22469900008,
+        "selectionCount": 27000,
+        "meanSelectionMs": 1.3696749888518547
+      },
+      {
+        "scenario": "wellSpecified",
+        "method": "C",
+        "preparationMs": 4.82146799996076,
+        "selectionMs": 3.6557959999927334,
+        "selectionCount": 27000,
+        "meanSelectionMs": 0.00013539985185158273
+      },
+      {
+        "scenario": "misspecified",
+        "method": "A",
+        "preparationMs": 3.4669579999972484,
+        "selectionMs": 2.890844999725232,
+        "selectionCount": 27000,
+        "meanSelectionMs": 0.00010706833332315674
+      },
+      {
+        "scenario": "misspecified",
+        "method": "B",
+        "preparationMs": 0,
+        "selectionMs": 36534.10972999952,
+        "selectionCount": 27000,
+        "meanSelectionMs": 1.3531151751851676
+      },
+      {
+        "scenario": "misspecified",
+        "method": "C",
+        "preparationMs": 3.7291189996758476,
+        "selectionMs": 2.8609510008973302,
+        "selectionCount": 27000,
+        "meanSelectionMs": 0.00010596114818138261
+      },
+      {
+        "scenario": "homogeneous",
+        "method": "A",
+        "preparationMs": 4.040250000020023,
+        "selectionMs": 2.8914470001182053,
+        "selectionCount": 27000,
+        "meanSelectionMs": 0.0001070906296340076
+      },
+      {
+        "scenario": "homogeneous",
+        "method": "B",
+        "preparationMs": 0,
+        "selectionMs": 36973.72086899968,
+        "selectionCount": 27000,
+        "meanSelectionMs": 1.3693970692222102
+      },
+      {
+        "scenario": "homogeneous",
+        "method": "C",
+        "preparationMs": 3.6572290003678063,
+        "selectionMs": 3.173989001195878,
+        "selectionCount": 27000,
+        "meanSelectionMs": 0.00011755514819243992
+      }
+    ],
+    "definition": "Suma, sobre las réplicas, de la preparación del orden y de la obtención de cada pregunta, según runDiagnosticMethod. No incluye simular, registrar ni agregar.",
+    "disclaimer": "Tiempos de una ejecución en esta máquina, variables entre ejecuciones: no son una comparación definitiva de rendimiento."
+  }
+}

@@ -1,6 +1,6 @@
 # Estado del motor RADAR
 
-Traspaso al cerrar la Fase 7C. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+Traspaso al cerrar la Fase 7D. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
 
 ## Implementado
 
@@ -16,9 +16,12 @@ Traspaso al cerrar la Fase 7C. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - **Fase 6B:** `simulatePostIntervention`: postest con diagnóstico nuevo e informe en tres capas: observada, estimada y real simulada.
 - **Fase 7A:** `src/benchmarks`: `computeDiagnosticMetrics`, métricas de una réplica frente a la verdad simulada.
 - **Fase 7B:** `summarizeSeedValues` y `comparePairedSeeds`: resúmenes por semilla, bootstrap percentil reproducible y diferencias B − A emparejadas.
-- **Fase 7C:** `runDiagnosticMethod`: ejecución de A, B y C en una réplica, con presupuestos como prefijos. Sin escenarios, 30 semillas ni resultados.
+- **Fase 7C:** `runDiagnosticMethod`: ejecución de A, B y C en una réplica, con presupuestos como prefijos.
+- **Fase 7D:** `runBenchmark`, `renderBenchmarkMarkdown` y `npm run bench`: experimento completo con tres escenarios y 30 semillas.
 
-**Verificación:** typecheck limpio y 1494 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+**Verificación:** typecheck limpio y 1555 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+
+**Experimento:** `npm run bench` completo ejecutado, con `kind: "full"`, y `npm run bench -- --check` superado: el bloque determinista se regeneró y coincidió byte a byte. Las cifras solo están en `RESULTADOS_BENCHMARK.md` y `.json`, generados por script. Tiempos y metadatos, en `RESULTADOS_BENCHMARK_TIEMPOS.json`.
 
 ## Decisiones y limitaciones vigentes
 
@@ -53,11 +56,15 @@ Traspaso al cerrar la Fase 7C. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - `runDiagnosticMethod` es una réplica: no permite comparar métodos. Sus tiempos dependen de la máquina y no son una comparación definitiva.
 - `methods.ts` es el único módulo de `src/benchmarks` que coordina diagnóstico y respuestas. Los tests comprueban que el diagnóstico solo recibe datos observables.
 - La validación de `realParametersByQuestion` está repetida en `methods.ts` y `postIntervention.ts`, porque la Fase 7C no podía modificar `src/simulation`. Conviene compartirla.
-- `simulateResponse` valida clase y tabla enteras en cada llamada. Si en la Fase 7 pesa en los benchmarks, habrá que medirlo antes de cambiarlo.
+- Los resultados del benchmark miden la recuperación de estados sintéticos bajo SUPUESTOS: no demuestran mejoras educativas ni eficacia con alumnos reales. La mala especificación es una única alternativa, no un análisis de sensibilidad.
+- `results` guarda métricas por réplica, no estados ni trayectorias: se regeneran con la configuración. Si cambia el banco, cambian los resultados, y hay que volver a ejecutar `npm run bench`.
+- El informe no compara B con C: solo B − A. C figura como control de cordura.
+- `scripts/bench.ts` queda cubierto por el typecheck porque un test lo importa: `tsconfig.engine.json` no incluye `scripts/`.
+- `simulateResponse` valida clase y tabla enteras en cada llamada. El tiempo medido del experimento está dominado por la selección EIG, según `RESULTADOS_BENCHMARK_TIEMPOS.json`, y no hizo falta cambiar `src/engine` ni `src/simulation`.
 
 ## Próximo trabajo
 
-- Fase 7: ejecutor de benchmarks, escenarios, 30 semillas, informes y documentación de integración.
+- Fase 7: documentación de integración (`INTEGRACION_REACT.md`, `LIMITACIONES.md`).
 
 ## Reglas para continuar
 
