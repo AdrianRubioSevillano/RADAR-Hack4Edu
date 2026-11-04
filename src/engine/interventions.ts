@@ -5,6 +5,7 @@ import { isBelowThreshold } from './thresholds.ts';
 import type {
   ClassDiagnostic,
   EffectiveInterventionConfig,
+  InferenceErrorCode,
   InterventionConfig,
   InterventionEvidence,
   InterventionPlan,
@@ -37,6 +38,11 @@ const DERIVED_RANGE_TOLERANCE = 1e-12;
 
 // Coherencia entre la media de dominio y la necesidad de un mismo diagnóstico.
 const NEED_CONSISTENCY_TOLERANCE = 1e-9;
+
+const SECONDS_PER_MINUTE = 60;
+
+// Redondeo de conversión admitido al pasar de minutos a segundos enteros (§2.6).
+const SECOND_CONVERSION_TOLERANCE = 1e-9;
 
 const DISCLAIMER =
   'Heurística de priorización: no es una estimación de efecto causal ni una mejora educativa demostrada. ' +
@@ -130,6 +136,44 @@ function effectiveConfig(config: InterventionConfig): EffectiveInterventionConfi
     lowPreparationThreshold,
     lowConfidenceThreshold,
   };
+}
+
+// Minutos a segundos enteros seguros. Lo que no tenga resolución de un segundo
+// se rechaza: nunca se redondea en silencio.
+function toWholeSeconds(minutes: number, code: InferenceErrorCode, label: string): number {
+  const seconds = minutes * SECONDS_PER_MINUTE;
+  const whole = Math.round(seconds);
+  if (!Number.isSafeInteger(whole) || Math.abs(seconds - whole) > SECOND_CONVERSION_TOLERANCE) {
+    throw new InferenceError(code, `${label} no es representable en segundos enteros: ${minutes}`);
+  }
+  return whole;
+}
+
+function secondsBySkill(durations: Readonly<Record<SkillId, number>>): ReadonlyMap<SkillId, number> {
+  const seconds = new Map(
+    SKILL_ORDER.map((skill) => {
+      const label = `La duración de ${skill}`;
+      const value = toWholeSeconds(durations[skill] ?? Number.NaN, 'INVALID_INTERVENTION_CONFIG', label);
+      if (value <= 0) {
+        throw new InferenceError('INVALID_INTERVENTION_CONFIG', `${label} debe ser de al menos un segundo`);
+      }
+      return [skill, value] as const;
+    }),
+  );
+  // Ningún subconjunto suma más que el total: basta comprobarlo una vez.
+  if (!Number.isSafeInteger([...seconds.values()].reduce((sum, value) => sum + value, 0))) {
+    throw new InferenceError('INVALID_INTERVENTION_CONFIG', 'La suma de las duraciones no es representable en segundos');
+  }
+  return seconds;
+}
+
+// Una operación no representable falla de forma explícita: Infinity o NaN
+// romperían las comparaciones y JSON los convertiría en null.
+function finiteValue(value: number, label: string): number {
+  if (!Number.isFinite(value)) {
+    throw new InferenceError('NON_FINITE_VALUE', `${label} no es representable: ${value}`);
+  }
+  return value;
 }
 
 function diagnosticError(message: string): InferenceError {
@@ -249,6 +293,7 @@ interface SkillMetrics {
 interface Model {
   readonly config: EffectiveInterventionConfig;
   readonly metrics: ReadonlyMap<SkillId, SkillMetrics>;
+  readonly durationSeconds: ReadonlyMap<SkillId, number>;
   readonly descendantsOf: ReadonlyMap<SkillId, readonly SkillId[]>;
   readonly totalImportance: number;
 }
@@ -270,8 +315,8 @@ function importanceOf(model: Model, skill: SkillId): number {
   return model.config.importance[skill] ?? Number.NaN;
 }
 
-function durationOf(model: Model, skill: SkillId): number {
-  return model.config.durations[skill] ?? Number.NaN;
+function secondsOf(model: Model, skill: SkillId): number {
+  return model.durationSeconds.get(skill) ?? Number.NaN;
 }
 
 function isDescendant(model: Model, descendant: SkillId, skill: SkillId): boolean {
@@ -305,15 +350,16 @@ function skillBenefit(model: Model, skill: SkillId): number {
 
 function benefit(model: Model, skills: readonly SkillId[]): number {
   const direct = skills.reduce((sum, skill) => sum + skillBenefit(model, skill), 0);
-  return direct + model.config.weights.relevance * coverage(model, skills);
+  return finiteValue(direct + model.config.weights.relevance * coverage(model, skills), 'El beneficio');
 }
 
-function totalMinutes(model: Model, skills: readonly SkillId[]): number {
-  return skills.reduce((sum, skill) => sum + durationOf(model, skill), 0);
+function totalSeconds(model: Model, skills: readonly SkillId[]): number {
+  return skills.reduce((sum, skill) => sum + secondsOf(model, skill), 0);
 }
 
 function cost(model: Model, skills: readonly SkillId[]): number {
-  return (model.config.lambda * totalMinutes(model, skills)) / model.config.referenceMinutes;
+  const minutes = totalSeconds(model, skills) / SECONDS_PER_MINUTE;
+  return finiteValue((model.config.lambda * minutes) / model.config.referenceMinutes, 'El coste');
 }
 
 function scoreOf(model: Model, skill: SkillId, title: string): InterventionScore {
@@ -331,14 +377,16 @@ function scoreOf(model: Model, skill: SkillId, title: string): InterventionScore
 
   const benefitOfSkill = benefit(model, [skill]);
   const costOfSkill = cost(model, [skill]);
-  const netValue = benefitOfSkill - costOfSkill;
-  const durationMinutes = durationOf(model, skill);
+  const netValue = finiteValue(benefitOfSkill - costOfSkill, 'El valor neto');
+  const durationSeconds = secondsOf(model, skill);
+  const durationMinutes = durationSeconds / SECONDS_PER_MINUTE;
 
   return {
     id: interventionId(skill),
     skill,
     title,
     durationMinutes,
+    durationSeconds,
     components: {
       need: metrics.need,
       relevance,
@@ -355,25 +403,29 @@ function scoreOf(model: Model, skill: SkillId, title: string): InterventionScore
     benefit: benefitOfSkill,
     cost: costOfSkill,
     netValue,
-    valuePerMinute: netValue / durationMinutes,
+    valuePerMinute: finiteValue(netValue / durationMinutes, 'El valor por minuto'),
   };
 }
 
 // En cada iteración añade todo el grupo a distancia ≤ 1e-12 del máximo actual,
 // ordenado por duración e id, y continúa con las restantes (§2.6).
-export function rankWithTies<T extends Pick<InterventionScore, 'id' | 'durationMinutes' | 'netValue'>>(
+export function rankWithTies<T extends Pick<InterventionScore, 'id' | 'durationSeconds' | 'netValue'>>(
   scores: readonly T[],
 ): readonly T[] {
+  for (const score of scores) {
+    finiteValue(score.netValue, `El valor neto de ${score.id}`);
+  }
+
   const ranked: T[] = [];
   let remaining = [...scores];
   while (remaining.length > 0) {
     const best = Math.max(...remaining.map((score) => score.netValue));
     const isTied = (score: T): boolean => best - score.netValue <= VALUE_TIE_TOLERANCE;
-    ranked.push(
-      ...remaining
-        .filter(isTied)
-        .sort((a, b) => a.durationMinutes - b.durationMinutes || compareIds(a.id, b.id)),
-    );
+    const group = remaining.filter(isTied);
+    if (group.length === 0) {
+      throw new InferenceError('NON_FINITE_VALUE', 'El ranking no puede avanzar');
+    }
+    ranked.push(...group.sort((a, b) => a.durationSeconds - b.durationSeconds || compareIds(a.id, b.id)));
     remaining = remaining.filter((score) => !isTied(score));
   }
   return ranked;
@@ -397,25 +449,26 @@ function allSubsets(): readonly (readonly SkillId[])[] {
 interface PlanCandidate {
   readonly skills: readonly SkillId[];
   readonly ids: readonly string[];
-  readonly minutes: number;
+  readonly seconds: number;
   readonly value: number;
 }
 
-// Enumeración exacta de los 64 subconjuntos, incluido el vacío.
-function bestSubset(model: Model, availableMinutes: number): readonly SkillId[] {
+// Enumeración exacta de los 64 subconjuntos, incluido el vacío. Solo se valoran
+// los que caben en el presupuesto.
+function bestSubset(model: Model, availableSeconds: number): readonly SkillId[] {
   const feasible: readonly PlanCandidate[] = allSubsets()
+    .filter((skills) => totalSeconds(model, skills) <= availableSeconds)
     .map((skills) => ({
       skills,
       ids: skills.map(interventionId).sort(compareIds),
-      minutes: totalMinutes(model, skills),
-      value: benefit(model, skills) - cost(model, skills),
-    }))
-    .filter((candidate) => candidate.minutes <= availableMinutes);
+      seconds: totalSeconds(model, skills),
+      value: finiteValue(benefit(model, skills) - cost(model, skills), 'El valor de un subconjunto'),
+    }));
 
   const best = Math.max(...feasible.map((candidate) => candidate.value));
   const [selected] = feasible
     .filter((candidate) => best - candidate.value <= VALUE_TIE_TOLERANCE)
-    .sort((a, b) => a.minutes - b.minutes || compareIdLists(a.ids, b.ids));
+    .sort((a, b) => a.seconds - b.seconds || compareIdLists(a.ids, b.ids));
   return selected?.skills ?? [];
 }
 
@@ -427,11 +480,11 @@ function planFor(model: Model, skills: readonly SkillId[], ranking: readonly Int
       .filter((score) => skills.includes(score.skill))
       .map(({ id, skill, title, durationMinutes }) => ({ id, skill, title, durationMinutes }))
       .sort((a, b) => compareIds(a.id, b.id)),
-    totalMinutes: totalMinutes(model, skills),
+    totalMinutes: totalSeconds(model, skills) / SECONDS_PER_MINUTE,
     coverage: coverage(model, skills),
     benefit: benefitOfPlan,
     cost: costOfPlan,
-    netValue: benefitOfPlan - costOfPlan,
+    netValue: finiteValue(benefitOfPlan - costOfPlan, 'El valor neto del plan'),
   };
 }
 
@@ -493,10 +546,12 @@ export function rankInterventions(
   config: InterventionConfig = {},
 ): InterventionRanking {
   const effective = effectiveConfig(config);
+  const durationSeconds = secondsBySkill(effective.durations);
   assertInferenceGraph(knowledgeGraph);
   if (typeof availableMinutes !== 'number' || !Number.isFinite(availableMinutes) || availableMinutes < 0) {
     throw new InferenceError('INVALID_BUDGET', 'El presupuesto debe ser finito y no negativo');
   }
+  const availableSeconds = toWholeSeconds(availableMinutes, 'INVALID_BUDGET', 'El presupuesto');
   const summaries = skillSummaries(classDiagnostic);
 
   const common = {
@@ -527,6 +582,7 @@ export function rankInterventions(
         return summary === undefined ? [] : [[skill, metricsOf(summary, classDiagnostic.studentCount)] as const];
       }),
     ),
+    durationSeconds,
     descendantsOf: new Map(SKILL_ORDER.map((skill) => [skill, descendants(knowledgeGraph, skill)])),
     totalImportance: SKILL_ORDER.reduce((sum, skill) => sum + (effective.importance[skill] ?? 0), 0),
   };
@@ -537,7 +593,7 @@ export function rankInterventions(
   const ranking = rankWithTies(scores);
 
   const priorsOnly = classDiagnostic.evidenceStatus === 'priorsOnly';
-  const plan = priorsOnly ? emptyPlan() : planFor(model, bestSubset(model, availableMinutes), ranking);
+  const plan = priorsOnly ? emptyPlan() : planFor(model, bestSubset(model, availableSeconds), ranking);
   const collect: readonly InterventionWarning[] = priorsOnly
     ? [{ code: 'COLLECT_RESPONSES', message: COLLECT_RESPONSES_MESSAGE, skill: null, ancestor: null }]
     : [];

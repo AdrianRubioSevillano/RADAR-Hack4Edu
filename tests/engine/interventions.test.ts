@@ -212,9 +212,9 @@ describe('ranking', () => {
   it('añade todo el grupo empatado con el máximo actual, sin recalcularlo', () => {
     const top = 0.5;
     const ranked = rankWithTies([
-      { id: 'C', durationMinutes: 10, netValue: top - 1.6e-12 },
-      { id: 'B', durationMinutes: 15, netValue: top - 0.8e-12 },
-      { id: 'A', durationMinutes: 15, netValue: top },
+      { id: 'C', durationSeconds: 600, netValue: top - 1.6e-12 },
+      { id: 'B', durationSeconds: 900, netValue: top - 0.8e-12 },
+      { id: 'A', durationSeconds: 900, netValue: top },
     ]);
 
     // Recalcular el grupo tras colocar A pondría C (más corta) antes que B.
@@ -223,8 +223,8 @@ describe('ranking', () => {
 
   it('dentro de un grupo manda la duración aunque el valor sea algo menor', () => {
     const ranked = rankWithTies([
-      { id: 'A', durationMinutes: 15, netValue: 0.5 },
-      { id: 'B', durationMinutes: 10, netValue: 0.5 - 0.5e-12 },
+      { id: 'A', durationSeconds: 900, netValue: 0.5 },
+      { id: 'B', durationSeconds: 600, netValue: 0.5 - 0.5e-12 },
     ]);
 
     expect(ranked.map((item) => item.id)).toEqual(['B', 'A']);
@@ -232,9 +232,9 @@ describe('ranking', () => {
 
   it('incluye el límite de distancia exacta y separa lo que queda fuera', () => {
     const ranked = rankWithTies([
-      { id: 'B', durationMinutes: 15, netValue: 1e-12 },
-      { id: 'A', durationMinutes: 15, netValue: 0 },
-      { id: 'C', durationMinutes: 15, netValue: 3e-12 },
+      { id: 'B', durationSeconds: 900, netValue: 1e-12 },
+      { id: 'A', durationSeconds: 900, netValue: 0 },
+      { id: 'C', durationSeconds: 900, netValue: 3e-12 },
     ]);
 
     expect(ranked.map((item) => item.id)).toEqual(['C', 'A', 'B']);
@@ -242,8 +242,8 @@ describe('ranking', () => {
 
   it('no altera la lista recibida', () => {
     const scores = deepFreeze([
-      { id: 'B', durationMinutes: 15, netValue: 0 },
-      { id: 'A', durationMinutes: 15, netValue: 1 },
+      { id: 'B', durationSeconds: 900, netValue: 0 },
+      { id: 'A', durationSeconds: 900, netValue: 1 },
     ]);
 
     expect(rankWithTies(scores).map((item) => item.id)).toEqual(['A', 'B']);
@@ -657,6 +657,155 @@ describe('validación', () => {
     const score = scoreOf(rankInterventions(diagnostic, KNOWLEDGE_GRAPH, 60), 'NEG');
 
     expect(score.components.confidence).toBe(0);
+  });
+});
+
+describe('tiempo en segundos enteros', () => {
+  const both = { FRA: { need: 1 }, ECU: { need: 1 } };
+
+  it('0.1 y 0.2 minutos caben en 0.3 si ambas compensan', () => {
+    const result = rank(both, 0.3, { durations: { FRA: 0.1, ECU: 0.2 } });
+
+    expect(planSkills(result)).toEqual(['ECU', 'FRA']);
+    expect(result.plan.totalMinutes).toBe(0.3);
+  });
+
+  it('dos actividades de 7.5 minutos caben en 15', () => {
+    const result = rank(both, 15, { durations: { FRA: 7.5, ECU: 7.5 } });
+
+    expect(planSkills(result)).toEqual(['ECU', 'FRA']);
+    expect(result.plan.totalMinutes).toBe(15);
+  });
+
+  it('un presupuesto insuficiente sigue rechazando el conjunto', () => {
+    const result = rank(both, 0.25, { durations: { FRA: 0.1, ECU: 0.2 } });
+
+    expect(result.plan.interventions).toHaveLength(1);
+    expect(result.plan.totalMinutes).toBeLessThanOrEqual(0.25);
+  });
+
+  it('un segundo de menos deja fuera el conjunto', () => {
+    const minutes = 17 / 60;
+
+    expect(rank(both, minutes, { durations: { FRA: 0.1, ECU: 0.2 } }).plan.interventions).toHaveLength(1);
+  });
+
+  it('expone la duración en minutos y en segundos', () => {
+    const score = scoreOf(rank({ FRA: { need: 1 } }, 60, { durations: { FRA: 0.1 } }), 'FRA');
+
+    expect(score.durationSeconds).toBe(6);
+    expect(score.durationMinutes).toBe(0.1);
+  });
+
+  it('acepta el redondeo de conversión a menos de 1e-9 de un entero', () => {
+    const score = scoreOf(rank({ FRA: { need: 1 } }, 60, { durations: { FRA: 1 / 3 } }), 'FRA');
+
+    expect(score.durationSeconds).toBe(20);
+    expect(scoreOf(rank({}, 60, { durations: { OPS: 1 / 60 } }), 'OPS').durationSeconds).toBe(1);
+  });
+
+  it('un valor por defecto sigue siendo de 900 segundos', () => {
+    expect(scoreOf(rank({}), 'OPS').durationSeconds).toBe(900);
+  });
+
+  it.each([[0.01], [1 / 120], [0.5 / 60], [1.001]])('rechaza la duración subsegundo %d', (minutes) => {
+    expectInferenceError(() => rank({}, 60, { durations: { OPS: minutes } }), 'INVALID_INTERVENTION_CONFIG');
+  });
+
+  it('rechaza una duración que se convertiría en cero segundos', () => {
+    expectInferenceError(() => rank({}, 60, { durations: { OPS: 1e-12 } }), 'INVALID_INTERVENTION_CONFIG');
+  });
+
+  it.each([[1e300], [Number.MAX_SAFE_INTEGER]])('rechaza la duración fuera del rango seguro %d', (minutes) => {
+    expectInferenceError(() => rank({}, 60, { durations: { OPS: minutes } }), 'INVALID_INTERVENTION_CONFIG');
+  });
+
+  it('rechaza duraciones cuya suma en segundos desbordaría', () => {
+    const durations = Object.fromEntries(ORDER.map((skill) => [skill, 3e13]));
+
+    expect(() => rank({}, 60, { durations: { OPS: 3e13 } })).not.toThrow();
+    expectInferenceError(() => rank({}, 60, { durations }), 'INVALID_INTERVENTION_CONFIG');
+  });
+
+  it.each([[0.01], [0.29], [1 / 120], [1e300], [Number.MAX_SAFE_INTEGER]])('rechaza el presupuesto %d', (minutes) => {
+    expectInferenceError(() => rank({}, minutes), 'INVALID_BUDGET');
+  });
+
+  it('valida los tiempos también con la clase vacía', () => {
+    const empty = getClassDiagnostic([], KNOWLEDGE_GRAPH);
+
+    expectInferenceError(() => rankInterventions(empty, KNOWLEDGE_GRAPH, 0.01), 'INVALID_BUDGET');
+    expectInferenceError(
+      () => rankInterventions(empty, KNOWLEDGE_GRAPH, 60, { durations: { OPS: 0.01 } }),
+      'INVALID_INTERVENTION_CONFIG',
+    );
+  });
+});
+
+describe('valores no representables', () => {
+  const rows = { OPS: { need: 0.5 } };
+
+  it('un coste no representable falla de forma explícita, sin colgarse', () => {
+    expectInferenceError(() => rank(rows, 60, { lambda: 1e308 }), 'NON_FINITE_VALUE');
+  });
+
+  it('también con un ranking hipotético de solo priors', () => {
+    const diagnostic = getClassDiagnostic([createInitialDiagnosticState('S1')], KNOWLEDGE_GRAPH);
+
+    expectInferenceError(
+      () => rankInterventions(diagnostic, KNOWLEDGE_GRAPH, 60, { lambda: 1e308 }),
+      'NON_FINITE_VALUE',
+    );
+  });
+
+  it('un t_ref casi nulo no produce Infinity', () => {
+    expectInferenceError(() => rank(rows, 60, { referenceMinutes: 1e-320 }), 'NON_FINITE_VALUE');
+  });
+
+  it('solo se valoran los subconjuntos que caben en el presupuesto', () => {
+    // 1e307·15 es representable; 1e307·90 no lo es.
+    const config: InterventionConfig = { lambda: 1e307 };
+    const result = rank(rows, 15, config);
+
+    expect(planSkills(result)).toEqual([]);
+    expect(serializedCopy(result)).toEqual(result);
+    expectInferenceError(() => rank(rows, 90, config), 'NON_FINITE_VALUE');
+  });
+
+  it('un lambda muy grande pero representable da valores finitos', () => {
+    const result = rank(rows, 15, { lambda: 1e300 });
+
+    for (const score of result.ranking) {
+      expect(Number.isFinite(score.netValue)).toBe(true);
+      expect(Number.isFinite(score.valuePerMinute)).toBe(true);
+    }
+    expect(JSON.stringify(result)).not.toContain('"netValue":null');
+  });
+
+  it.each([[Number.NaN], [Number.POSITIVE_INFINITY], [Number.NEGATIVE_INFINITY]])(
+    'rankWithTies rechaza la puntuación %d',
+    (netValue) => {
+      const scores = [
+        { id: 'A', durationSeconds: 900, netValue: 1 },
+        { id: 'B', durationSeconds: 900, netValue },
+      ];
+
+      expectInferenceError(() => rankWithTies(scores), 'NON_FINITE_VALUE');
+      expectInferenceError(() => rankWithTies([...scores].reverse()), 'NON_FINITE_VALUE');
+    },
+  );
+
+  it('rankWithTies termina con valores finitos extremos', () => {
+    const ranked = rankWithTies([
+      { id: 'A', durationSeconds: 900, netValue: -Number.MAX_VALUE },
+      { id: 'B', durationSeconds: 900, netValue: Number.MAX_VALUE },
+    ]);
+
+    expect(ranked.map((item) => item.id)).toEqual(['B', 'A']);
+  });
+
+  it('rankWithTies acepta una lista vacía', () => {
+    expect(rankWithTies([])).toEqual([]);
   });
 });
 

@@ -36,6 +36,7 @@ interface InterventionScore {
   readonly skill: SkillId;
   readonly title: string;
   readonly durationMinutes: number;
+  readonly durationSeconds: number;
   readonly components: InterventionComponents;        // need, relevance, preparation, confidence, priority
   readonly contributions: InterventionContributions;  // preparation, confidence, priority, coverage
   readonly benefit: number;
@@ -72,6 +73,10 @@ interface InterventionWarning {
 
 - Los valores por defecto son SUPUESTOS no calibrados: pesos 0.30, 0.20, 0.30 y 0.20, `lambda` 0.10, `referenceMinutes` 30, duraciones de 15 minutos, importancias de 1 y umbrales bajos de 0.5.
 - `weights` puede indicar solo algunos pesos, pero los cuatro efectivos deben sumar 1.
+- **Tiempo:** duraciones y `availableMinutes` están en minutos, con resolución de un segundo. Internamente se convierten a segundos enteros. `0.1` minutos son 6 segundos y `7.5` son 450, pero `0.01` son 0.6 segundos y se rechaza. Se admite un error de conversión de hasta `1e-9` segundos.
+- Las duraciones deben ser de al menos un segundo, y su suma debe ser representable. El presupuesto puede ser 0.
+- `plan.totalMinutes` es la suma en segundos dividida entre 60.
+- Un cálculo no representable, como un coste infinito con un `lambda` enorme, lanza `NON_FINITE_VALUE`. Nunca se devuelve `Infinity` ni `NaN`.
 - Con `priorsOnly`, `ranking` es un cálculo hipotético, `plan` queda vacío y hay un aviso `COLLECT_RESPONSES`.
 - Con la clase vacía, `ranking` y `plan` quedan vacíos y hay un aviso `NO_STUDENTS`. No es un fallo.
 - Los títulos salen del nombre de la competencia en el grafo.
@@ -260,8 +265,9 @@ Las funciones de inferencia lanzan `InferenceError`, con un `code`:
 | `INVALID_EIG` | La EIG no es finita o es menor que `-1e-12`. |
 | `INVALID_CLASS_CONFIG` | Un umbral está fuera de `[0, 1]` o `lowerUncertainty` no es menor que `upperUncertainty`. |
 | `DUPLICATE_STUDENT` | Dos estados tienen el mismo `studentId`. |
-| `INVALID_INTERVENTION_CONFIG` | Pesos, `lambda`, `t_ref`, duraciones, importancias o umbrales inválidos. |
-| `INVALID_BUDGET` | El presupuesto no es finito o es negativo. |
+| `INVALID_INTERVENTION_CONFIG` | Pesos, `lambda`, `t_ref`, duraciones, importancias o umbrales inválidos, o duraciones sin resolución de un segundo. |
+| `INVALID_BUDGET` | El presupuesto no es finito, es negativo, no tiene resolución de un segundo o está fuera del rango seguro. |
+| `NON_FINITE_VALUE` | Una magnitud calculada o una puntuación no son representables. |
 | `INVALID_DIAGNOSTIC` | El diagnóstico tiene competencias, magnitudes, rangos o recuentos incoherentes. |
 
 Un grafo con estructura inválida lanza `KnowledgeGraphError`, como en `validateKnowledgeGraph`. En `selectNextQuestion`, un banco que no pasa la validación lanza `QuestionBankError`.

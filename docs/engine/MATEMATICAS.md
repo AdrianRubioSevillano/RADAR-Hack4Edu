@@ -199,6 +199,10 @@ La cobertura se calcula directamente sobre el conjunto: cada descendiente cuenta
 
 **Plan.** Enumeración exacta de los 64 subconjuntos, incluido el vacío, que cumplen `Σ d_k ≤ T`. Entre los subconjuntos a distancia `≤ 1e-12` del máximo global se elige la menor duración y después la lista de ids ordenada, comparada elemento a elemento. El plan no es un prefijo del ranking. El coste permite descartar incorporaciones que no compensan, y el presupuesto puede agotarse si compensa.
 
+**Tiempo.** Duraciones y presupuesto se convierten a segundos enteros seguros antes de sumar, comparar con el presupuesto y desempatar por duración. Así, `0.1 + 0.2` minutos caben en `0.3`, porque son 6 + 12 segundos frente a 18. El coste sigue siendo `λ · Σ d_k / t_ref`, en minutos.
+
+**Valores no representables.** Beneficio, coste y valor neto se comprueban antes de usarlos, y `rankWithTies` rechaza puntuaciones no finitas. Una operación no representable lanza `NON_FINITE_VALUE`. Solo se valoran los subconjuntos que caben en el presupuesto.
+
 **Avisos.** Usan la tolerancia de clasificación y no alteran la puntuación.
 
 - `LOW_PREPARATION`: indica el ancestro con menor dominio medio. Entre ancestros a distancia `≤ 1e-12` del mínimo, el menor id. Con priors uniformes, sin esa tolerancia decidiría el redondeo.

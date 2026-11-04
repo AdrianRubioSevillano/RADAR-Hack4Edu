@@ -302,6 +302,8 @@ export interface InterventionScore {
   readonly skill: SkillId;
   readonly title: string;
   readonly durationMinutes: number;
+  // Segundos enteros: es lo que se suma, se compara y desempata.
+  readonly durationSeconds: number;
   readonly components: InterventionComponents;
   readonly contributions: InterventionContributions;
   readonly benefit: number;
@@ -387,4 +389,5 @@ export type InferenceErrorCode =
   | 'DUPLICATE_STUDENT'
   | 'INVALID_INTERVENTION_CONFIG'
   | 'INVALID_BUDGET'
-  | 'INVALID_DIAGNOSTIC';
+  | 'INVALID_DIAGNOSTIC'
+  | 'NON_FINITE_VALUE';

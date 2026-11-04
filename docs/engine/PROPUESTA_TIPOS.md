@@ -233,6 +233,7 @@ export interface InterventionScore {
   readonly skill: SkillId;
   readonly title: string;
   readonly durationMinutes: number;
+  readonly durationSeconds: number;
   readonly components: InterventionComponents;
   readonly contributions: InterventionContributions;
   readonly benefit: number;
