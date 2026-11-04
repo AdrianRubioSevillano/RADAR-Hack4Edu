@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 6A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 6B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -376,6 +376,7 @@ createResponseUniforms(seed: number, studentIds: readonly string[], questionIds:
 simulateResponse(syntheticClass: SyntheticClass, studentId: string, question: Question, uniforms: ResponseUniformTable, realParameters?: RealItemParameters): AnswerValue
 
 applySyntheticIntervention(classState: SyntheticClass, intervention: InterventionPlan, knowledgeGraph: KnowledgeGraph, seed: number, config?: SyntheticInterventionConfig): SyntheticInterventionResult
+simulatePostIntervention(input: PostInterventionInput): PostInterventionReport
 
 mulberry32(seed: number): UniformStream
 deriveStreamSeed(seed: number, label: string): number
@@ -470,6 +471,78 @@ interface SyntheticInterventionProvenance {
   readonly config: EffectiveSyntheticInterventionConfig;
   readonly intervenedSkills: readonly SkillId[];  // en el orden de SKILL_ORDER
 }
+
+interface PostInterventionInput {
+  readonly classState: SyntheticClass;
+  readonly intervention: InterventionPlan;
+  readonly seed: number;  // intervención y control; las respuestas usan la de población
+  readonly pretestStates: readonly DiagnosticState[];
+  readonly questionBank: QuestionBank;
+  readonly knowledgeGraph: KnowledgeGraph;
+  readonly priorConfig: PriorConfig;
+  readonly config: PostInterventionConfig;
+}
+
+interface PostInterventionConfig extends SyntheticInterventionConfig {
+  readonly questionBudgetPerStudent: number;      // entero positivo, obligatorio
+  readonly assessmentSkills?: readonly SkillId[];  // por defecto, las seis
+  readonly realParametersByQuestion?: Readonly<Record<QuestionId, RealItemParameters>>;
+}
+
+interface PostInterventionReport {
+  readonly students: readonly StudentPostInterventionReport[];  // por id
+  readonly groups: Readonly<Record<'treatment' | 'control', GroupPostInterventionReport>>;
+  readonly differenceInDifferences: DifferenceInDifferences;  // observed, estimated, simulatedTruth, label
+  readonly coverage: EvaluationCoverage;
+  readonly postStates: readonly DiagnosticState[];  // solo alumnos con alguna pregunta de postest
+  readonly postClass: SyntheticClass;               // verdad simulada
+  readonly assignment: SyntheticAssignment;
+  readonly simulatedChanges: readonly SimulatedMasteryChange[];
+  readonly provenance: PostInterventionProvenance;  // la de 6A, más responseSeed y occasion
+  readonly config: EffectivePostInterventionConfig;
+  readonly priorConfig: EffectivePriorConfig;
+  readonly warnings: readonly PostInterventionWarning[];  // code, message, studentIds
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
+
+interface StudentPostInterventionReport {
+  readonly studentId: string;
+  readonly group: 'treatment' | 'control';
+  readonly coverage: StudentEvaluationCoverage;  // pretestQuestionIds, posttestQuestionIds, requestedBudget, effectiveBudget
+  readonly observed: ObservedOutcome;            // pretest, posttest ({ correct, questions, proportion }), change, label
+  readonly estimated: EstimatedOutcome;          // pretestMeanMastery, pretestBasedOnPriorOnly, posttestMeanMastery, change, label
+  readonly simulatedTruth: SimulatedTruthOutcome;  // before, after, change, label
+}
+
+interface GroupPostInterventionReport {
+  readonly group: 'treatment' | 'control';
+  readonly studentIds: readonly string[];
+  readonly isEmpty: boolean;
+  readonly coverage: EvaluationCoverage;
+  readonly observed: PairedMetric;
+  readonly estimated: PairedMetric;
+  readonly simulatedTruth: PairedMetric;
+}
+
+interface PairedMetric {
+  readonly pairs: number;
+  readonly excluded: number;
+  readonly excludedStudentIds: readonly string[];
+  readonly meanPretest: number | null;
+  readonly meanPosttest: number | null;
+  readonly meanChange: number | null;  // media de cambios individuales
+  readonly label: string;
+}
+
+interface EvaluationCoverage {
+  readonly requestedBudgetPerStudent: number;
+  readonly pretest: EvaluationComposition;   // questionCount, questionsByPrimarySkill
+  readonly posttest: EvaluationComposition;
+  readonly meanEffectiveBudget: number | null;
+  readonly studentsWithoutPosttest: readonly string[];
+  readonly studentsWithReducedPosttest: readonly string[];
+}
 ```
 
 - `seed` es un entero uint32, incluido 0. `studentCount` es un entero seguro no negativo, y la clase vacía es válida.
@@ -490,6 +563,15 @@ interface SyntheticInterventionProvenance {
 - Reconstruir `postClass` requiere el plan, el estado anterior y la semilla y configuración de intervención: `createSyntheticClass` con `postClass.seed` devuelve el estado anterior, no este.
 - `postClass.students` va ordenado por id en unidades de código, así que `S100` queda detrás de `S10`.
 - La misma tabla de uniformes vale para `postClass`: el mismo `u` puede dar otra respuesta con la nueva `α`.
+- `simulatePostIntervention` separa tres capas: `observed`, `estimated` y `simulatedTruth`. Nunca las combina, y `null` no se convierte en 0.
+- `observed` es un cambio descriptivo no equiparado, porque pre y post usan ítems distintos. `estimated` no es aprendizaje confirmado. `simulatedTruth` solo es conocible en esta simulación.
+- `postStates` no incluye a los alumnos sin preguntas nuevas: el prior no se presenta como resultado de un postest. Sus resultados de postest son `null`.
+- Las preguntas del postest se fijan antes de aplicar el plan, con `fixedQuestionOrder`, sin EIG. No dependen del plan ni de tratamiento o control.
+- `seed` no se usa para las respuestas: los uniformes del postest usan `classState.seed` y la ocasión `posttest`. La tabla no forma parte del informe.
+- `priorConfig` debe coincidir con el prior efectivo de cada pretest, tras normalizarlo. No se compara el posterior con el prior.
+- `realParametersByQuestion` solo afecta al respondedor: el diagnóstico sigue usando los parámetros del banco.
+- Esta función es el único punto de `src/simulation` que llama a `createInitialDiagnosticState` y `submitAnswer`, con id, prior y respuestas observables.
+- Avisos: `NO_STUDENTS`, `EMPTY_TREATMENT`, `EMPTY_CONTROL`, `NO_POSTTEST_QUESTIONS`, `REDUCED_POSTTEST`, `PRIOR_ONLY_PRETEST` y `UNEQUAL_COVERAGE`.
 
 | `SimulationError.code` | Causa |
 |---|---|
@@ -505,8 +587,13 @@ interface SyntheticInterventionProvenance {
 | `UNKNOWN_STUDENT` | El alumno no está en la clase. |
 | `MISSING_UNIFORM` | La tabla no cubre el par (alumno, pregunta). |
 | `INVALID_QUESTION` | Formato desconocido, opciones inválidas, sin distractores o respuesta numérica no canónica. |
-| `INVALID_REAL_PARAMETERS` | `realParameters` no es un objeto. |
+| `INVALID_REAL_PARAMETERS` | `realParameters` no es un objeto, o `realParametersByQuestion` cita preguntas desconocidas o valores que no son objetos. |
 | `INVALID_INTERVENTION_PLAN` | El plan no tiene la forma esperada, repite o desconoce una competencia, un id no corresponde a su competencia o `totalMinutes` no coincide con las duraciones. |
 | `INVALID_INTERVENTION_CONFIG` | Probabilidad, factor o fracción de control fuera de `[0, 1]`. |
+| `INVALID_POST_INTERVENTION_INPUT` | La entrada no es un objeto o falta `priorConfig`. |
+| `INVALID_POST_INTERVENTION_CONFIG` | `questionBudgetPerStudent` no es un entero positivo o `assessmentSkills` está vacía, repite o cita competencias desconocidas. |
+| `INCONSISTENT_PRETEST` | Los estados de pretest no corresponden exactamente a los alumnos de la clase. |
+| `PRIOR_MISMATCH` | `priorConfig` no coincide con el prior efectivo de algún pretest. |
+| `POSTTEST_FAILED` | `submitAnswer` rechaza una respuesta sintética. |
 
-Un grafo sin las seis competencias lanza `InferenceError` con `INVALID_GRAPH`. Un grafo con estructura inválida lanza `KnowledgeGraphError`. `slip` y `guess`, del ítem o reales, que incumplan la restricción DINA lanzan `InferenceError` con `INVALID_PARAMETERS`, y un `R_q` inválido, sus códigos habituales.
+Un grafo sin las seis competencias lanza `InferenceError` con `INVALID_GRAPH`. Un grafo con estructura inválida lanza `KnowledgeGraphError`. `slip` y `guess`, del ítem o reales, que incumplan la restricción DINA lanzan `InferenceError` con `INVALID_PARAMETERS`, y un `R_q` inválido, sus códigos habituales. En `simulatePostIntervention`, estados, historiales, banco y prior inválidos lanzan los errores del motor (`INVALID_STATE`, `INVALID_HISTORY`, `INVALID_BANK`, `INVALID_PRIOR`).

@@ -1,10 +1,38 @@
+import { assertValidBank, assertValidDiagnosticState } from '../engine/answers.ts';
 import { assertInferenceGraph } from '../engine/bayes.ts';
-import { SKILL_ORDER, ancestors } from '../engine/index.ts';
-import type { InterventionPlan, KnowledgeGraph, MasteryVector, SkillId } from '../engine/index.ts';
+import {
+  SKILL_ORDER,
+  ancestors,
+  correctProbability,
+  createInitialDiagnosticState,
+  fixedQuestionOrder,
+  requiredSkills,
+  submitAnswer,
+} from '../engine/index.ts';
+import type {
+  DiagnosticState,
+  EffectivePriorConfig,
+  InterventionPlan,
+  KnowledgeGraph,
+  MasteryVector,
+  PriorConfig,
+  Question,
+  QuestionBank,
+  QuestionId,
+  SkillId,
+} from '../engine/index.ts';
+import { aggregateReport, studentReport } from './postInterventionReport.ts';
+import { createResponseUniforms, simulateResponse } from './responder.ts';
 import { GENERATOR, STREAMS, SimulationError, assertValidSeed, createStream } from './rng.ts';
 import { assertValidClass, isBlank, isInUnit } from './syntheticClass.ts';
 import type {
+  EffectivePostInterventionConfig,
   EffectiveSyntheticInterventionConfig,
+  PostInterventionConfig,
+  PostInterventionInput,
+  PostInterventionReport,
+  RealItemParameters,
+  ResponseUniformTable,
   SimulatedMasteryChange,
   SyntheticAssignment,
   SyntheticClass,
@@ -227,5 +255,250 @@ export function applySyntheticIntervention(
     },
     assumptions: [...ASSUMPTIONS],
     disclaimer: DISCLAIMER,
+  };
+}
+
+const POSTTEST_OCCASION = 'posttest';
+
+const POST_INTERVENTION_DISCLAIMER =
+  'Simulación con parámetros SUPUESTOS: no demuestra eficacia educativa. ' +
+  'El cambio observado es descriptivo no equiparado, porque pre y post usan ítems distintos. ' +
+  'El cambio estimado no es aprendizaje confirmado, y el cambio real simulado solo es conocible aquí. ' +
+  'En alumnos reales, una comparación antes y después no demuestra causalidad; la diferencia en diferencias es una estimación en simulación.';
+
+const POST_INTERVENTION_ASSUMPTIONS: readonly string[] = [
+  ...ASSUMPTIONS,
+  'Las respuestas siguen DINA por construcción, con parámetros no calibrados.',
+  'El postest usa una selección fija, sin EIG, fijada antes de aplicar el plan.',
+];
+
+function postConfigError(message: string): SimulationError {
+  return new SimulationError('INVALID_POST_INTERVENTION_CONFIG', message);
+}
+
+function effectiveSkills(given: readonly SkillId[] | undefined): readonly SkillId[] {
+  if (given === undefined) {
+    return [...SKILL_ORDER];
+  }
+  if (!Array.isArray(given) || given.length === 0 || new Set(given).size !== given.length) {
+    throw postConfigError('assessmentSkills debe ser una lista no vacía y sin repetir');
+  }
+  if (!given.every((skill) => SKILL_ORDER.includes(skill))) {
+    throw postConfigError('assessmentSkills cita una competencia desconocida');
+  }
+  return SKILL_ORDER.filter((skill) => given.includes(skill));
+}
+
+// correctProbability aplica la restricción DINA; el resultado no se usa.
+function effectiveRealParameters(
+  given: PostInterventionConfig['realParametersByQuestion'],
+  bank: QuestionBank,
+): Readonly<Record<QuestionId, RealItemParameters>> {
+  if (given === undefined) {
+    return {};
+  }
+  if (typeof given !== 'object' || given === null || Array.isArray(given)) {
+    throw new SimulationError('INVALID_REAL_PARAMETERS', 'realParametersByQuestion debe asociar ids y parámetros');
+  }
+  const unknownId = Object.keys(given).find((id) => !bank.questions.some((question) => question.id === id));
+  if (unknownId !== undefined) {
+    throw new SimulationError('INVALID_REAL_PARAMETERS', `Pregunta desconocida en los parámetros reales: ${unknownId}`);
+  }
+  const noMastery = SKILL_ORDER.map(() => 0 as const);
+  return Object.fromEntries(
+    bank.questions.flatMap((question) => {
+      if (!Object.hasOwn(given, question.id)) {
+        return [];
+      }
+      const parameters = given[question.id];
+      if (typeof parameters !== 'object' || parameters === null) {
+        throw new SimulationError('INVALID_REAL_PARAMETERS', `Parámetros reales inválidos en ${question.id}`);
+      }
+      const { slip, guess } = parameters;
+      correctProbability(noMastery, requiredSkills(question), slip, guess);
+      return [[question.id, { slip, guess }]];
+    }),
+  );
+}
+
+function effectivePostConfig(config: PostInterventionConfig, bank: QuestionBank): EffectivePostInterventionConfig {
+  if (typeof config !== 'object' || config === null) {
+    throw postConfigError('La configuración no tiene la forma esperada');
+  }
+  const { questionBudgetPerStudent } = config;
+  if (!Number.isSafeInteger(questionBudgetPerStudent) || questionBudgetPerStudent <= 0) {
+    throw postConfigError('questionBudgetPerStudent debe ser un entero positivo');
+  }
+  return {
+    ...effectiveConfig(config),
+    questionBudgetPerStudent,
+    assessmentSkills: effectiveSkills(config.assessmentSkills),
+    realParametersByQuestion: effectiveRealParameters(config.realParametersByQuestion, bank),
+  };
+}
+
+function pretestError(message: string): SimulationError {
+  return new SimulationError('INCONSISTENT_PRETEST', message);
+}
+
+// Correspondencia exacta entre alumnos y estados, con cada historial válido.
+function matchedPretests(
+  students: readonly SyntheticStudent[],
+  pretestStates: readonly DiagnosticState[],
+  bank: QuestionBank,
+): ReadonlyMap<string, DiagnosticState> {
+  if (!Array.isArray(pretestStates)) {
+    throw pretestError('pretestStates debe ser una lista');
+  }
+  const states = new Map<string, DiagnosticState>();
+  for (const state of pretestStates as readonly DiagnosticState[]) {
+    assertValidDiagnosticState(state, bank);
+    if (states.has(state.studentId)) {
+      throw pretestError(`Estado repetido: ${state.studentId}`);
+    }
+    states.set(state.studentId, state);
+  }
+  if (states.size !== students.length || !students.every((student) => states.has(student.studentId))) {
+    throw pretestError('Los estados de pretest no corresponden exactamente a los alumnos de la clase');
+  }
+  return states;
+}
+
+function isSamePrior(a: EffectivePriorConfig, b: EffectivePriorConfig): boolean {
+  return (
+    SKILL_ORDER.every((skill) => a.marginals[skill] === b.marginals[skill]) &&
+    a.compatibility?.epsilon === b.compatibility?.epsilon
+  );
+}
+
+// Compara configuraciones de prior: el posterior debe poder diferir del prior.
+function assertSamePrior(prior: EffectivePriorConfig, states: Iterable<DiagnosticState>): void {
+  for (const state of states) {
+    if (!isSamePrior(prior, state.priorConfig)) {
+      throw new SimulationError('PRIOR_MISMATCH', `${state.studentId}: priorConfig no coincide con su pretest`);
+    }
+  }
+}
+
+// Solo depende del banco, del alcance y del historial: nunca del plan.
+function posttestQuestions(
+  state: DiagnosticState,
+  order: readonly Question[],
+  config: EffectivePostInterventionConfig,
+): readonly Question[] {
+  const answered = new Set(state.responses.map((record) => record.questionId));
+  return order
+    .filter((question) => config.assessmentSkills.includes(question.primarySkill) && !answered.has(question.id))
+    .slice(0, config.questionBudgetPerStudent);
+}
+
+interface PosttestContext {
+  readonly postClass: SyntheticClass;
+  readonly uniforms: ResponseUniformTable;
+  readonly bank: QuestionBank;
+  readonly graph: KnowledgeGraph;
+  readonly prior: PriorConfig;
+  readonly config: EffectivePostInterventionConfig;
+}
+
+// La verdad se queda en el respondedor: el diagnóstico solo recibe id, prior y
+// respuestas observables.
+function runPosttest(studentId: string, questions: readonly Question[], context: PosttestContext): DiagnosticState | null {
+  if (questions.length === 0) {
+    return null;
+  }
+  const { postClass, uniforms, bank, graph, prior, config } = context;
+  return questions.reduce((state, question) => {
+    const real = Object.hasOwn(config.realParametersByQuestion, question.id)
+      ? config.realParametersByQuestion[question.id]
+      : undefined;
+    const answer = simulateResponse(postClass, studentId, question, uniforms, real);
+    const result = submitAnswer(state, question.id, answer, bank);
+    if (!result.ok) {
+      throw new SimulationError('POSTTEST_FAILED', `${studentId}, ${question.id}: ${result.error.message}`);
+    }
+    return result.value;
+  }, createInitialDiagnosticState(studentId, prior, graph));
+}
+
+export function simulatePostIntervention(input: PostInterventionInput): PostInterventionReport {
+  if (typeof input !== 'object' || input === null) {
+    throw new SimulationError('INVALID_POST_INTERVENTION_INPUT', 'La entrada no tiene la forma esperada');
+  }
+  const { classState, intervention, seed, pretestStates, questionBank, knowledgeGraph, priorConfig, config } = input;
+  if (typeof priorConfig !== 'object' || priorConfig === null) {
+    throw new SimulationError('INVALID_POST_INTERVENTION_INPUT', 'priorConfig es obligatorio');
+  }
+  assertValidClass(classState);
+  assertInferenceGraph(knowledgeGraph);
+  assertValidBank(questionBank);
+  const effective = effectivePostConfig(config, questionBank);
+  const pretests = matchedPretests(classState.students, pretestStates, questionBank);
+  const prior = createInitialDiagnosticState('prior', priorConfig, knowledgeGraph).priorConfig;
+  assertSamePrior(prior, pretests.values());
+
+  const questionsById = new Map(questionBank.questions.map((question) => [question.id, question]));
+  const order = fixedQuestionOrder(questionBank, knowledgeGraph).flatMap((id) => questionsById.get(id) ?? []);
+  const selections = new Map(
+    [...pretests].map(([studentId, state]) => [studentId, posttestQuestions(state, order, effective)] as const),
+  );
+
+  const { improvementProbability, prerequisiteImprovementFactor, controlFraction } = effective;
+  const intervened = applySyntheticIntervention(classState, intervention, knowledgeGraph, seed, {
+    improvementProbability,
+    prerequisiteImprovementFactor,
+    controlFraction,
+  });
+  const { postClass, assignment } = intervened;
+
+  const studentIds = postClass.students.map((student) => student.studentId);
+  const selectedIds = [...new Set([...selections.values()].flatMap((questions) => questions.map((question) => question.id)))];
+  const uniforms = createResponseUniforms(classState.seed, studentIds, selectedIds, POSTTEST_OCCASION);
+  const context: PosttestContext = {
+    postClass,
+    uniforms,
+    bank: questionBank,
+    graph: knowledgeGraph,
+    prior: priorConfig,
+    config: effective,
+  };
+
+  const control = new Set(assignment.controlStudentIds);
+  const before = new Map(classState.students.map((student) => [student.studentId, student.trueMastery]));
+  const outcomes = postClass.students.map(({ studentId, trueMastery }) => {
+    const pretest = pretests.get(studentId);
+    const masteryBefore = before.get(studentId);
+    if (pretest === undefined || masteryBefore === undefined) {
+      throw pretestError(`Falta el estado anterior de ${studentId}`);
+    }
+    const questions = selections.get(studentId) ?? [];
+    const posttest = runPosttest(studentId, questions, context);
+    const report = studentReport({
+      studentId,
+      group: control.has(studentId) ? 'control' : 'treatment',
+      pretest,
+      posttest,
+      posttestQuestionIds: questions.map((question) => question.id),
+      masteryBefore,
+      masteryAfter: trueMastery,
+      questionsById,
+      config: effective,
+    });
+    return { posttest, report };
+  });
+  const students = outcomes.map((outcome) => outcome.report);
+
+  return {
+    students,
+    ...aggregateReport(students, questionsById, effective),
+    postStates: outcomes.flatMap((outcome) => outcome.posttest ?? []),
+    postClass,
+    assignment,
+    simulatedChanges: intervened.simulatedChanges,
+    provenance: { ...intervened.provenance, responseSeed: classState.seed, occasion: POSTTEST_OCCASION },
+    config: effective,
+    priorConfig: prior,
+    assumptions: [...POST_INTERVENTION_ASSUMPTIONS],
+    disclaimer: POST_INTERVENTION_DISCLAIMER,
   };
 }

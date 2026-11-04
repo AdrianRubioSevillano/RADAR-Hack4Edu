@@ -1,6 +1,16 @@
 // Tipos del simulador. La verdad simulada vive solo aquí: no pasa a src/engine
 // ni a tipos compartidos (§2.7).
-import type { MasteryVector, SkillId } from '../engine/index.ts';
+import type {
+  DiagnosticState,
+  EffectivePriorConfig,
+  InterventionPlan,
+  KnowledgeGraph,
+  MasteryVector,
+  PriorConfig,
+  QuestionBank,
+  QuestionId,
+  SkillId,
+} from '../engine/index.ts';
 
 export type SimulationErrorCode =
   | 'INVALID_SEED'
@@ -17,7 +27,12 @@ export type SimulationErrorCode =
   | 'INVALID_QUESTION'
   | 'INVALID_REAL_PARAMETERS'
   | 'INVALID_INTERVENTION_PLAN'
-  | 'INVALID_INTERVENTION_CONFIG';
+  | 'INVALID_INTERVENTION_CONFIG'
+  | 'INVALID_POST_INTERVENTION_INPUT'
+  | 'INVALID_POST_INTERVENTION_CONFIG'
+  | 'INCONSISTENT_PRETEST'
+  | 'PRIOR_MISMATCH'
+  | 'POSTTEST_FAILED';
 
 // Devuelve el siguiente uniforme en [0, 1) y avanza su propio estado.
 export type UniformStream = () => number;
@@ -143,6 +158,177 @@ export interface SyntheticInterventionResult {
   // Por alumno y, dentro de cada uno, en el orden de SKILL_ORDER.
   readonly simulatedChanges: readonly SimulatedMasteryChange[];
   readonly provenance: SyntheticInterventionProvenance;
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
+
+export interface PostInterventionConfig extends SyntheticInterventionConfig {
+  // Entero positivo.
+  readonly questionBudgetPerStudent: number;
+  // Por defecto, las seis competencias.
+  readonly assessmentSkills?: readonly SkillId[];
+  // Solo afectan al respondedor, nunca al motor.
+  readonly realParametersByQuestion?: Readonly<Record<QuestionId, RealItemParameters>>;
+}
+
+export interface EffectivePostInterventionConfig extends EffectiveSyntheticInterventionConfig {
+  readonly questionBudgetPerStudent: number;
+  // En el orden de SKILL_ORDER.
+  readonly assessmentSkills: readonly SkillId[];
+  // Con las claves en el orden del banco.
+  readonly realParametersByQuestion: Readonly<Record<QuestionId, RealItemParameters>>;
+}
+
+export interface PostInterventionInput {
+  readonly classState: SyntheticClass;
+  readonly intervention: InterventionPlan;
+  // Semilla de intervención y control. Las respuestas usan la de población.
+  readonly seed: number;
+  readonly pretestStates: readonly DiagnosticState[];
+  readonly questionBank: QuestionBank;
+  readonly knowledgeGraph: KnowledgeGraph;
+  readonly priorConfig: PriorConfig;
+  readonly config: PostInterventionConfig;
+}
+
+export type TreatmentGroup = 'treatment' | 'control';
+
+export interface ObservedPeriod {
+  readonly correct: number;
+  readonly questions: number;
+  // null si no hubo preguntas en el periodo.
+  readonly proportion: number | null;
+}
+
+export interface ObservedOutcome {
+  readonly pretest: ObservedPeriod;
+  readonly posttest: ObservedPeriod;
+  // Solo con ambas proporciones. Pre y post usan ítems distintos.
+  readonly change: number | null;
+  readonly label: string;
+}
+
+export interface EstimatedOutcome {
+  readonly pretestMeanMastery: number;
+  // El pretest no tenía ninguna respuesta: su valor es el prior.
+  readonly pretestBasedOnPriorOnly: boolean;
+  // null si no hubo preguntas nuevas.
+  readonly posttestMeanMastery: number | null;
+  readonly change: number | null;
+  readonly label: string;
+}
+
+// Solo conocible en esta simulación.
+export interface SimulatedTruthOutcome {
+  readonly before: number;
+  readonly after: number;
+  readonly change: number;
+  readonly label: string;
+}
+
+export interface StudentEvaluationCoverage {
+  // Respuestas del pretest con competencia principal en assessmentSkills.
+  readonly pretestQuestionIds: readonly QuestionId[];
+  // Fijadas antes de aplicar el plan.
+  readonly posttestQuestionIds: readonly QuestionId[];
+  readonly requestedBudget: number;
+  readonly effectiveBudget: number;
+}
+
+export interface StudentPostInterventionReport {
+  readonly studentId: string;
+  readonly group: TreatmentGroup;
+  readonly coverage: StudentEvaluationCoverage;
+  readonly observed: ObservedOutcome;
+  readonly estimated: EstimatedOutcome;
+  readonly simulatedTruth: SimulatedTruthOutcome;
+}
+
+// Sobre los mismos alumnos, con pareja válida para esta métrica.
+export interface PairedMetric {
+  readonly pairs: number;
+  readonly excluded: number;
+  readonly excludedStudentIds: readonly string[];
+  readonly meanPretest: number | null;
+  readonly meanPosttest: number | null;
+  // Media de los cambios individuales.
+  readonly meanChange: number | null;
+  readonly label: string;
+}
+
+export interface EvaluationComposition {
+  readonly questionCount: number;
+  // Competencias de assessmentSkills.
+  readonly questionsByPrimarySkill: Readonly<Record<SkillId, number>>;
+}
+
+export interface EvaluationCoverage {
+  readonly requestedBudgetPerStudent: number;
+  readonly pretest: EvaluationComposition;
+  readonly posttest: EvaluationComposition;
+  // null sin alumnos.
+  readonly meanEffectiveBudget: number | null;
+  readonly studentsWithoutPosttest: readonly string[];
+  // Con alguna pregunta, pero menos que el presupuesto.
+  readonly studentsWithReducedPosttest: readonly string[];
+}
+
+export interface GroupPostInterventionReport {
+  readonly group: TreatmentGroup;
+  readonly studentIds: readonly string[];
+  readonly isEmpty: boolean;
+  readonly coverage: EvaluationCoverage;
+  readonly observed: PairedMetric;
+  readonly estimated: PairedMetric;
+  readonly simulatedTruth: PairedMetric;
+}
+
+// Cambio medio de tratamiento menos cambio medio de control: estimación en
+// simulación. null salvo que ambos grupos tengan parejas válidas.
+export interface DifferenceInDifferences {
+  readonly observed: number | null;
+  readonly estimated: number | null;
+  readonly simulatedTruth: number | null;
+  readonly label: string;
+}
+
+export type PostInterventionWarningCode =
+  | 'NO_STUDENTS'
+  | 'EMPTY_TREATMENT'
+  | 'EMPTY_CONTROL'
+  | 'NO_POSTTEST_QUESTIONS'
+  | 'REDUCED_POSTTEST'
+  | 'PRIOR_ONLY_PRETEST'
+  | 'UNEQUAL_COVERAGE';
+
+export interface PostInterventionWarning {
+  readonly code: PostInterventionWarningCode;
+  readonly message: string;
+  readonly studentIds: readonly string[];
+}
+
+export interface PostInterventionProvenance extends SyntheticInterventionProvenance {
+  // Semilla de los uniformes del postest: la de población.
+  readonly responseSeed: number;
+  readonly occasion: string;
+}
+
+export interface PostInterventionReport {
+  // Por id.
+  readonly students: readonly StudentPostInterventionReport[];
+  readonly groups: Readonly<Record<TreatmentGroup, GroupPostInterventionReport>>;
+  readonly differenceInDifferences: DifferenceInDifferences;
+  readonly coverage: EvaluationCoverage;
+  // Diagnósticos nuevos, por id: solo alumnos con alguna pregunta de postest.
+  readonly postStates: readonly DiagnosticState[];
+  // Verdad simulada, separada de los estados diagnósticos.
+  readonly postClass: SyntheticClass;
+  readonly assignment: SyntheticAssignment;
+  readonly simulatedChanges: readonly SimulatedMasteryChange[];
+  readonly provenance: PostInterventionProvenance;
+  readonly config: EffectivePostInterventionConfig;
+  readonly priorConfig: EffectivePriorConfig;
+  readonly warnings: readonly PostInterventionWarning[];
   readonly assumptions: readonly string[];
   readonly disclaimer: string;
 }

@@ -1,18 +1,36 @@
 export { GENERATOR, STREAMS, SimulationError, createStream, deriveStreamSeed, mulberry32 } from './rng.ts';
-export { applySyntheticIntervention } from './postIntervention.ts';
+export { applySyntheticIntervention, simulatePostIntervention } from './postIntervention.ts';
 export { createResponseUniforms, simulateResponse } from './responder.ts';
 export { createSyntheticClass, observableStudents } from './syntheticClass.ts';
 export type {
+  DifferenceInDifferences,
+  EffectivePostInterventionConfig,
   EffectiveSimulationConfig,
   EffectiveSyntheticInterventionConfig,
+  EstimatedOutcome,
+  EvaluationComposition,
+  EvaluationCoverage,
   GeneratorInfo,
+  GroupPostInterventionReport,
   ObservableStudent,
+  ObservedOutcome,
+  ObservedPeriod,
+  PairedMetric,
+  PostInterventionConfig,
+  PostInterventionInput,
+  PostInterventionProvenance,
+  PostInterventionReport,
+  PostInterventionWarning,
+  PostInterventionWarningCode,
   RealItemParameters,
   ResponseUniformEntry,
   ResponseUniformTable,
   SimulatedMasteryChange,
+  SimulatedTruthOutcome,
   SimulationConfig,
   SimulationErrorCode,
+  StudentEvaluationCoverage,
+  StudentPostInterventionReport,
   SyntheticAssignment,
   SyntheticClass,
   SyntheticGroupConfig,
@@ -20,5 +38,6 @@ export type {
   SyntheticInterventionProvenance,
   SyntheticInterventionResult,
   SyntheticStudent,
+  TreatmentGroup,
   UniformStream,
 } from './types.ts';

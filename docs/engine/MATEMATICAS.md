@@ -379,6 +379,47 @@ Todas las `p_ik` salen de `α` y los cambios se aplican a la vez: no hay cascada
 
 **Límites.** Es un modelo de transición inventado, sin olvido ni mejora espontánea, en el que la intervención solo actúa sobre sus competencias directas. La asignación usa flujos pseudoaleatorios, no una aleatorización con independencia demostrada.
 
+## Evaluación postintervención
+
+`simulatePostIntervention` aplica §2.8. Solo existe en simulación: no demuestra eficacia educativa.
+
+**Flujo.**
+
+1. Valida la correspondencia entre alumnos y estados de pretest, y cada historial contra el banco.
+2. Normaliza `priorConfig` y lo compara con el prior efectivo de cada pretest.
+3. Fija las preguntas: orden fijo, competencia principal en `assessmentSkills`, sin las respondidas por ese alumno, hasta el presupuesto. Sin EIG.
+4. Aplica la intervención sintética.
+5. Crea los uniformes con la semilla de población y la ocasión `posttest`.
+6. Genera respuestas sobre `postClass` y crea un diagnóstico nuevo por alumno, desde el mismo prior. No se continúa el posterior del pretest, porque el modelo no incorpora transiciones temporales.
+
+La selección se hace antes de aplicar el plan y solo depende de banco, alcance, presupuesto e historial. Por eso coincide entre planes, tratamiento y control con el mismo historial. Los uniformes tampoco dependen del plan ni de la semilla de intervención: dos planes dan la misma respuesta salvo donde `α` difiere.
+
+**Tres capas.** Para el alumno `i`, con `A` las competencias de `assessmentSkills`:
+
+| Capa | Pre | Post | Cambio |
+|---|---|---|---|
+| Observada | Aciertos / preguntas del pretest con competencia principal en `A` | Aciertos / preguntas del postest | Post − pre, si existen ambas proporciones |
+| Estimada | `media_{k∈A} p_ik` del pretest | Igual en el diagnóstico de postest; `null` sin preguntas nuevas | Post − pre; `null` sin ninguna respuesta de pretest o sin postest |
+| Real simulada | `media_{k∈A} α_ik` antes del plan | `media_{k∈A} α_ik` en `postClass` | Post − pre, siempre disponible |
+
+El cambio observado es **descriptivo no equiparado**: pre y post usan ítems distintos, con otra composición y dificultad. El cambio estimado compara dos diagnósticos independientes y no es aprendizaje confirmado. Si el pretest no tenía respuestas, su estimación es el prior y el cambio no se calcula. Una respuesta fuera de `A` basta para que no sea solo prior, aunque la proporción observada sea `null`.
+
+**Agregación.** Para cada grupo y capa se usan solo los alumnos con pareja válida en esa capa:
+
+```
+meanPretest, meanPosttest = medias sobre esos alumnos
+meanChange                = media de sus cambios individuales
+DiD                       = meanChange_tratamiento − meanChange_control
+```
+
+La diferencia en diferencias existe solo si ambos grupos tienen parejas válidas en esa capa. `null` nunca se convierte en 0. Las parejas válidas pueden diferir entre capas y entre grupos, y se informa de ellas y de las exclusiones.
+
+**Ejemplo.** Tratamiento con proporciones pre `1/2` y `0`, y post `1` y `1`: cambios `+0.5` y `+1`, media `0.75`. Control con pre `1/2` y `1`, y post `0` y `0`: cambios `−0.5` y `−1`, media `−0.75`. La diferencia en diferencias es `1.5`, en una escala descriptiva no equiparada.
+
+**Cobertura.** Se informa del presupuesto pedido y efectivo, de la composición por competencia principal y de los alumnos sin postest o con postest reducido. `UNEQUAL_COVERAGE` compara con enteros las preguntas de postest por alumno y competencia entre grupos: una cobertura desigual no es evidencia concluyente.
+
+**Límites.** En alumnos reales, una comparación antes y después no demuestra causalidad. La diferencia en diferencias es una estimación dentro de esta simulación, y sus datos siguen DINA con parámetros no calibrados. La asignación al control es pseudoaleatoria y grupos pequeños dan comparaciones inestables. No hay intervalos de confianza: una sola réplica no permite extraer conclusiones.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |

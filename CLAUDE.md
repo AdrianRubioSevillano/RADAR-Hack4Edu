@@ -242,6 +242,18 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
   - Las competencias seleccionadas son las del plan. `benefit`, `netValue` y demás valores del plan no se usan como probabilidades de mejora.
   - `postClass` conserva ids, grupos generadores, `skillOrder` y semilla de población. Reconstruirlo requiere también el plan, el estado anterior y la semilla y configuración de intervención: no basta con regenerar desde la semilla de población.
   - Los cambios reales simulados se informan aparte de cualquier observación y no se presentan como aprendizaje observado.
+- Concreciones de la Fase 6B (`simulatePostIntervention`):
+  - `config` combina las opciones de la Fase 6A con `questionBudgetPerStudent`, `assessmentSkills` (lista no vacía, única y válida) y `realParametersByQuestion` opcional. Los parámetros reales solo afectan al respondedor, nunca al motor, y se validan sus ids y valores.
+  - Flujo: validar la correspondencia exacta entre alumnos y `pretestStates`; validar estados e historiales contra el banco; normalizar `priorConfig` con la inicialización existente y comprobar que coincide con el prior efectivo de cada pre‑test, sin comparar posterior con prior.
+  - Las preguntas del post‑test se fijan antes de aplicar el plan. La selección no depende del plan, de tratamiento o control ni de resultados posteriores.
+  - La intervención reutiliza `applySyntheticIntervention`. Los uniformes del post‑test usan la semilla de población y la ocasión fija `posttest`; `seed` se reserva para intervención y control.
+  - Las respuestas salen de `simulateResponse` sobre `postClass`, y cada alumno recibe un diagnóstico nuevo desde el mismo prior inicial, con `submitAnswer`. No se modifican `pretestStates`.
+  - Sin preguntas nuevas, los resultados del post‑test y los cambios estimados son `null`, con aviso, y el alumno no aparece en `postStates`: el prior no se presenta como resultado. Clase y grupos vacíos dan `null`, sin NaN.
+  - Capa observada: aciertos, preguntas y proporción pre y post. El pre usa las respuestas cuya competencia principal está en `assessmentSkills`. Sin preguntas en un periodo, proporción `null`; cambio solo con ambas proporciones, etiquetado “cambio descriptivo no equiparado”.
+  - Capa estimada: media de marginales sobre `assessmentSkills`, antes y después. Se informa si el pre‑test solo tenía prior. Cambio `null` sin ninguna respuesta de pre‑test o sin post‑test. Las diferencias no se interpretan como aprendizaje confirmado.
+  - Capa real simulada: media de `α` sobre `assessmentSkills`, antes y después, y su cambio. Disponible aunque no queden preguntas, con la etiqueta de que solo es conocible en esta simulación.
+  - Agregación por grupo: solo alumnos con pareja válida para esa métrica. Media de cambios individuales, con número de parejas y exclusiones. Diferencia en diferencias = cambio medio de tratamiento − cambio medio de control, solo si ambos grupos tienen parejas válidas; si no, `null`. `null` nunca se convierte en 0.
+  - La salida conserva por separado `postStates`, procedencia, configuración efectiva, asignación, avisos, composición y cobertura. Los campos de verdad simulada no se mezclan con los estados diagnósticos.
 - Las diferencias brutas de aciertos entre pre‑test y post‑test con ítems distintos no son ganancias equivalentes. Se informa de la composición y la cobertura, y el cambio se etiqueta como descriptivo no equiparado. La simulación no demuestra eficacia educativa real.
 - La salida separa SIEMPRE: (a) cambio en resultados observados, (b) cambio en estimaciones del motor, (c) efecto real simulado (solo conocible en simulación), (d) nota de que en alumnos reales una comparación antes/después no demuestra causalidad; con control aleatorio se muestra la diferencia en diferencias como estimación en simulación.
 
@@ -339,7 +351,8 @@ interface PostInterventionInput {
 ```
 src/engine/       graph.ts, questionBank.ts, bayes.ts, entropy.ts, selection.ts,
                   classDiagnostic.ts, interventions.ts, planComparison.ts, types.ts, index.ts
-src/simulation/   rng.ts, syntheticClass.ts, responder.ts, postIntervention.ts, types.ts, index.ts
+src/simulation/   rng.ts, syntheticClass.ts, responder.ts, postIntervention.ts, postInterventionReport.ts,
+                  types.ts, index.ts
 src/benchmarks/   methods.ts, metrics.ts, stats.ts, runBenchmark.ts, index.ts
 tests/engine|simulation|benchmarks/  *.test.ts
 docs/engine/      MATEMATICAS.md, API.md, INTEGRACION_REACT.md, LIMITACIONES.md,

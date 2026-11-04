@@ -1,6 +1,6 @@
 # Estado del motor RADAR
 
-Traspaso al cerrar la Fase 6A. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+Traspaso al cerrar la Fase 6B. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
 
 ## Implementado
 
@@ -12,9 +12,10 @@ Traspaso al cerrar la Fase 6A. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - **Fase 4C:** `compareInterventionPlans`: plan colectivo frente a plan por necesidad pendiente, con detalle por alumno y competencia.
 - **Fase 5A:** `src/simulation`: PRNG mulberry32 con flujos etiquetados, `createSyntheticClass` y `observableStudents`.
 - **Fase 5B:** `createResponseUniforms` y `simulateResponse`: respuestas sintéticas con números aleatorios comunes.
-- **Fase 6A:** `applySyntheticIntervention`: cambios en el conocimiento simulado, con control opcional. Sin postest ni comparación de resultados observados.
+- **Fase 6A:** `applySyntheticIntervention`: cambios en el conocimiento simulado, con control opcional.
+- **Fase 6B:** `simulatePostIntervention`: postest con diagnóstico nuevo e informe en tres capas: observada, estimada y real simulada.
 
-**Verificación:** typecheck limpio y 1187 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+**Verificación:** typecheck limpio y 1261 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
 
 ## Decisiones y limitaciones vigentes
 
@@ -39,11 +40,13 @@ Traspaso al cerrar la Fase 6A. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - La intervención sintética es un modelo de transición inventado: `improvementProbability` y `prerequisiteImprovementFactor` son SUPUESTOS. Sus cambios no son aprendizaje observado ni demuestran eficacia educativa.
 - El recuento de controles usa una tolerancia numérica de `1e-12` sobre `n · controlFraction`: 100 alumnos con `0.29` dan 29 controles.
 - `postClass` no se regenera desde la semilla de población: requiere plan, estado anterior y semilla y configuración de intervención.
+- El cambio observado es descriptivo no equiparado, el estimado no es aprendizaje confirmado y el real simulado solo es conocible en simulación. La diferencia en diferencias no demuestra causalidad en alumnos reales.
+- Un informe es una sola réplica, sin intervalos de confianza: no sirve para concluir sobre planes. La replicación corresponde a la Fase 7.
+- `postIntervention.ts` es el único módulo de `src/simulation` que llama a `createInitialDiagnosticState` y `submitAnswer`. Los tests comprueban que solo reciben id, prior y respuestas observables.
 - `simulateResponse` valida clase y tabla enteras en cada llamada. Si en la Fase 7 pesa en los benchmarks, habrá que medirlo antes de cambiarlo.
 
 ## Próximo trabajo
 
-- Fase 6B: `simulatePostIntervention`: postest y separación entre resultados observados, estimaciones y efecto real simulado.
 - Fase 7: benchmarks e informes.
 
 ## Reglas para continuar
