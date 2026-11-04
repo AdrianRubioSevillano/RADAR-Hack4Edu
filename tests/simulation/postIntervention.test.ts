@@ -289,6 +289,42 @@ describe('asignación a control', () => {
     expect(new Set([...assignment.controlStudentIds, ...assignment.treatedStudentIds]).size).toBe(7);
   });
 
+  it.each<[string, number, number, number]>([
+    ['el redondeo no pierde un control', 100, 0.29, 29],
+    ['una fracción no entera sigue truncándose', 30, 0.29, 8],
+    ['una fracción auténtica no se redondea', 100, 0.28999, 28],
+    ['fracción 0', 100, 0, 0],
+    ['fracción 1', 100, 1, 100],
+  ])('recuento: %s (%d alumnos, %d)', (_, count, fraction, controls) => {
+    const before = repeated(NONE, count);
+    const config = { ...ALL_IMPROVE, controlFraction: fraction };
+    const result = apply(before, ['OPS'], config);
+    const expected = before.students
+      .map((student) => student.studentId)
+      .sort((a, b) => controlValue(a) - controlValue(b))
+      .slice(0, controls)
+      .sort();
+
+    expect(result.assignment.controlStudentIds).toEqual(expected);
+    expect(result.assignment.treatedStudentIds).toHaveLength(count - controls);
+    expect(JSON.stringify(apply(before, ['OPS'], config))).toBe(JSON.stringify(result));
+
+    // Solo cambian los alumnos fuera del control esperado.
+    for (const id of expected) {
+      expect(masteryOf(result, id)).toEqual(NONE);
+    }
+    expect(result.simulatedChanges.map((change) => change.studentId)).toEqual(result.assignment.treatedStudentIds);
+  });
+
+  it('el recuento solo añade alumnos a los que ya eran control', () => {
+    const before = repeated(NONE, 100);
+    const below = apply(before, [], { controlFraction: 0.28 }).assignment.controlStudentIds;
+    const stabilized = apply(before, [], { controlFraction: 0.29 }).assignment.controlStudentIds;
+
+    expect(stabilized).toHaveLength(29);
+    expect(stabilized).toEqual(expect.arrayContaining([...below]));
+  });
+
   it('fracción 1: tratamiento vacío, identificado y sin cambios', () => {
     const result = apply(repeated(NONE, 5), ['OPS'], { ...ALL_IMPROVE, controlFraction: 1 });
 

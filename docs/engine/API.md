@@ -485,6 +485,7 @@ interface SyntheticInterventionProvenance {
 - Cada llamada valida la clase y la tabla enteras, con coste proporcional a su tamaño.
 - `applySyntheticIntervention` cambia el conocimiento **simulado**: no genera postest ni diagnósticos. `simulatedChanges` no es una observación ni aprendizaje observado.
 - Del plan solo usa las competencias. `benefit`, `netValue` y demás valores se comprueban como forma, pero no intervienen.
+- Número de controles: con `x = studentCount · controlFraction`, `round(x)` si `|x − round(x)| ≤ 1e-12` y `floor(x)` en otro caso. Así, 100 alumnos con `0.29` dan 29 controles y con `0.28999`, 28. Es una tolerancia numérica, no incertidumbre estadística.
 - `seed` es la semilla de intervención, independiente de la de población. `postClass.seed` conserva la de población.
 - Reconstruir `postClass` requiere el plan, el estado anterior y la semilla y configuración de intervención: `createSyntheticClass` con `postClass.seed` devuelve el estado anterior, no este.
 - `postClass.students` va ordenado por id en unidades de código, así que `S100` queda detrás de `S10`.

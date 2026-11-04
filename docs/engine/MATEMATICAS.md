@@ -352,7 +352,14 @@ Si falla en numérica, devuelve `0/1`, o `1/1` si `0/1` es la correcta. Es un **
 
 Solo para demo y benchmarks (§2.8). Cambia el estado real **simulado**: no es aprendizaje observado ni demuestra eficacia educativa.
 
-**Asignación.** Con la semilla de intervención, cada alumno recibe el primer valor de su flujo `intervention/["control","<id>"]`. Se ordena por ese valor, se desempata por id y los primeros `⌊n · controlFraction⌋` son control. La fracción es un número en coma flotante: el valor almacenado de `0.29` queda algo por debajo, y con 100 alumnos da 28 controles. La asignación no depende del plan ni del orden de entrada, y una fracción menor da un subconjunto del control.
+**Asignación.** Con la semilla de intervención, cada alumno recibe el primer valor de su flujo `intervention/["control","<id>"]`. Se ordena por ese valor, se desempata por id y los primeros `c` son control, con `x = n · controlFraction`:
+
+```
+c = round(x)   si |x − round(x)| ≤ 1e-12
+c = ⌊x⌋        en otro caso
+```
+
+La tolerancia es numérica, no incertidumbre estadística: `100 · 0.29` da `28.999999999999996` en coma flotante y debe contar 29, mientras que `100 · 0.28999` son 28 y `30 · 0.29` son 8. Como `x` está en `[0, n]`, `c` también. La asignación no depende del plan ni del orden de entrada, y una fracción menor da un subconjunto del control.
 
 **Mejora.** Sea `α` el estado anterior al plan, `S` las competencias del plan, `p` la probabilidad de mejora y `f` el factor. Para cada alumno tratado y cada `k ∈ S` con `α_k = 0`:
 
@@ -386,6 +393,7 @@ Todas las `p_ik` salen de `α` y los cambios se aplican a la vez: no hay cascada
 | `1e-9` | Tolerancia de `\|Σ w − 1\|` en los pesos (§2.6). |
 | `1e-9` | Tolerancia de `\|dominio medio + necesidad − 1\|` al validar un diagnóstico. |
 | `1e-12` | Distancia al mejor global de las candidatas restantes en los tres primeros criterios del plan B (§2.6.1). |
+| `1e-12` | Distancia de `n · controlFraction` a un entero dentro de la cual el recuento de controles usa ese entero (§2.8). |
 | `1e-9` | Diferencia entre `totalMinutes` y la suma de duraciones al validar un plan en la intervención sintética (§2.8). |
 | `1e-9` | Coherencia del detalle por alumno: entropía con probabilidad, cotas de la preparación y medias con el agregado (§2.6.1). |
 

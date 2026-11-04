@@ -20,6 +20,10 @@ const DEFAULT_CONTROL_FRACTION = 0;
 
 const INTERVENTION_ID_PREFIX = 'reinforce-';
 
+// Tolerancia numérica del recuento de controles: 100·0.29 da 28.999999999999996 en
+// coma flotante. No es incertidumbre estadística.
+const CONTROL_COUNT_TOLERANCE = 1e-12;
+
 // Diferencia de redondeo admitida entre totalMinutes y la suma de las duraciones.
 const TOTAL_MINUTES_TOLERANCE = 1e-9;
 
@@ -111,13 +115,18 @@ function compareText(a: string, b: string): number {
   return a > b ? 1 : 0;
 }
 
+function controlCountOf(studentCount: number, controlFraction: number): number {
+  const exact = studentCount * controlFraction;
+  const nearest = Math.round(exact);
+  return Math.abs(exact - nearest) <= CONTROL_COUNT_TOLERANCE ? nearest : Math.floor(exact);
+}
+
 function assignmentOf(studentIds: readonly string[], seed: number, controlFraction: number): SyntheticAssignment {
   const ranked = studentIds
     .map((studentId) => ({ studentId, value: firstUniform(seed, ['control', studentId]) }))
     .sort((a, b) => a.value - b.value || compareText(a.studentId, b.studentId))
     .map((item) => item.studentId);
-  const controlCount = Math.floor(studentIds.length * controlFraction);
-  const control = new Set(ranked.slice(0, controlCount));
+  const control = new Set(ranked.slice(0, controlCountOf(studentIds.length, controlFraction)));
 
   const treatedStudentIds = studentIds.filter((studentId) => !control.has(studentId));
   const controlStudentIds = studentIds.filter((studentId) => control.has(studentId));

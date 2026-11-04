@@ -235,7 +235,7 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
   - Se advierte de que usar todo el banco en el pre‑test impide un post‑test con ítems nuevos.
 - Decisiones de la Fase 6A (intervención sintética):
   - `improvementProbability = 0.35` y `prerequisiteImprovementFactor = 0.5` por defecto, SUPUESTOS configurables en `[0,1]`.
-  - `controlFraction = 0` por defecto, configurable en `[0,1]`. Número de controles: `floor(studentCount · controlFraction)`. El control no recibe intervención; los grupos vacíos son posibles y se identifican.
+  - `controlFraction = 0` por defecto, configurable en `[0,1]`. Número de controles: con `x = studentCount · controlFraction`, `round(x)` si `|x − round(x)| ≤ 1e-12` y `floor(x)` en otro caso. Es una tolerancia numérica sobre el recuento, no incertidumbre estadística, y el resultado queda entre 0 y `studentCount`. El control no recibe intervención; los grupos vacíos son posibles y se identifican.
   - La semilla de intervención es independiente de la de población.
   - Asignación: cada alumno recibe un valor estable de un flujo etiquetado de control; se ordena por ese valor, se desempata por id y los primeros son control. No depende del orden de entrada de los alumnos ni del plan.
   - Mejora: un uniforme estable por alumno y competencia, en un flujo separado, con etiquetas estructuradas que no incluyen el nombre del plan ni del método. Dos planes sobre la misma población y semilla comparten asignación y uniformes de las competencias comunes. No se consumen ni alteran las tablas de respuestas.
