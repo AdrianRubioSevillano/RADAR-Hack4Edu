@@ -93,7 +93,7 @@ Ninguno está calibrado con datos reales.
 ## Límites técnicos
 
 - **Sin seguridad.** Sin backend, el banco con sus soluciones viaja al navegador. Ocultar campos en la interfaz no protege una evaluación.
-- **Seis competencias fijas.** La inferencia exacta enumera 64 estados. El motor exige exactamente el grafo RADAR.
+- **Seis competencias fijas.** La inferencia exacta enumera 64 estados. El motor exige exactamente los seis identificadores de competencias de RADAR y un grafo de prerrequisitos válido; las aristas pueden variar.
 - **Validación limitada.** Detecta incoherencias, no prueba que un diagnóstico proceda de respuestas reales. `validateQuestionBank` no detecta opciones algebraicas equivalentes con textos distintos.
 - **Pseudoaleatoriedad.** mulberry32 no es criptográfico. Sus flujos comparten un ciclo de `2^32` estados, y las derivaciones de 32 bits pueden coincidir: no hay independencia estadística demostrada.
 - **Grupo deducible.** En la simulación, el id y la regla `i mod G` revelan el grupo generador.
