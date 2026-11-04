@@ -417,7 +417,8 @@ describe('createInitialDiagnosticState', () => {
   it('incluye solo los campos acordados, sin observaciones', () => {
     const state = createInitialDiagnosticState('S01');
 
-    expect(Object.keys(state).sort()).toEqual(['joint', 'priorConfig', 'skillOrder', 'studentId']);
+    expect(Object.keys(state).sort()).toEqual(['joint', 'priorConfig', 'responses', 'skillOrder', 'studentId']);
+    expect(state.responses).toEqual([]);
     expect(state.studentId).toBe('S01');
     expect(state.skillOrder).toEqual(ORDER);
     expect(state.joint).toEqual(UNIFORM);

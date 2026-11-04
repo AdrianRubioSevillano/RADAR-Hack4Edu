@@ -43,6 +43,58 @@ export function exactMastery(joint: readonly Exact[], skills: readonly string[])
     .reduce(add, q(0));
 }
 
+const sum = (values: readonly number[]): number => values.reduce((total, value) => total + value, 0);
+
+export function entropyBits(probabilities: readonly number[]): number {
+  return sum(probabilities.filter((probability) => probability > 0).map((p) => -p * Math.log2(p)));
+}
+
+export function binaryBits(probability: number): number {
+  return entropyBits([probability, 1 - probability]);
+}
+
+export function marginalOf(joint: readonly number[], skill: string): number {
+  return sum(joint.filter((_, index) => masteredSkills(index).includes(skill)));
+}
+
+export interface ReferenceEvidence {
+  readonly correctProbability: number;
+  readonly incorrectProbability: number;
+  readonly eig: number;
+  readonly posteriorIfCorrect: readonly number[];
+  readonly posteriorIfIncorrect: readonly number[];
+}
+
+// Formulación independiente: H(joint) - P(acierto)·H(joint|acierto) - P(fallo)·H(joint|fallo).
+export function referenceEvidence(
+  joint: readonly number[],
+  required: readonly string[],
+  slip: number,
+  guess: number,
+): ReferenceEvidence {
+  const total = sum(joint);
+  const prior = joint.map((mass) => mass / total);
+  const mastersAll = (index: number): boolean => required.every((skill) => masteredSkills(index).includes(skill));
+
+  const correctWeights = prior.map((mass, index) => mass * (mastersAll(index) ? 1 - slip : guess));
+  const incorrectWeights = prior.map((mass, index) => mass * (mastersAll(index) ? slip : 1 - guess));
+  const correctProbability = sum(correctWeights);
+  const incorrectProbability = sum(incorrectWeights);
+  const posteriorIfCorrect = correctWeights.map((weight) => weight / correctProbability);
+  const posteriorIfIncorrect = incorrectWeights.map((weight) => weight / incorrectProbability);
+
+  return {
+    correctProbability,
+    incorrectProbability,
+    eig:
+      entropyBits(prior) -
+      correctProbability * entropyBits(posteriorIfCorrect) -
+      incorrectProbability * entropyBits(posteriorIfIncorrect),
+    posteriorIfCorrect,
+    posteriorIfIncorrect,
+  };
+}
+
 export function expectClose(actual: number | undefined, expected: Exact | number, tolerance = 1e-12): void {
   const value = typeof expected === 'number' ? expected : toNumber(expected);
   expect(actual).toBeDefined();

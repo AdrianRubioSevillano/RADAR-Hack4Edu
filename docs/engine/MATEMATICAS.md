@@ -1,6 +1,6 @@
 # Matemáticas del motor
 
-Este documento cubre lo implementado hasta la Fase 2: modelo DINA, prior, actualización bayesiana exacta, consultas y entropías. La selección de preguntas, el diagnóstico de clase y las intervenciones aún no existen.
+Este documento cubre lo implementado hasta la Fase 3: modelo DINA, prior, actualización bayesiana exacta, consultas, entropías, selección adaptativa y registro de respuestas. El diagnóstico de clase y las intervenciones aún no existen.
 
 Los parámetros no están calibrados con datos reales. Este motor no demuestra precisión diagnóstica ni eficacia educativa.
 
@@ -95,12 +95,54 @@ Ambas están en bits, con `0·log(0) = 0`.
 
 La entropía conjunta usa las masas normalizadas por la masa total. Sin esa división, una distribución aceptada que suma `1 + 5e-10` daría entropías fuera de `[0, 6]`, como `-7.2e-10` en una masa puntual. El resultado no se recorta a ese intervalo.
 
+## Selección activa
+
+`selectNextQuestion` evalúa todas las preguntas no respondidas. Las distribuciones aceptadas se interpretan normalizadas, igual que en las consultas.
+
+**Probabilidades de respuesta.** `P(acierto)` y `P(fallo)` se acumulan por separado con las probabilidades del modelo, y cada una se divide entre la suma de ambas. `P(fallo)` nunca se obtiene restando a 1, porque perdería precisión con valores pequeños.
+
+**EIG exacta (§2.4), en bits.** `EIG(q) = I(α; Y_q) = H_b(P(Y_q = 1)) − Σ_α p(α) · H_b(P(Y_q = 1 | α))`.
+
+Cada entropía binaria se calcula sobre la menor de sus dos probabilidades complementarias. `H_b` es simétrica, y así se pierde menos precisión cuando una está muy cerca de 1, aunque no se elimina el error: con `s = 1e-12`, el error relativo baja de cerca de `1e-4` a menos de `1e-5`.
+
+**Residuos negativos.** La EIG no puede ser negativa. Un valor entre `-1e-12` y 0 se convierte en 0 como corrección numérica. Un valor más negativo o no finito lanza `INVALID_EIG`: no se oculta con un recorte general.
+
+**Explicación de cada candidata.** Incluye `P(acierto)`, `P(fallo)`, la EIG, los dos posteriores hipotéticos y sus marginales. Si una rama no puede normalizarse, se lanza `INVALID_NORMALIZATION`: no se inventa una distribución.
+
+**Reducción esperada de entropía por competencia.** `H_b(p_k) − P(acierto)·H_b(p_k | acierto) − P(fallo)·H_b(p_k | fallo)`, en bits.
+
+- Es la reducción esperada. En una rama concreta la entropía puede aumentar: con `p_k = 0.1`, un acierto acerca la marginal a 0.5.
+- Las reducciones de varias competencias no son aditivas y no suman la EIG. Ninguna supera la EIG, salvo redondeo.
+- A diferencia de la EIG, no se corrigen sus residuos de redondeo.
+
+**Elección.** Se toma el máximo global de EIG y, entre las candidatas a distancia absoluta `≤ 1e-12` de ese máximo, el menor `id` lexicográfico. Comparar siempre con el máximo evita los empates encadenados. El resultado no depende del orden del banco.
+
+**Sin parada.** No hay criterio de parada por confianza, presupuesto o EIG baja. Una candidata con EIG cero sigue siendo elegible. Sin candidatas se devuelve `null`.
+
+## Registro de respuestas
+
+`submitAnswer` corrige la respuesta, actualiza la conjunta una sola vez con `updatePosterior` y añade un registro.
+
+- En opción múltiple se compara el `id` de opción, de forma exacta.
+- En respuesta numérica se normaliza con `normalizeRational`, y se comparan racionales canónicos.
+- Un formato inválido, una opción inexistente o una pregunta repetida devuelven un error y dejan el estado como estaba. No cuentan como respuesta incorrecta.
+
+**Validación del estado.** Antes de usarlo se comprueban `skillOrder`, la distribución, `priorConfig` y el historial. El historial debe tener ids únicos, y cada registro debe ser coherente con el banco.
+
+No se reconstruye el posterior ni se compara con el prior: tras observar respuestas debe poder cambiar. `priorConfig` es procedencia, no una comprobación del posterior.
+
+## Orden fijo
+
+`fixedQuestionOrder` da el orden del método A (§2.9): rondas por competencia principal en orden topológico. Dentro de cada competencia, dificultad 2, 1, 3 y después `id`. Cada ronda toma el siguiente ítem disponible de cada competencia.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |
 |---|---|
 | `1e-9` | Tolerancia numérica de `\|Σπ − 1\|` al aceptar una distribución. Fuera de ella se rechaza, no se corrige. |
 | `1e-300` | Masa total mínima para renormalizar (§2.3). Por debajo, o si no es finita, se lanza `INVALID_NORMALIZATION`. |
+| `1e-12` | Distancia absoluta al máximo global de EIG para considerar un empate (§2.4). |
+| `1e-12` | Residuo negativo de EIG que se convierte en 0. Por debajo se lanza `INVALID_EIG`. |
 
 Una distribución dentro de la tolerancia se acepta sin modificar. La actualización la renormaliza como cualquier otra, y las consultas y `jointEntropy` la interpretan normalizada. Nunca se muta la entrada ni se recortan probabilidades.
 

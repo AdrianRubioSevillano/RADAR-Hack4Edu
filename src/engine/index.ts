@@ -1,3 +1,4 @@
+export { submitAnswer } from './answers.ts';
 export {
   createInitialDiagnosticState,
   createPriorDistribution,
@@ -25,7 +26,13 @@ export {
 } from './graph.ts';
 export { QuestionBankError, RADAR_QUESTION_BANK, validateQuestionBank } from './questionBank.ts';
 export { isCanonicalRational, normalizeRational } from './rational.ts';
+export { fixedQuestionOrder, selectNextQuestion } from './selection.ts';
 export type {
+  AnswerError,
+  AnswerErrorCode,
+  AnswerRecord,
+  AnswerValue,
+  CandidateExplanation,
   CanonicalRational,
   CompatiblePriorConfig,
   DiagnosticState,
@@ -46,6 +53,7 @@ export type {
   QuestionBankErrorCode,
   QuestionId,
   QuestionOption,
+  QuestionSelection,
   RationalErrorCode,
   Result,
   SkillId,

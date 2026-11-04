@@ -74,6 +74,16 @@ function effectivePriorConfig(config: PriorConfig): EffectivePriorConfig {
   };
 }
 
+export function assertValidEffectivePriorConfig(config: EffectivePriorConfig): void {
+  if (typeof config !== 'object' || config === null || typeof config.marginals !== 'object' || config.marginals === null) {
+    throw new InferenceError('INVALID_PRIOR', 'La configuración del prior no tiene la forma esperada');
+  }
+  effectivePriorConfig(config);
+  if (!SKILL_ORDER.every((skill) => skill in config.marginals)) {
+    throw new InferenceError('INVALID_PRIOR', 'La configuración efectiva debe incluir las seis marginales');
+  }
+}
+
 function assertInferenceGraph(graph: KnowledgeGraph): void {
   validateKnowledgeGraph(graph);
   const ids = new Set(graph.nodes.map((node) => node.id));
@@ -130,6 +140,7 @@ export function createInitialDiagnosticState(
     skillOrder: [...SKILL_ORDER],
     joint: priorFromEffective(priorConfig, knowledgeGraph),
     priorConfig,
+    responses: [],
   };
 }
 

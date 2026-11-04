@@ -123,14 +123,66 @@ export interface EffectivePriorConfig {
   readonly compatibility: CompatiblePriorConfig | null;
 }
 
-// Sin historial todavía: la Fase 3 añadirá el registro de respuestas.
+// id de opción en opción múltiple; entrada racional textual en respuesta numérica.
+export type AnswerValue = string;
+
+export interface AnswerRecord {
+  readonly questionId: QuestionId;
+  // Respuesta tal como se recibió.
+  readonly answer: AnswerValue;
+  // id de opción, o racional canónico en respuesta numérica.
+  readonly normalizedAnswer: OptionId | CanonicalRational;
+  readonly isCorrect: boolean;
+}
+
 export interface DiagnosticState {
   readonly studentId: string;
   // Orden explícito de codificación de `joint`, igual a SKILL_ORDER.
   readonly skillOrder: readonly SkillId[];
   readonly joint: JointDistribution;
-  // Copia de la configuración efectiva, para reutilizar el mismo prior.
+  // Copia de la configuración efectiva: procedencia del prior, no una
+  // comprobación del posterior, que cambia al observar respuestas.
   readonly priorConfig: EffectivePriorConfig;
+  readonly responses: readonly AnswerRecord[];
+}
+
+export type AnswerErrorCode =
+  | 'INVALID_BANK'
+  | 'INVALID_STATE'
+  | 'UNKNOWN_QUESTION'
+  | 'REPEATED_QUESTION'
+  | 'INVALID_ANSWER_TYPE'
+  | 'UNKNOWN_OPTION'
+  | 'INVALID_NUMERIC_FORMAT'
+  | 'ZERO_DENOMINATOR'
+  | 'INFERENCE_FAILED';
+
+export interface AnswerError {
+  readonly code: AnswerErrorCode;
+  readonly message: string;
+  readonly questionId: QuestionId | null;
+  // Código del error interno que lo originó, si lo hay.
+  readonly causeCode: InferenceErrorCode | QuestionBankErrorCode | KnowledgeGraphErrorCode | null;
+}
+
+export interface CandidateExplanation {
+  readonly questionId: QuestionId;
+  readonly correctProbability: number;
+  readonly incorrectProbability: number;
+  // Ganancia de información esperada, en bits.
+  readonly eig: number;
+  readonly posteriorIfCorrect: JointDistribution;
+  readonly posteriorIfIncorrect: JointDistribution;
+  readonly marginalsIfCorrect: Readonly<Record<SkillId, number>>;
+  readonly marginalsIfIncorrect: Readonly<Record<SkillId, number>>;
+  // H_b(p_k) - P(acierto)·H_b(p_k|acierto) - P(fallo)·H_b(p_k|fallo), en bits.
+  readonly expectedEntropyReduction: Readonly<Record<SkillId, number>>;
+}
+
+export interface QuestionSelection {
+  readonly question: Question;
+  // Todas las candidatas, ordenadas por id.
+  readonly candidates: readonly CandidateExplanation[];
 }
 
 export type InferenceErrorCode =
@@ -147,4 +199,8 @@ export type InferenceErrorCode =
   | 'MISSING_GRAPH'
   | 'INVALID_GRAPH'
   | 'INVALID_STUDENT_ID'
-  | 'INVALID_PROBABILITY';
+  | 'INVALID_PROBABILITY'
+  | 'INVALID_BANK'
+  | 'INVALID_STATE'
+  | 'INVALID_HISTORY'
+  | 'INVALID_EIG';
