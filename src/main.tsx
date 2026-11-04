@@ -1,10 +1,21 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import {
+  PreferencesProvider,
+  RadarProvider,
+} from "./components/RadarProvider.tsx";
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
-createRoot(document.getElementById("root")!).render(
+
+const root = document.getElementById("root");
+if (root === null) throw new Error("Falta el elemento raíz");
+createRoot(root).render(
   <StrictMode>
-    <App />
+    <PreferencesProvider>
+      <RadarProvider>
+        <App />
+      </RadarProvider>
+    </PreferencesProvider>
   </StrictMode>,
 );
