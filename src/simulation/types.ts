@@ -15,7 +15,9 @@ export type SimulationErrorCode =
   | 'UNKNOWN_STUDENT'
   | 'MISSING_UNIFORM'
   | 'INVALID_QUESTION'
-  | 'INVALID_REAL_PARAMETERS';
+  | 'INVALID_REAL_PARAMETERS'
+  | 'INVALID_INTERVENTION_PLAN'
+  | 'INVALID_INTERVENTION_CONFIG';
 
 // Devuelve el siguiente uniforme en [0, 1) y avanza su propio estado.
 export type UniformStream = () => number;
@@ -95,4 +97,52 @@ export interface ResponseUniformTable {
 export interface RealItemParameters {
   readonly slip: number;
   readonly guess: number;
+}
+
+export interface SyntheticInterventionConfig {
+  // p_mejora en [0, 1]: SUPUESTO; 0.35 por defecto.
+  readonly improvementProbability?: number;
+  // Factor en [0, 1] si falta al menos un ancestro: SUPUESTO; 0.5 por defecto.
+  readonly prerequisiteImprovementFactor?: number;
+  // Fracción de alumnos en control, en [0, 1]; 0 por defecto.
+  readonly controlFraction?: number;
+}
+
+export type EffectiveSyntheticInterventionConfig = Required<SyntheticInterventionConfig>;
+
+export interface SyntheticAssignment {
+  // Ordenados por id.
+  readonly treatedStudentIds: readonly string[];
+  readonly controlStudentIds: readonly string[];
+  readonly treatmentIsEmpty: boolean;
+  readonly controlIsEmpty: boolean;
+}
+
+// Cambio de α en la simulación: no es una observación ni aprendizaje observado.
+export interface SimulatedMasteryChange {
+  readonly studentId: string;
+  readonly skill: SkillId;
+  // Probabilidad usada, tras aplicar el factor si faltaba algún ancestro.
+  readonly appliedProbability: number;
+}
+
+// Con el estado anterior, basta para reproducir postClass.
+export interface SyntheticInterventionProvenance {
+  readonly generator: GeneratorInfo;
+  readonly populationSeed: number;
+  readonly interventionSeed: number;
+  readonly config: EffectiveSyntheticInterventionConfig;
+  // Competencias del plan, en el orden de SKILL_ORDER.
+  readonly intervenedSkills: readonly SkillId[];
+}
+
+export interface SyntheticInterventionResult {
+  // Alumnos por id. Contiene verdad simulada.
+  readonly postClass: SyntheticClass;
+  readonly assignment: SyntheticAssignment;
+  // Por alumno y, dentro de cada uno, en el orden de SKILL_ORDER.
+  readonly simulatedChanges: readonly SimulatedMasteryChange[];
+  readonly provenance: SyntheticInterventionProvenance;
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
 }

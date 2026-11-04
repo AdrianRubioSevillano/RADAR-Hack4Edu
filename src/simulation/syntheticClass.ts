@@ -4,6 +4,7 @@ import type { KnowledgeGraph, MasteryVector, SkillId } from '../engine/index.ts'
 import { GENERATOR, STREAMS, SimulationError, assertValidSeed, createStream } from './rng.ts';
 import type {
   EffectiveSimulationConfig,
+  GeneratorInfo,
   ObservableStudent,
   SimulationConfig,
   SyntheticClass,
@@ -23,7 +24,7 @@ function configError(message: string): SimulationError {
   return new SimulationError('INVALID_SIMULATION_CONFIG', message);
 }
 
-function isInUnit(value: unknown): value is number {
+export function isInUnit(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
 }
 
@@ -152,6 +153,64 @@ export function createSyntheticClass(
     skillOrder: [...SKILL_ORDER],
     students,
   };
+}
+
+export function isBlank(value: unknown): boolean {
+  return typeof value !== 'string' || value.trim() === '';
+}
+
+export function isCurrentGenerator(generator: GeneratorInfo): boolean {
+  return (
+    typeof generator === 'object' &&
+    generator !== null &&
+    generator.algorithm === GENERATOR.algorithm &&
+    generator.version === GENERATOR.version
+  );
+}
+
+function assertValidMastery(student: SyntheticStudent): void {
+  const { trueMastery } = student;
+  if (
+    !Array.isArray(trueMastery) ||
+    trueMastery.length !== SKILL_ORDER.length ||
+    !trueMastery.every((bit: unknown) => bit === 0 || bit === 1)
+  ) {
+    throw new SimulationError('INVALID_SYNTHETIC_CLASS', `${student.studentId}: α debe ser un vector binario de seis posiciones`);
+  }
+}
+
+// Solo la forma: no regenera la verdad, porque una intervención puede cambiar α.
+export function assertValidClass(syntheticClass: SyntheticClass): void {
+  if (typeof syntheticClass !== 'object' || syntheticClass === null || !Array.isArray(syntheticClass.students)) {
+    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'La clase sintética no tiene la forma esperada');
+  }
+  const { generator, seed, skillOrder, students, studentCount } = syntheticClass;
+  assertValidSeed(seed);
+  if (!isCurrentGenerator(generator)) {
+    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'La clase procede de otro generador');
+  }
+  if (
+    !Array.isArray(skillOrder) ||
+    skillOrder.length !== SKILL_ORDER.length ||
+    !SKILL_ORDER.every((skill, position) => skillOrder[position] === skill)
+  ) {
+    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'skillOrder no coincide con el orden de codificación');
+  }
+  if (studentCount !== students.length) {
+    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'studentCount no coincide con los alumnos');
+  }
+
+  const ids = new Set<string>();
+  for (const student of students as readonly SyntheticStudent[]) {
+    if (typeof student !== 'object' || student === null || isBlank(student.studentId)) {
+      throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'La clase contiene un alumno inválido');
+    }
+    if (ids.has(student.studentId)) {
+      throw new SimulationError('INVALID_SYNTHETIC_CLASS', `Alumno repetido: ${student.studentId}`);
+    }
+    ids.add(student.studentId);
+    assertValidMastery(student);
+  }
 }
 
 // Copia campo a campo: un dato latente nuevo no puede salir por omisión.

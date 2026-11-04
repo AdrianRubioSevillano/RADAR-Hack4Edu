@@ -233,6 +233,15 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
   - Sin preguntas disponibles, los resultados observados y los cambios estimados correspondientes son `null`, con aviso. El efecto real simulado se informa por separado.
   - Tratamiento y control usan la misma política. Una cobertura desigual no se presenta como evidencia concluyente.
   - Se advierte de que usar todo el banco en el pre‑test impide un post‑test con ítems nuevos.
+- Decisiones de la Fase 6A (intervención sintética):
+  - `improvementProbability = 0.35` y `prerequisiteImprovementFactor = 0.5` por defecto, SUPUESTOS configurables en `[0,1]`.
+  - `controlFraction = 0` por defecto, configurable en `[0,1]`. Número de controles: `floor(studentCount · controlFraction)`. El control no recibe intervención; los grupos vacíos son posibles y se identifican.
+  - La semilla de intervención es independiente de la de población.
+  - Asignación: cada alumno recibe un valor estable de un flujo etiquetado de control; se ordena por ese valor, se desempata por id y los primeros son control. No depende del orden de entrada de los alumnos ni del plan.
+  - Mejora: un uniforme estable por alumno y competencia, en un flujo separado, con etiquetas estructuradas que no incluyen el nombre del plan ni del método. Dos planes sobre la misma población y semilla comparten asignación y uniformes de las competencias comunes. No se consumen ni alteran las tablas de respuestas.
+  - Las competencias seleccionadas son las del plan. `benefit`, `netValue` y demás valores del plan no se usan como probabilidades de mejora.
+  - `postClass` conserva ids, grupos generadores, `skillOrder` y semilla de población. Reconstruirlo requiere también el plan, el estado anterior y la semilla y configuración de intervención: no basta con regenerar desde la semilla de población.
+  - Los cambios reales simulados se informan aparte de cualquier observación y no se presentan como aprendizaje observado.
 - Las diferencias brutas de aciertos entre pre‑test y post‑test con ítems distintos no son ganancias equivalentes. Se informa de la composición y la cobertura, y el cambio se etiqueta como descriptivo no equiparado. La simulación no demuestra eficacia educativa real.
 - La salida separa SIEMPRE: (a) cambio en resultados observados, (b) cambio en estimaciones del motor, (c) efecto real simulado (solo conocible en simulación), (d) nota de que en alumnos reales una comparación antes/después no demuestra causalidad; con control aleatorio se muestra la diferencia en diferencias como estimación en simulación.
 

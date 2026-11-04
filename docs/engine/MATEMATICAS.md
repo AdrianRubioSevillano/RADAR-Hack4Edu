@@ -348,6 +348,30 @@ Si falla en numérica, devuelve `0/1`, o `1/1` si `0/1` es la correcta. Es un **
 
 **Límites.** Son flujos pseudoaleatorios, no independencia estadística demostrada. La derivación tiene 32 bits, así que dos pares pueden recibir por azar la misma semilla de flujo, y con ella los mismos uniformes. Una tabla no se contrasta con su semilla: un uniforme alterado dentro de `[0, 1)` no se detecta.
 
+## Intervención sintética
+
+Solo para demo y benchmarks (§2.8). Cambia el estado real **simulado**: no es aprendizaje observado ni demuestra eficacia educativa.
+
+**Asignación.** Con la semilla de intervención, cada alumno recibe el primer valor de su flujo `intervention/["control","<id>"]`. Se ordena por ese valor, se desempata por id y los primeros `⌊n · controlFraction⌋` son control. La fracción es un número en coma flotante: el valor almacenado de `0.29` queda algo por debajo, y con 100 alumnos da 28 controles. La asignación no depende del plan ni del orden de entrada, y una fracción menor da un subconjunto del control.
+
+**Mejora.** Sea `α` el estado anterior al plan, `S` las competencias del plan, `p` la probabilidad de mejora y `f` el factor. Para cada alumno tratado y cada `k ∈ S` con `α_k = 0`:
+
+```
+p_ik = p · f   si falta en α al menos un ancestro de k
+p_ik = p       en otro caso, y siempre si k no tiene ancestros
+α'_k = 1 si u_ik < p_ik,  con u_ik el primer valor de intervention/["improvement","<id>","<k>"]
+```
+
+Todas las `p_ik` salen de `α` y los cambios se aplican a la vez: no hay cascada dentro del plan. Si `OPS` y `NEG` están en el plan y `α_OPS = 0`, `NEG` usa `p · f` aunque `OPS` mejore. Se comprueban todos los ancestros, `f` se aplica una sola vez y nunca se pierde dominio. Los alumnos de control y el plan vacío no cambian `α`.
+
+**Valores por defecto, SUPUESTOS no calibrados.** `p = 0.35`, `f = 0.5` y `controlFraction = 0`.
+
+**Comparación entre planes.** Las etiquetas no incluyen el plan ni el método. Dos planes sobre la misma población y semilla comparten asignación y `u_ik` en las competencias comunes, y como `p_ik` depende solo de `α`, también los mismos cambios en ellas.
+
+**Reconstrucción.** `postClass` conserva la semilla de población, pero no se regenera con ella: hacen falta el plan, el estado anterior y la semilla y configuración de intervención.
+
+**Límites.** Es un modelo de transición inventado, sin olvido ni mejora espontánea, en el que la intervención solo actúa sobre sus competencias directas. La asignación usa flujos pseudoaleatorios, no una aleatorización con independencia demostrada.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |
@@ -362,6 +386,7 @@ Si falla en numérica, devuelve `0/1`, o `1/1` si `0/1` es la correcta. Es un **
 | `1e-9` | Tolerancia de `\|Σ w − 1\|` en los pesos (§2.6). |
 | `1e-9` | Tolerancia de `\|dominio medio + necesidad − 1\|` al validar un diagnóstico. |
 | `1e-12` | Distancia al mejor global de las candidatas restantes en los tres primeros criterios del plan B (§2.6.1). |
+| `1e-9` | Diferencia entre `totalMinutes` y la suma de duraciones al validar un plan en la intervención sintética (§2.8). |
 | `1e-9` | Coherencia del detalle por alumno: entropía con probabilidad, cotas de la preparación y medias con el agregado (§2.6.1). |
 
 Una distribución dentro de la tolerancia se acepta sin modificar. La actualización la renormaliza como cualquier otra, y las consultas y `jointEntropy` la interpretan normalizada. Nunca se muta la entrada ni se recortan probabilidades.

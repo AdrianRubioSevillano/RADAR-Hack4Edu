@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 5B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 6A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -375,6 +375,8 @@ observableStudents(syntheticClass: SyntheticClass): readonly ObservableStudent[]
 createResponseUniforms(seed: number, studentIds: readonly string[], questionIds: readonly string[], occasion: string): ResponseUniformTable
 simulateResponse(syntheticClass: SyntheticClass, studentId: string, question: Question, uniforms: ResponseUniformTable, realParameters?: RealItemParameters): AnswerValue
 
+applySyntheticIntervention(classState: SyntheticClass, intervention: InterventionPlan, knowledgeGraph: KnowledgeGraph, seed: number, config?: SyntheticInterventionConfig): SyntheticInterventionResult
+
 mulberry32(seed: number): UniformStream
 deriveStreamSeed(seed: number, label: string): number
 createStream(seed: number, label: string): UniformStream
@@ -432,6 +434,42 @@ interface RealItemParameters {
   readonly slip: number;
   readonly guess: number;
 }
+
+interface SyntheticInterventionConfig {
+  readonly improvementProbability?: number;         // en [0, 1]; 0.35 por defecto
+  readonly prerequisiteImprovementFactor?: number;  // en [0, 1]; 0.5 por defecto
+  readonly controlFraction?: number;                // en [0, 1]; 0 por defecto
+}
+
+interface SyntheticInterventionResult {
+  readonly postClass: SyntheticClass;  // verdad simulada; alumnos por id
+  readonly assignment: SyntheticAssignment;
+  readonly simulatedChanges: readonly SimulatedMasteryChange[];
+  readonly provenance: SyntheticInterventionProvenance;
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
+
+interface SyntheticAssignment {
+  readonly treatedStudentIds: readonly string[];  // por id
+  readonly controlStudentIds: readonly string[];  // por id
+  readonly treatmentIsEmpty: boolean;
+  readonly controlIsEmpty: boolean;
+}
+
+interface SimulatedMasteryChange {
+  readonly studentId: string;
+  readonly skill: SkillId;
+  readonly appliedProbability: number;
+}
+
+interface SyntheticInterventionProvenance {
+  readonly generator: GeneratorInfo;
+  readonly populationSeed: number;
+  readonly interventionSeed: number;
+  readonly config: EffectiveSyntheticInterventionConfig;
+  readonly intervenedSkills: readonly SkillId[];  // en el orden de SKILL_ORDER
+}
 ```
 
 - `seed` es un entero uint32, incluido 0. `studentCount` es un entero seguro no negativo, y la clase vacía es válida.
@@ -445,6 +483,12 @@ interface RealItemParameters {
 - `simulateResponse` devuelve solo un `AnswerValue`, válido para `submitAnswer`. Por defecto usa `slip` y `guess` del ítem; `realParameters` los sustituye sin modificar el banco.
 - No regenera la verdad para validar la clase: una `α` distinta de la generada se acepta.
 - Cada llamada valida la clase y la tabla enteras, con coste proporcional a su tamaño.
+- `applySyntheticIntervention` cambia el conocimiento **simulado**: no genera postest ni diagnósticos. `simulatedChanges` no es una observación ni aprendizaje observado.
+- Del plan solo usa las competencias. `benefit`, `netValue` y demás valores se comprueban como forma, pero no intervienen.
+- `seed` es la semilla de intervención, independiente de la de población. `postClass.seed` conserva la de población.
+- Reconstruir `postClass` requiere el plan, el estado anterior y la semilla y configuración de intervención: `createSyntheticClass` con `postClass.seed` devuelve el estado anterior, no este.
+- `postClass.students` va ordenado por id en unidades de código, así que `S100` queda detrás de `S10`.
+- La misma tabla de uniformes vale para `postClass`: el mismo `u` puede dar otra respuesta con la nueva `α`.
 
 | `SimulationError.code` | Causa |
 |---|---|
@@ -461,5 +505,7 @@ interface RealItemParameters {
 | `MISSING_UNIFORM` | La tabla no cubre el par (alumno, pregunta). |
 | `INVALID_QUESTION` | Formato desconocido, opciones inválidas, sin distractores o respuesta numérica no canónica. |
 | `INVALID_REAL_PARAMETERS` | `realParameters` no es un objeto. |
+| `INVALID_INTERVENTION_PLAN` | El plan no tiene la forma esperada, repite o desconoce una competencia, un id no corresponde a su competencia o `totalMinutes` no coincide con las duraciones. |
+| `INVALID_INTERVENTION_CONFIG` | Probabilidad, factor o fracción de control fuera de `[0, 1]`. |
 
 Un grafo sin las seis competencias lanza `InferenceError` con `INVALID_GRAPH`. Un grafo con estructura inválida lanza `KnowledgeGraphError`. `slip` y `guess`, del ítem o reales, que incumplan la restricción DINA lanzan `InferenceError` con `INVALID_PARAMETERS`, y un `R_q` inválido, sus códigos habituales.

@@ -1,6 +1,6 @@
 # Estado del motor RADAR
 
-Traspaso al cerrar la Fase 5B. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+Traspaso al cerrar la Fase 6A. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
 
 ## Implementado
 
@@ -12,8 +12,9 @@ Traspaso al cerrar la Fase 5B. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - **Fase 4C:** `compareInterventionPlans`: plan colectivo frente a plan por necesidad pendiente, con detalle por alumno y competencia.
 - **Fase 5A:** `src/simulation`: PRNG mulberry32 con flujos etiquetados, `createSyntheticClass` y `observableStudents`.
 - **Fase 5B:** `createResponseUniforms` y `simulateResponse`: respuestas sintéticas con números aleatorios comunes.
+- **Fase 6A:** `applySyntheticIntervention`: cambios en el conocimiento simulado, con control opcional. Sin postest ni comparación de resultados observados.
 
-**Verificación:** typecheck limpio y 1097 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+**Verificación:** typecheck limpio y 1181 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
 
 ## Decisiones y limitaciones vigentes
 
@@ -35,11 +36,13 @@ Traspaso al cerrar la Fase 5B. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - mulberry32 no es criptográfico, y sus flujos comparten un ciclo de `2^32` estados: no hay independencia estadística garantizada.
 - Las respuestas sintéticas siguen DINA por construcción: no dicen nada sobre cómo responden alumnos reales.
 - El error numérico sintético (`0/1` o `1/1`) es un SUPUESTO simplificado, sin relación con errores reales.
+- La intervención sintética es un modelo de transición inventado: `improvementProbability` y `prerequisiteImprovementFactor` son SUPUESTOS. Sus cambios no son aprendizaje observado ni demuestran eficacia educativa.
+- `postClass` no se regenera desde la semilla de población: requiere plan, estado anterior y semilla y configuración de intervención.
 - `simulateResponse` valida clase y tabla enteras en cada llamada. Si en la Fase 7 pesa en los benchmarks, habrá que medirlo antes de cambiarlo.
 
 ## Próximo trabajo
 
-- Fase 6: evaluación postintervención.
+- Fase 6B: `simulatePostIntervention`: postest y separación entre resultados observados, estimaciones y efecto real simulado.
 - Fase 7: benchmarks e informes.
 
 ## Reglas para continuar

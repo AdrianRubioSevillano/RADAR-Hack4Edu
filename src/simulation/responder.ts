@@ -1,22 +1,12 @@
-import { SKILL_ORDER, correctProbability, isCanonicalRational, requiredSkills } from '../engine/index.ts';
+import { correctProbability, isCanonicalRational, requiredSkills } from '../engine/index.ts';
 import type { AnswerValue, MultipleChoiceQuestion, Question } from '../engine/index.ts';
 import { GENERATOR, STREAMS, SimulationError, assertValidSeed, createStream } from './rng.ts';
-import type {
-  GeneratorInfo,
-  RealItemParameters,
-  ResponseUniformEntry,
-  ResponseUniformTable,
-  SyntheticClass,
-  SyntheticStudent,
-} from './types.ts';
+import { assertValidClass, isBlank, isCurrentGenerator } from './syntheticClass.ts';
+import type { RealItemParameters, ResponseUniformEntry, ResponseUniformTable, SyntheticClass } from './types.ts';
 
 // SUPUESTO simplificado (§2.7): no reproduce errores reales ni concepciones equivocadas.
 const NUMERIC_WRONG_ANSWER = '0/1';
 const NUMERIC_WRONG_ANSWER_IF_ZERO_IS_CORRECT = '1/1';
-
-function isBlank(value: unknown): boolean {
-  return typeof value !== 'string' || value.trim() === '';
-}
 
 function sortedIds(ids: readonly string[], label: string): readonly string[] {
   if (!Array.isArray(ids) || ids.some(isBlank)) {
@@ -61,60 +51,6 @@ export function createResponseUniforms(
       questions.map((questionId) => entryOf(seed, occasion, studentId, questionId)),
     ),
   };
-}
-
-function isCurrentGenerator(generator: GeneratorInfo): boolean {
-  return (
-    typeof generator === 'object' &&
-    generator !== null &&
-    generator.algorithm === GENERATOR.algorithm &&
-    generator.version === GENERATOR.version
-  );
-}
-
-function assertValidMastery(student: SyntheticStudent): void {
-  const { trueMastery } = student;
-  if (
-    !Array.isArray(trueMastery) ||
-    trueMastery.length !== SKILL_ORDER.length ||
-    !trueMastery.every((bit: unknown) => bit === 0 || bit === 1)
-  ) {
-    throw new SimulationError('INVALID_SYNTHETIC_CLASS', `${student.studentId}: α debe ser un vector binario de seis posiciones`);
-  }
-}
-
-// Solo la forma: no regenera la verdad, porque una intervención puede cambiar α.
-function assertValidClass(syntheticClass: SyntheticClass): void {
-  if (typeof syntheticClass !== 'object' || syntheticClass === null || !Array.isArray(syntheticClass.students)) {
-    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'La clase sintética no tiene la forma esperada');
-  }
-  const { generator, seed, skillOrder, students, studentCount } = syntheticClass;
-  assertValidSeed(seed);
-  if (!isCurrentGenerator(generator)) {
-    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'La clase procede de otro generador');
-  }
-  if (
-    !Array.isArray(skillOrder) ||
-    skillOrder.length !== SKILL_ORDER.length ||
-    !SKILL_ORDER.every((skill, position) => skillOrder[position] === skill)
-  ) {
-    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'skillOrder no coincide con el orden de codificación');
-  }
-  if (studentCount !== students.length) {
-    throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'studentCount no coincide con los alumnos');
-  }
-
-  const ids = new Set<string>();
-  for (const student of students as readonly SyntheticStudent[]) {
-    if (typeof student !== 'object' || student === null || isBlank(student.studentId)) {
-      throw new SimulationError('INVALID_SYNTHETIC_CLASS', 'La clase contiene un alumno inválido');
-    }
-    if (ids.has(student.studentId)) {
-      throw new SimulationError('INVALID_SYNTHETIC_CLASS', `Alumno repetido: ${student.studentId}`);
-    }
-    ids.add(student.studentId);
-    assertValidMastery(student);
-  }
 }
 
 function isUniform(value: unknown): boolean {
