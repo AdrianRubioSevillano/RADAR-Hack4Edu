@@ -1,6 +1,6 @@
 # Estado del motor RADAR
 
-Traspaso al cerrar la Fase 7A. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+Traspaso al cerrar la Fase 7B. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
 
 ## Implementado
 
@@ -14,9 +14,10 @@ Traspaso al cerrar la Fase 7A. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - **Fase 5B:** `createResponseUniforms` y `simulateResponse`: respuestas sintéticas con números aleatorios comunes.
 - **Fase 6A:** `applySyntheticIntervention`: cambios en el conocimiento simulado, con control opcional.
 - **Fase 6B:** `simulatePostIntervention`: postest con diagnóstico nuevo e informe en tres capas: observada, estimada y real simulada.
-- **Fase 7A:** `src/benchmarks`: `computeDiagnosticMetrics`, métricas de una réplica frente a la verdad simulada. Sin ejecutor, bootstrap ni resultados.
+- **Fase 7A:** `src/benchmarks`: `computeDiagnosticMetrics`, métricas de una réplica frente a la verdad simulada.
+- **Fase 7B:** `summarizeSeedValues` y `comparePairedSeeds`: resúmenes por semilla, bootstrap percentil reproducible y diferencias B − A emparejadas. Sin ejecutor ni resultados.
 
-**Verificación:** typecheck limpio y 1323 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+**Verificación:** typecheck limpio y 1397 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
 
 ## Decisiones y limitaciones vigentes
 
@@ -46,11 +47,13 @@ Traspaso al cerrar la Fase 7A. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - `postIntervention.ts` es el único módulo de `src/simulation` que llama a `createInitialDiagnosticState` y `submitAnswer`. Los tests comprueban que solo reciben id, prior y respuestas observables.
 - Las métricas de diagnóstico miden la recuperación de un estado simulado, no la calidad con alumnos reales. Aún no hay ningún resultado de benchmark.
 - `computeDiagnosticMetrics` no contrasta los historiales con un banco, porque no lo recibe. El ejecutor debe pasarle estados ya validados.
+- El intervalo bootstrap solo refleja variabilidad entre semillas bajo SUPUESTOS fijos, suele quedarse corto con pocas semillas y no corrige por multiplicidad. No es prueba de eficacia educativa ni garantía de superioridad.
+- Dos series con el mismo `seriesId` y `bootstrapSeed` comparten remuestreo: el ejecutor debe usar ids únicos por métrica, método y escenario.
 - `simulateResponse` valida clase y tabla enteras en cada llamada. Si en la Fase 7 pesa en los benchmarks, habrá que medirlo antes de cambiarlo.
 
 ## Próximo trabajo
 
-- Fase 7: métodos A, B y C, ejecutor de benchmarks, estadísticas con bootstrap, informes y documentación de integración.
+- Fase 7: métodos A, B y C, ejecutor de benchmarks, escenarios, informes y documentación de integración.
 
 ## Reglas para continuar
 

@@ -1,13 +1,27 @@
 export { BenchmarkError, computeDiagnosticMetrics } from './metrics.ts';
+export { comparePairedSeeds, summarizeSeedValues } from './stats.ts';
 export type {
   BenchmarkErrorCode,
+  BootstrapProvenance,
+  ConfidenceInterval,
   DiagnosticMetrics,
   DiagnosticMetricsConfig,
   DifficultyConfusion,
   EffectiveDiagnosticMetricsConfig,
+  ExcludedPair,
+  ImprovementDirection,
   MetricDefinitions,
   MetricSummary,
+  PairExclusionReason,
+  PairedComparison,
+  PairedComparisonConfig,
+  PairedDifference,
   QuestionUsage,
+  SeedObservation,
+  SeedSeriesConfig,
+  SeedSeriesSummary,
+  SeedStatisticsWarning,
+  SeedStatisticsWarningCode,
   SkillDiagnosticMetrics,
   StudentDiagnosticMetrics,
 } from './types.ts';

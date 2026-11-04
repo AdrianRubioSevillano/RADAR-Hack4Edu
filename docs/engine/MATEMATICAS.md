@@ -457,6 +457,43 @@ F1 vale 0, no `null`, si hay errores y ningún acierto positivo: con `TP = 0` y 
 
 **Límites.** Los pares de un mismo alumno no son independientes, porque comparten respuestas y conjunta. La log‑loss depende del límite elegido cuando `p` es 0 o 1, que es un SUPUESTO. Con priors extremos, una sola competencia mal estimada puede dominar la media.
 
+## Estadística entre semillas
+
+§2.9. Cada semilla es una réplica completa y es la unidad de análisis: los pares alumno‑competencia de una semilla no son observaciones independientes.
+
+**Resumen.** Las observaciones se ordenan por semilla y se excluyen las `null`. Con `x_1…x_n` los valores válidos:
+
+```
+media      = Σ x_i / n
+desviación = √( Σ (x_i − media)² / (n − 1) )     null si n < 2
+```
+
+**Bootstrap percentil de medias.** Se repite `m` veces, 2000 por defecto (SUPUESTO):
+
+1. Se toman `n` índices con reemplazo: `⌊u · n⌋`, con `u` del flujo de la serie.
+2. Se calcula la media de esos `n` valores.
+
+Con las `m` medias ordenadas, cada límite es un percentil por interpolación lineal:
+
+```
+pos = (m − 1) · q      para q = 0.025 y q = 0.975
+P(q) = v[⌊pos⌋] + (pos − ⌊pos⌋) · (v[⌊pos⌋ + 1] − v[⌊pos⌋])
+```
+
+El flujo es `bootstrap/["<seriesId>"]`, derivado de `bootstrapSeed`. Cada serie tiene el suyo, así que añadir métricas no cambia las existentes. Se consume en orden de remuestra y posición, de modo que aumentar `m` conserva las primeras remuestras.
+
+**Comparación emparejada.** Para cada semilla presente en ambos métodos y con ambos valores válidos:
+
+```
+d_s = B_s − A_s
+```
+
+Después se resumen las `d_s` como cualquier serie. No es la resta de medias: si A y B tienen semillas válidas distintas, esa resta compara conjuntos diferentes. Por ejemplo, con A = {0.1, 0.2, 0.9} y B = {0.2, null, 1, 0} en las semillas 1 a 4, las medias sin emparejar son 0.4 y 0.4, pero las diferencias emparejadas, 0.1 y 0.1.
+
+**Clasificación.** Con tolerancia `t`, `|d_s| ≤ t` es empate. Fuera de ella, B mejora si `d_s < 0` con `lowerIsBetter`, o si `d_s > 0` con `higherIsBetter`; si no, empeora. La tolerancia no modifica las diferencias ni los resúmenes.
+
+**Límites.** El percentil bootstrap es aproximado y suele quedarse corto con pocas semillas: con `n` pequeño, el intervalo es más estrecho de lo que debería. Con un solo valor es degenerado y no informa sobre variabilidad. Solo refleja la variabilidad entre semillas bajo un generador y unos SUPUESTOS fijos, no la incertidumbre sobre esos SUPUESTOS. Varias comparaciones a la vez no se corrigen por multiplicidad. No es una prueba de eficacia educativa ni garantiza superioridad.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |
@@ -473,6 +510,7 @@ F1 vale 0, no `null`, si hay errores y ningún acierto positivo: con `TP = 0` y 
 | `1e-12` | Distancia al mejor global de las candidatas restantes en los tres primeros criterios del plan B (§2.6.1). |
 | `1e-12` | Distancia de `n · controlFraction` a un entero dentro de la cual el recuento de controles usa ese entero (§2.8). |
 | `1e-12` | `ε_clip` de la log‑loss, solo en evaluación (§2.9). No se aplica a ninguna probabilidad del motor. |
+| `1e-12` | Tolerancia de empate de `B − A`, por defecto (§2.9). Solo clasifica. |
 | `1e-9` | Diferencia entre `totalMinutes` y la suma de duraciones al validar un plan en la intervención sintética (§2.8). |
 | `1e-9` | Coherencia del detalle por alumno: entropía con probabilidad, cotas de la preparación y medias con el agregado (§2.6.1). |
 

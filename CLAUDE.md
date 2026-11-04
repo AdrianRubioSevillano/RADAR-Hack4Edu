@@ -278,6 +278,14 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
   - IC por bootstrap con semilla y 2000 remuestreos (SUPUESTO) sobre semillas completas, no sobre pares alumno‑competencia independientes.
   - Se informa de cuántos valores válidos hay; `null` no se convierte en 0. Las comparaciones emparejadas usan solo parejas válidas.
   - Desviación típica `null` con menos de dos semillas válidas. Media, IC y diferencias sin datos válidos: `null` con indicación explícita.
+- Concreciones de la Fase 7B (estadística entre semillas):
+  - Cada observación identifica su semilla y contiene un número finito o `null`. Se rechazan semillas duplicadas, NaN, Infinity y configuraciones inválidas. Se ordena por semilla: permutar la entrada no cambia el resultado.
+  - Bootstrap de medias: 2000 remuestreos por defecto, entero positivo configurable, y semilla explícita. Usa `createStream` con `STREAMS.bootstrap` y una etiqueta con un identificador explícito de serie, de modo que añadir otras métricas no cambia las existentes. La unidad remuestreada es una semilla completa, y cada remuestra tiene `n` observaciones con reemplazo.
+  - Percentiles 2.5 y 97.5 por interpolación lineal: posición `(m−1)·q` en los `m` valores ordenados.
+  - Con un solo valor válido: media disponible, desviación `null` e intervalo degenerado, con advertencia de que no informa sobre variabilidad.
+  - Comparación: se empareja por semilla, solo con semillas presentes en ambos métodos y con ambos valores válidos. Primero se calcula cada `B − A` y después se resumen esas diferencias; no se restan medias de conjuntos distintos. Se informa de las exclusiones con su motivo.
+  - Se cuenta dónde B mejora, empata o empeora, con dirección de mejora explícita y tolerancia de empate configurable, `1e-12` por defecto. La tolerancia solo clasifica: no modifica diferencias ni estadísticas.
+  - El intervalo no es prueba de eficacia educativa ni garantía de superioridad.
 - Escenarios: (1) bien especificado; (2) mala especificación (slip/guess reales distintos de los asumidos); (3) presupuesto = todas las preguntas; (4) clase homogénea. Se reporta todo, también donde B empata o pierde.
 - Escenario 3: mismos prior, banco y respuestas comunes, sin parada anticipada; todos los métodos consumen todas las preguntas. Se comparan posteriores y métricas deterministas con tolerancia absoluta `1e-9`, excluyendo los tiempos.
 - Salida: `docs/engine/RESULTADOS_BENCHMARK.md` y `.json`, generados por `npm run bench`, con la semilla base y la configuración. Tiempos y metadatos variables van separados de los resultados deterministas.

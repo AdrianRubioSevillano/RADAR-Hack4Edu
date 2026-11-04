@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, de `src/simulation/index.ts`, hasta la Fase 6B, y de `src/benchmarks/index.ts`, hasta la Fase 7A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, de `src/simulation/index.ts`, hasta la Fase 6B, y de `src/benchmarks/index.ts`, hasta la Fase 7B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -646,5 +646,67 @@ interface MetricSummary {
 |---|---|
 | `INVALID_METRICS_CONFIG` | La configuración no es un objeto o `tau` no es finito en `[0, 1]`. |
 | `INCONSISTENT_STUDENTS` | `states` no es una lista, repite un alumno o no corresponde exactamente a la clase. |
+| `INVALID_OBSERVATIONS` | Las observaciones no son una lista, repiten una semilla, o tienen una semilla que no es uint32 o un valor que no es finito ni `null`. |
+| `INVALID_STATS_CONFIG` | `seriesId`, `bootstrapSeed`, `resamples`, `direction` o `tieTolerance` inválidos. |
+| `NON_FINITE_STATISTIC` | Una diferencia, media, desviación o límite no es representable. Nunca se devuelve `Infinity` ni `NaN`. |
 
 Un estado inválido lanza `InferenceError` (`INVALID_STATE`, `INVALID_DISTRIBUTION`, `INVALID_HISTORY`) y una clase inválida, `SimulationError` con `INVALID_SYNTHETIC_CLASS`. La validación de estados no comprueba el historial contra un banco, porque esta función no lo recibe.
+
+## Estadística entre semillas
+
+`src/benchmarks/index.ts`. Cada semilla es una réplica completa.
+
+```ts
+summarizeSeedValues(observations: readonly SeedObservation[], config: SeedSeriesConfig): SeedSeriesSummary
+comparePairedSeeds(methodA: readonly SeedObservation[], methodB: readonly SeedObservation[], config: PairedComparisonConfig): PairedComparison
+```
+
+```ts
+interface SeedObservation {
+  readonly seed: number;          // entero uint32
+  readonly value: number | null;  // finito o null
+}
+
+interface SeedSeriesConfig {
+  readonly seriesId: string;       // identifica el flujo de remuestreo
+  readonly bootstrapSeed: number;  // entero uint32
+  readonly resamples?: number;     // entero positivo; 2000 por defecto
+}
+
+interface PairedComparisonConfig extends SeedSeriesConfig {
+  readonly direction: 'lowerIsBetter' | 'higherIsBetter';
+  readonly tieTolerance?: number;  // finita y no negativa; 1e-12 por defecto
+}
+
+interface SeedSeriesSummary {
+  readonly totalCount: number;
+  readonly validCount: number;
+  readonly excludedSeeds: readonly number[];
+  readonly mean: number | null;
+  readonly standardDeviation: number | null;  // divisor n - 1
+  readonly confidenceInterval: { readonly lower: number; readonly upper: number } | null;
+  readonly bootstrap: BootstrapProvenance;
+  readonly warnings: readonly SeedStatisticsWarning[];  // 'NO_VALID_VALUES' | 'SINGLE_VALID_VALUE'
+}
+
+interface PairedComparison {
+  readonly direction: ImprovementDirection;
+  readonly tieTolerance: number;
+  readonly pairCount: number;
+  readonly pairs: readonly PairedDifference[];       // seed, a, b, difference = b - a
+  readonly excludedPairs: readonly ExcludedPair[];   // seed, reason
+  readonly differences: SeedSeriesSummary;           // resumen de las diferencias B - A
+  readonly improvedCount: number;
+  readonly tiedCount: number;
+  readonly worsenedCount: number;
+  readonly disclaimer: string;
+}
+```
+
+- `BootstrapProvenance` declara método, estadístico, unidad, generador, `bootstrapSeed`, `seriesId`, `streamLabel`, `resamples`, `resampleSize`, nivel y cuantiles.
+- `seriesId` debe ser distinto para cada métrica, método y escenario, como `mae/B` o `mae/B-A`. Dos series con el mismo id y semilla comparten remuestreo.
+- `reason` es `missingInA`, `missingInB`, `nullInA`, `nullInB` o `nullInBoth`. Si falta en un método, prevalece `missing…`.
+- `improvedCount` depende de `direction`. `tieTolerance` solo clasifica.
+- Un `null` nunca se convierte en 0. Sin valores válidos, media, desviación e intervalo son `null`.
+- Con un solo valor, el intervalo es degenerado: no significa ausencia de variabilidad.
+- El intervalo no es prueba de eficacia educativa ni garantía de superioridad.
