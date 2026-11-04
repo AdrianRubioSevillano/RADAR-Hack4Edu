@@ -1,6 +1,6 @@
 # Estado del motor RADAR
 
-Traspaso al cerrar la Fase 7D. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+Traspaso al cerrar el motor: Fases 1–7 terminadas. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
 
 ## Implementado
 
@@ -18,10 +18,19 @@ Traspaso al cerrar la Fase 7D. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - **Fase 7B:** `summarizeSeedValues` y `comparePairedSeeds`: resúmenes por semilla, bootstrap percentil reproducible y diferencias B − A emparejadas.
 - **Fase 7C:** `runDiagnosticMethod`: ejecución de A, B y C en una réplica, con presupuestos como prefijos.
 - **Fase 7D:** `runBenchmark`, `renderBenchmarkMarkdown` y `npm run bench`: experimento completo con tres escenarios y 30 semillas.
+- **Documentación:** `INTEGRACION_REACT.md` y `LIMITACIONES.md`.
 
 **Verificación:** typecheck limpio y 1555 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
 
 **Experimento:** `npm run bench` completo ejecutado, con `kind: "full"`, y `npm run bench -- --check` superado: el bloque determinista se regeneró y coincidió byte a byte. Las cifras solo están en `RESULTADOS_BENCHMARK.md` y `.json`, generados por script. Tiempos y metadatos, en `RESULTADOS_BENCHMARK_TIEMPOS.json`.
+
+## Terminado y pendiente
+
+**Terminado en el motor:** diagnóstico adaptativo, diagnóstico colectivo, priorización y comparación de planes, simulación, evaluación postintervención simulada, benchmark y su documentación.
+
+**Corresponde a la integración, y no está hecho:** pantallas, práctica individual, actividades colectivas, persistencia, tratamiento de datos de alumnos reales y accesibilidad. Que exista el motor no los completa.
+
+**Sin demostrar:** validez y eficacia educativas. El benchmark mide la recuperación de estados sintéticos en el diagnóstico; no valida planes ni intervenciones. Ver `LIMITACIONES.md`.
 
 ## Decisiones y limitaciones vigentes
 
@@ -64,7 +73,7 @@ Traspaso al cerrar la Fase 7D. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 
 ## Próximo trabajo
 
-- Fase 7: documentación de integración (`INTEGRACION_REACT.md`, `LIMITACIONES.md`).
+- Integrar el motor en la aplicación, siguiendo `INTEGRACION_REACT.md`.
 
 ## Reglas para continuar
 
