@@ -1,13 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Avatar, Icon, Speech, SkillBadge } from "../components/art.tsx";
 import { ReadAloud } from "../components/ReadAloud.tsx";
 import { usePreferences, useRadar } from "../components/RadarProvider.tsx";
-import {
-  EmptyClassNotice,
-  Notice,
-  PageTitle,
-  StudentPicker,
-} from "../components/ui.tsx";
-import { decimal, percent } from "../services/format.ts";
+import { EmptyClassNotice, EmptyState, Notice, PageTitle, StudentPicker } from "../components/ui.tsx";
+import { decimal, percentBounded } from "../services/format.ts";
 import {
   checkPracticeAnswer,
   revealPracticeSolution,
@@ -17,10 +13,11 @@ import {
 } from "../services/practice.ts";
 import { stateOf } from "../services/session.ts";
 import { PLAN_LABELS, comparedPlan } from "../services/teacher.ts";
+import { Confetti } from "./StudentDiagnosticScreen.tsx";
 
 const SOURCE_LABELS = {
   diagnosticRepeat: "Repaso de una pregunta fallada",
-  template: "Ejercicio de plantilla",
+  template: "Ejercicio de práctica",
 } as const;
 
 function Exercise({
@@ -38,9 +35,8 @@ function Exercise({
   const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [hints, setHints] = useState(0);
-  const [solution, setSolution] = useState<
-    (PracticeSolution & { solved: boolean }) | null
-  >(null);
+  const [solution, setSolution] = useState<(PracticeSolution & { solved: boolean }) | null>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
 
   function check(event: FormEvent) {
     event.preventDefault();
@@ -61,28 +57,43 @@ function Exercise({
   // El registro se escribe al pasar al siguiente: al resolverse sale de la lista.
   function next() {
     if (solution?.solved === true)
-      recordPractice(studentId, exercise.id, (r) => ({
-        ...r,
-        attempts: r.attempts + 1,
-        solved: true,
-      }));
+      recordPractice(studentId, exercise.id, (r) => ({ ...r, attempts: r.attempts + 1, solved: true }));
     onNext();
   }
 
   return (
-    <section className="card question-card" aria-label="Ejercicio de práctica">
-      <div className="section-heading">
-        <span className="eyebrow">{exercise.skillName.toUpperCase()}</span>
-        <span className="pill">{SOURCE_LABELS[exercise.source]}</span>
+    <section className="quest-stage" aria-label="Ejercicio de práctica">
+      {solution?.solved === true && <Confetti />}
+      {solution !== null ? (
+        <Speech mood={solution.solved ? "cheer" : "hello"} size={104}>
+          <strong className="bubble-title" role="status">
+            {solution.solved ? "¡Lo tienes!" : `Solución: ${solution.answerText}`}
+          </strong>
+          {solution.explanation}
+        </Speech>
+      ) : hints > 0 ? (
+        <Speech mood="hello" size={84}>
+          <ol className="hints" aria-label="Pistas">
+            {exercise.hints.slice(0, hints).map((hint) => <li key={hint}>{hint}</li>)}
+          </ol>
+        </Speech>
+      ) : (
+        <Speech mood="think" size={84}>
+          Prueba las veces que quieras: esto es práctica, no cuenta para el diagnóstico.
+        </Speech>
+      )}
+      <div className="exercise-tags">
+        <span className="tag"><SkillBadge id={exercise.skill} size="sm" /> {exercise.skillName}</span>
+        <span className="tag">{SOURCE_LABELS[exercise.source]}</span>
       </div>
       <form onSubmit={check}>
-        <h2 tabIndex={-1}>{exercise.statement}</h2>
+        <h2 tabIndex={-1} ref={heading} className="statement">{exercise.statement}</h2>
         <ReadAloud text={exercise.statement} />
         {exercise.format === "multipleChoice" ? (
-          <fieldset disabled={solution !== null}>
+          <fieldset className="choices" disabled={solution !== null}>
             <legend className="sr-only">Elige una respuesta</legend>
             {exercise.options.map((option, i) => (
-              <label className={`option ${answer === option.id ? "selected" : ""}`} key={option.id}>
+              <label className={answer === option.id ? "choice on" : "choice"} key={option.id}>
                 <input
                   type="radio"
                   name="practice-answer"
@@ -92,13 +103,13 @@ function Exercise({
                     setMessage(null);
                   }}
                 />
-                <span className="option-letter" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
+                <span className="choice-letter" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
                 <span>{option.text}</span>
               </label>
             ))}
           </fieldset>
         ) : (
-          <div className="numeric">
+          <div className="answer-field">
             <label htmlFor="practice-answer">Tu respuesta</label>
             <input
               id="practice-answer"
@@ -113,28 +124,23 @@ function Exercise({
             />
           </div>
         )}
-        {message !== null && <p role="status" className="error">{message}</p>}
-        {hints > 0 && (
-          <ol className="hints" aria-label="Pistas">
-            {exercise.hints.slice(0, hints).map((hint) => <li key={hint}>{hint}</li>)}
-          </ol>
-        )}
+        {message !== null && <p role="status" className="error"><Icon name="info" /> {message}</p>}
         {solution === null ? (
-          <div className="question-footer practice-actions">
+          <div className="quest-actions">
             <button
               type="button"
-              className="secondary"
+              className="btn btn-ghost"
               disabled={hints >= exercise.hints.length}
               onClick={() => {
                 setHints(hints + 1);
                 recordPractice(studentId, exercise.id, (r) => ({ ...r, hintsUsed: r.hintsUsed + 1 }));
               }}
             >
-              Pedir pista ({hints}/{exercise.hints.length})
+              <Icon name="hint" /> Pedir pista ({hints}/{exercise.hints.length})
             </button>
             <button
               type="button"
-              className="secondary"
+              className="btn btn-ghost"
               onClick={() => {
                 setSolution({ ...revealPracticeSolution(exercise.id), solved: false });
                 recordPractice(studentId, exercise.id, (r) => ({ ...r, revealed: true }));
@@ -142,15 +148,13 @@ function Exercise({
             >
               Ver solución
             </button>
-            <button type="button" className="text-button" onClick={onSkip}>Saltar</button>
-            <button className="primary" disabled={answer.trim() === ""}>Comprobar</button>
+            <button type="button" className="link" onClick={onSkip}>Saltar</button>
+            <button className="btn btn-primary btn-lg push" disabled={answer.trim() === ""}>Comprobar</button>
           </div>
         ) : (
-          <div role="status" className="feedback">
-            <strong>{solution.solved ? "✓ Correcto" : `Solución: ${solution.answerText}`}</strong>
-            <p>{solution.explanation}</p>
-            <button type="button" className="primary" autoFocus onClick={next}>
-              Siguiente ejercicio →
+          <div className="quest-actions">
+            <button type="button" className="btn btn-primary btn-lg push" autoFocus onClick={next}>
+              Siguiente ejercicio <Icon name="arrow" />
             </button>
           </div>
         )}
@@ -172,53 +176,49 @@ export function PracticeScreen() {
   const selection = useMemo(() => {
     if (studentId === null) return null;
     const need = plans.ok
-      ? (comparedPlan(plans.comparison, session.activePlan).analysis.students.find(
-          (s) => s.studentId === studentId,
-        ) ?? null)
+      ? (comparedPlan(plans.comparison, session.activePlan).analysis.students.find((s) => s.studentId === studentId) ?? null)
       : null;
-    return selectPractice(
-      stateOf(session, studentId),
-      need,
-      session.practice[studentId] ?? {},
-    );
+    return selectPractice(stateOf(session, studentId), need, session.practice[studentId] ?? {});
   }, [studentId, plans, session]);
 
-  const intro = (
-    <PageTitle
-      eyebrow="PRÁCTICA INDIVIDUAL"
-      title="Practicar no es evaluar."
-      intro="Ejercicios elegidos según la necesidad estimada que el plan deja pendiente. Las respuestas, pistas y repeticiones de esta pantalla no cambian el diagnóstico."
-    >
-      {studentId !== null && <StudentPicker />}
-    </PageTitle>
-  );
-
   if (studentId === null || selection === null)
-    return <>{intro}<EmptyClassNotice /></>;
+    return (
+      <>
+        <PageTitle eyebrow="Práctica" title="Sin alumnos" />
+        <EmptyClassNotice />
+      </>
+    );
 
-  const available =
-    selection.status === "ready"
-      ? selection.exercises.filter((e) => !skipped.includes(e.id))
-      : [];
+  const index = session.students.findIndex((s) => s.studentId === studentId);
+  const student = session.students[index];
+  const available = selection.status === "ready" ? selection.exercises.filter((e) => !skipped.includes(e.id)) : [];
   const current = available[0] ?? null;
-  const skippedAll =
-    selection.status === "ready" && selection.exercises.length > 0 && current === null;
+  const skippedAll = selection.status === "ready" && selection.exercises.length > 0 && current === null;
+  const focused = preferences.onePerScreen;
+  const solved = Object.values(session.practice[studentId] ?? {}).filter((r) => r.solved).length;
 
   return (
-    <>
-      {intro}
+    <div className="quest">
+      <div className="quest-head">
+        <div className="quest-who">
+          <Avatar index={index + 1} size={56} />
+          <PageTitle eyebrow={student?.displayName ?? studentId} title="Practicar no es evaluar" />
+        </div>
+        {!focused && <div className="page-actions"><StudentPicker /></div>}
+      </div>
       <Notice title="Separada del diagnóstico.">
-        Esta práctica no genera evidencia para el modelo. Contenido sin revisión
-        docente. Plan activo: {PLAN_LABELS[session.activePlan]}.
+        Respuestas, pistas y repeticiones no cambian las estimaciones. Contenido
+        sin revisión docente. Plan activo: {PLAN_LABELS[session.activePlan]}.
       </Notice>
       {selection.status !== "ready" ? (
-        <section className="card empty-state">
-          <h2>Todavía no hay práctica para este alumno.</h2>
-          <p>{selection.message}</p>
-          <a className="primary" href="#/diagnostico">Ir al diagnóstico</a>
-        </section>
+        <EmptyState
+          title="Todavía no hay práctica para este alumno."
+          action={<a className="btn btn-primary" href="#/diagnostico">Ir al diagnóstico</a>}
+        >
+          {selection.message}
+        </EmptyState>
       ) : (
-        <div className={preferences.onePerScreen ? "diagnostic-single" : "diagnostic-grid"}>
+        <div className={focused ? "" : "practice-grid"}>
           <div>
             {selection.message !== null && <Notice>{selection.message}</Notice>}
             {selection.shortage !== null && (
@@ -234,24 +234,25 @@ export function PracticeScreen() {
               />
             )}
             {skippedAll && (
-              <section className="card empty-state">
-                <h2>Has saltado todos los ejercicios propuestos.</h2>
-                <button type="button" className="primary" onClick={() => setSkipped([])}>
-                  Volver a verlos
-                </button>
-              </section>
+              <EmptyState
+                title="Has saltado todos los ejercicios propuestos."
+                action={<button type="button" className="btn btn-primary" onClick={() => setSkipped([])}>Volver a verlos</button>}
+              >
+                Puedes retomarlos cuando quieras.
+              </EmptyState>
             )}
           </div>
-          {!preferences.onePerScreen && (
-            <section className="card estimates" aria-labelledby="why-title">
-              <p className="eyebrow">POR QUÉ ESTOS EJERCICIOS</p>
-              <h2 id="why-title">Necesidad estimada</h2>
+          {!focused && (
+            <aside className="panel backpack" aria-labelledby="why-title">
+              <h2 id="why-title">Por qué estos ejercicios</h2>
+              <p className="note">Resueltos en esta práctica: {solved}</p>
               {selection.targets.length === 0 ? (
                 <p>Ninguna competencia medida supera el umbral.</p>
               ) : (
-                <ul className="skill-list">
+                <ul className="skill-rows">
                   {selection.targets.map((target) => (
                     <li key={target.skill}>
+                      <SkillBadge id={target.skill} size="sm" />
                       <span>
                         {target.name}
                         <small>
@@ -260,25 +261,22 @@ export function PracticeScreen() {
                             : "Programada en el plan: también se trabaja en grupo"}
                         </small>
                       </span>
-                      <strong>{percent(target.need)}</strong>
+                      <strong>{percentBounded(target.need)}</strong>
                     </li>
                   ))}
                 </ul>
               )}
               {selection.unmeasured.length > 0 && (
-                <p>
+                <p className="note">
                   Sin evidencia, por lo que no se eligen ejercicios:{" "}
                   {selection.unmeasured.map((s) => s.name).join(", ")}.
                 </p>
               )}
-              <p>
-                Las preguntas del banco que este alumno aún no ha visto se
-                reservan para el diagnóstico.
-              </p>
-            </section>
+              <p className="note">Las preguntas del banco que este alumno aún no ha visto se reservan para el diagnóstico.</p>
+            </aside>
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

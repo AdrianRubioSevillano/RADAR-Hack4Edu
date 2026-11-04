@@ -1,5 +1,6 @@
 import { Component, useState, type ErrorInfo, type ReactNode } from "react";
 import { describeEngineError } from "../services/errors.ts";
+import { Icon, Mascot } from "./art.tsx";
 import { useRadar } from "./RadarProvider.tsx";
 
 export function Notice({
@@ -11,20 +12,15 @@ export function Notice({
   children: ReactNode;
   tone?: "info" | "warning" | "error";
 }) {
-  const icon = tone === "info" ? "ⓘ" : "!";
   return (
     <div className={`notice notice-${tone}`} role={tone === "error" ? "alert" : undefined}>
-      <span aria-hidden="true">{icon}</span>
+      <Icon name={tone === "info" ? "info" : "alert"} />
       <div>
         {title !== undefined && <strong>{title} </strong>}
         {children}
       </div>
     </div>
   );
-}
-
-export function SyntheticBadge() {
-  return <span className="badge">DATOS SINTÉTICOS</span>;
 }
 
 export function PageTitle({
@@ -35,37 +31,27 @@ export function PageTitle({
 }: {
   eyebrow: string;
   title: string;
-  intro: string;
+  intro?: string;
   children?: ReactNode;
 }) {
   return (
-    <div className="title-row">
+    <div className="page-title">
       <div>
         <p className="eyebrow">{eyebrow}</p>
-        <h1 tabIndex={-1} id="page-title">
-          {title}
-        </h1>
-        <p className="intro">{intro}</p>
+        <h1 tabIndex={-1} id="page-title">{title}</h1>
+        {intro !== undefined && <p className="intro">{intro}</p>}
       </div>
-      {children !== undefined && <div className="title-actions">{children}</div>}
+      {children !== undefined && <div className="page-actions">{children}</div>}
     </div>
   );
 }
 
-export function Metric({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: ReactNode;
-  detail: string;
-}) {
+export function Stat({ label, value, detail }: { label: string; value: ReactNode; detail: string }) {
   return (
-    <div>
-      <small>{label}</small>
-      <strong>{value}</strong>
-      <span>{detail}</span>
+    <div className="stat">
+      <span className="stat-label">{label}</span>
+      <strong className="stat-value">{value}</strong>
+      <span className="stat-detail">{detail}</span>
     </div>
   );
 }
@@ -75,7 +61,7 @@ export function ConfirmButton({
   label,
   confirmLabel,
   onConfirm,
-  className = "secondary",
+  className = "btn btn-ghost",
 }: {
   label: string;
   confirmLabel: string;
@@ -103,34 +89,46 @@ export function ConfirmButton({
 export function StudentPicker({ label = "Alumno" }: { label?: string }) {
   const { session, selectStudent } = useRadar();
   return (
-    <label className="picker">
+    <label className="field">
       <span>{label}</span>
-      <select
-        value={session.activeStudentId ?? ""}
-        onChange={(event) => selectStudent(event.target.value)}
-      >
+      <select value={session.activeStudentId ?? ""} onChange={(event) => selectStudent(event.target.value)}>
         {session.students.map((student) => (
-          <option key={student.studentId} value={student.studentId}>
-            {student.displayName}
-          </option>
+          <option key={student.studentId} value={student.studentId}>{student.displayName}</option>
         ))}
       </select>
     </label>
   );
 }
 
+export function EmptyState({
+  title,
+  children,
+  action,
+}: {
+  title: string;
+  children: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <section className="empty-state">
+      <Mascot mood="think" size={104} />
+      <div>
+        <h2>{title}</h2>
+        <p>{children}</p>
+        {action}
+      </div>
+    </section>
+  );
+}
+
 export function EmptyClassNotice() {
   return (
-    <section className="card empty-state">
-      <h2>No hay alumnos en esta clase.</h2>
-      <p>
-        Sin alumnos no hay estimaciones ni planes. Restaura la clase simulada
-        desde la pantalla Clase.
-      </p>
-      <a className="primary" href="#/clase">
-        Ir a Clase
-      </a>
-    </section>
+    <EmptyState
+      title="No hay alumnos en esta clase."
+      action={<a className="btn btn-primary" href="#/clase">Ir a Mi clase</a>}
+    >
+      Sin alumnos no hay estimaciones ni planes. Restaura la clase simulada desde Mi clase.
+    </EmptyState>
   );
 }
 
@@ -151,19 +149,22 @@ export class ErrorBoundary extends Component<
   override render() {
     if (this.state.message === null) return this.props.children;
     return (
-      <section className="card empty-state" role="alert">
-        <h2>No se ha podido mostrar esta pantalla.</h2>
-        <p>{this.state.message}</p>
-        <button
-          type="button"
-          className="primary"
-          onClick={() => {
-            this.setState({ message: null });
-            this.props.onReset();
-          }}
-        >
-          Reiniciar la demo
-        </button>
+      <section className="empty-state" role="alert">
+        <Mascot mood="try" size={104} />
+        <div>
+          <h2>No se ha podido mostrar esta pantalla.</h2>
+          <p>{this.state.message}</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              this.setState({ message: null });
+              this.props.onReset();
+            }}
+          >
+            Reiniciar la demo
+          </button>
+        </div>
       </section>
     );
   }

@@ -2,20 +2,63 @@ import { useEffect, useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Notice, PageTitle } from "../components/ui.tsx";
 import { BENCHMARK_REPORT_URL, BENCHMARK_SOURCES, loadBenchmark, type LoadedBenchmark } from "../services/benchmarkLoader.ts";
-import { METRICS, POSITION_LABELS, type ScenarioView } from "../services/benchmarkView.ts";
+import { METRICS, POSITION_LABELS, type IntervalPosition, type ScenarioView } from "../services/benchmarkView.ts";
 import { NOT_AVAILABLE, decimal, signedDecimal } from "../services/format.ts";
 
 // Color y trazo fijos por método: la identidad no depende solo del color.
 const METHOD_STYLE: Readonly<Record<string, { color: string; dash?: string; label: string } | undefined>> = {
-  A: { color: "#c17d26", label: "A · orden fijo", dash: "9 4" },
-  B: { color: "#158a6e", label: "B · adaptativo" },
-  C: { color: "#5b6fb5", label: "C · aleatorio", dash: "2 4" },
+  A: { color: "#EE6A3C", label: "A · orden fijo", dash: "9 4" },
+  B: { color: "#0068C8", label: "B · adaptativo" },
+  C: { color: "#0FA58A", label: "C · aleatorio", dash: "2 4" },
+};
+
+const CELL_TEXT: Readonly<Record<IntervalPosition, string>> = {
+  favorsB: "B",
+  favorsA: "A",
+  includesZero: "0",
+  unavailable: "–",
 };
 
 function interval(lower: number | null, upper: number | null, digits = 4) {
-  return lower === null || upper === null
-    ? NOT_AVAILABLE
-    : `[${decimal(lower, digits)}, ${decimal(upper, digits)}]`;
+  return lower === null || upper === null ? NOT_AVAILABLE : `[${decimal(lower, digits)}, ${decimal(upper, digits)}]`;
+}
+
+// Mosaico: dónde cae el intervalo de B − A en cada métrica y presupuesto.
+function Mosaic({ scenario, active, onPick }: { scenario: ScenarioView; active: boolean; onPick: () => void }) {
+  return (
+    <section className={active ? "mosaic on" : "mosaic"} aria-labelledby={`mosaic-${scenario.id}`}>
+      <h3 id={`mosaic-${scenario.id}`}>{scenario.label}</h3>
+      <table>
+        <caption className="sr-only">Posición del intervalo de B menos A en {scenario.label}</caption>
+        <thead>
+          <tr>
+            <th scope="col"><span className="sr-only">Métrica</span></th>
+            {scenario.budgets.map((budget) => <th key={budget.label} scope="col">{budget.label === "todas" ? "Todas" : budget.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {METRICS.map((metric) => (
+            <tr key={metric.id}>
+              <th scope="row">{metric.label}</th>
+              {scenario.budgets.map((budget) => {
+                const row = budget.comparisons.find((c) => c.metric === metric.id);
+                const position = row?.position ?? "unavailable";
+                return (
+                  <td key={budget.label} className={`cell cell-${position}`} title={`${POSITION_LABELS[position]} · media ${signedDecimal(row?.mean ?? null)}`}>
+                    <span aria-hidden="true">{CELL_TEXT[position]}</span>
+                    <span className="sr-only">{POSITION_LABELS[position]}</span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button type="button" className="btn btn-ghost" aria-pressed={active} onClick={onPick}>
+        {active ? "Viendo el detalle" : "Ver detalle"}
+      </button>
+    </section>
+  );
 }
 
 function ScenarioDetail({ scenario }: { scenario: ScenarioView }) {
@@ -26,12 +69,11 @@ function ScenarioDetail({ scenario }: { scenario: ScenarioView }) {
   const metricLabel = METRICS.find((m) => m.id === metric)?.label ?? metric;
   const chart = scenario.budgets.map((item) => {
     const row: Record<string, string | number | null> = { budget: item.label };
-    for (const method of item.methods)
-      row[method.method] = method.metrics.find((m) => m.metric === metric)?.mean ?? null;
+    for (const method of item.methods) row[method.method] = method.metrics.find((m) => m.metric === metric)?.mean ?? null;
     return row;
   });
   return (
-    <section className="card" aria-label={`Detalle: ${scenario.label}`}>
+    <section className="panel" aria-label={`Detalle: ${scenario.label}`}>
       <h2>{scenario.label}</h2>
       <p>{scenario.description}</p>
       {scenario.losses.length > 0 && (
@@ -41,22 +83,21 @@ function ScenarioDetail({ scenario }: { scenario: ScenarioView }) {
       )}
       {scenario.divergences.length > 0 && (
         <Notice title="Mejor MAE no implica más aciertos de clasificación.">
-          Con MAE favorable a B:{" "}
-          {scenario.divergences.map((d) => `presupuesto ${d.budget}: ${d.metrics.join(", ")}`).join("; ")}.
+          Con MAE favorable a B: {scenario.divergences.map((d) => `presupuesto ${d.budget}: ${d.metrics.join(", ")}`).join("; ")}.
         </Notice>
       )}
       <div className="controls">
-        <label className="picker">
+        <label className="field">
           <span>Métrica del gráfico</span>
           <select value={metric} onChange={(e) => setMetric(e.target.value as typeof metric)}>
             {METRICS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
           </select>
         </label>
       </div>
-      <div className="chart chart-wide" aria-hidden="true">
+      <div className="chart chart-lg" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chart} margin={{ top: 8, right: 24, left: 4, bottom: 4 }}>
-            <CartesianGrid vertical={false} stroke="var(--grid)" />
+          <LineChart accessibilityLayer={false} data={chart} margin={{ top: 8, right: 24, left: 4, bottom: 4 }}>
+            <CartesianGrid vertical={false} stroke="var(--ring)" />
             <XAxis dataKey="budget" axisLine={false} tickLine={false} />
             <YAxis width={52} axisLine={false} tickLine={false} tickFormatter={(v: number) => v.toFixed(2)} domain={["auto", "auto"]} />
             <Tooltip formatter={(v) => decimal(Number(v), 4)} labelFormatter={(l) => `Presupuesto ${String(l)}`} />
@@ -64,31 +105,16 @@ function ScenarioDetail({ scenario }: { scenario: ScenarioView }) {
             {(["A", "B", "C"] as const).map((id) => {
               const style = METHOD_STYLE[id];
               return (
-                <Line
-                  key={id}
-                  dataKey={id}
-                  name={style?.label ?? id}
-                  stroke={style?.color}
-                  strokeDasharray={style?.dash}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  isAnimationActive={false}
-                />
+                <Line key={id} dataKey={id} name={style?.label ?? id} stroke={style?.color} strokeDasharray={style?.dash} strokeWidth={2.5} dot={{ r: 4 }} isAnimationActive={false} />
               );
             })}
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="table-note">Media de {metricLabel} por presupuesto de preguntas. Los valores e intervalos están en las tablas.</p>
+      <p className="note">Media de {metricLabel} por presupuesto de preguntas. Valores e intervalos, en las tablas.</p>
       <div className="tabs" role="group" aria-label="Presupuesto de preguntas">
         {scenario.budgets.map((item, index) => (
-          <button
-            key={item.label}
-            type="button"
-            className={index === budgetIndex ? "tab active" : "tab"}
-            aria-pressed={index === budgetIndex}
-            onClick={() => setBudgetIndex(index)}
-          >
+          <button key={item.label} type="button" className={index === budgetIndex ? "preset on" : "preset"} aria-pressed={index === budgetIndex} onClick={() => setBudgetIndex(index)}>
             {item.label === "todas" ? "Todas" : `${item.label} preguntas`}
           </button>
         ))}
@@ -144,7 +170,7 @@ function ScenarioDetail({ scenario }: { scenario: ScenarioView }) {
                   return (
                     <td key={method.method}>
                       {decimal(value?.mean ?? null, 4)}
-                      <small className="row-flag">{interval(value?.lower ?? null, value?.upper ?? null)}</small>
+                      <small className="cell-note">{interval(value?.lower ?? null, value?.upper ?? null)}</small>
                     </td>
                   );
                 })}
@@ -176,8 +202,8 @@ export function BenchmarkScreen() {
 
   const title = (
     <PageTitle
-      eyebrow="EVIDENCIA EN SIMULACIÓN"
-      title="Qué mide el benchmark y qué no."
+      eyebrow="Evidencia en simulación"
+      title="Dónde gana, dónde empata y dónde pierde"
       intro="Informes ya generados del experimento de diagnóstico. Esta pantalla los lee: no ejecuta el experimento ni edita sus cifras."
     />
   );
@@ -186,10 +212,10 @@ export function BenchmarkScreen() {
       <>
         {title}
         <Notice tone="error" title="No se ha podido cargar el informe.">{error}</Notice>
-        <button type="button" className="primary" onClick={() => setAttempt(attempt + 1)}>Reintentar</button>
+        <button type="button" className="btn btn-primary" onClick={() => setAttempt(attempt + 1)}>Reintentar</button>
       </>
     );
-  if (data === null) return <>{title}<p role="status">Cargando el informe…</p></>;
+  if (data === null) return <>{title}<p role="status" className="loading">Cargando el informe…</p></>;
 
   const { view, execution } = data;
   const { provenance } = view;
@@ -203,9 +229,23 @@ export function BenchmarkScreen() {
         </Notice>
       )}
       <Notice title="Datos sintéticos.">{provenance.disclaimer}</Notice>
-      <section className="card" aria-labelledby="reading-title">
+      <section className="panel panel-navy" aria-labelledby="mosaics-title">
+        <h2 id="mosaics-title">B adaptativo frente a A orden fijo</h2>
+        <p>Una casilla por métrica y número de preguntas: dónde cae el intervalo del 95 % de B − A.</p>
+        <ul className="legend legend-navy" aria-label="Leyenda del mosaico">
+          <li><i className="cell-key cell-favorsB">B</i> Favorece a B</li>
+          <li><i className="cell-key cell-favorsA">A</i> Favorece a A</li>
+          <li><i className="cell-key cell-includesZero">0</i> Incluye cero: no demuestra equivalencia</li>
+        </ul>
+        <div className="mosaics">
+          {view.scenarios.map((item, index) => (
+            <Mosaic key={item.id} scenario={item} active={index === scenarioIndex} onPick={() => setScenarioIndex(index)} />
+          ))}
+        </div>
+      </section>
+      <section className="panel" aria-labelledby="reading-title">
         <h2 id="reading-title">Cómo leerlo</h2>
-        <ul>
+        <ul className="reading">
           <li>Evalúa el diagnóstico. No valida planes, actividades ni intervenciones.</li>
           <li>Mejor MAE no implica más aciertos de clasificación: miden cosas distintas.</li>
           <li>Un intervalo que incluye cero no demuestra equivalencia.</li>
@@ -214,9 +254,10 @@ export function BenchmarkScreen() {
           <li>Los resultados sintéticos no prueban eficacia educativa.</li>
         </ul>
       </section>
-      <section className="card" aria-labelledby="summary-title">
-        <h2 id="summary-title">Resumen de B − A en los tres escenarios</h2>
-        <div className="table-scroll" tabIndex={0} role="region" aria-labelledby="summary-title">
+      {scenario !== undefined && <ScenarioDetail key={scenario.id} scenario={scenario} />}
+      <section className="panel" aria-labelledby="summary-title">
+        <h2 id="summary-title">Resumen de B − A</h2>
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Tabla resumen de B menos A">
           <table>
             <thead>
               <tr>
@@ -250,23 +291,9 @@ export function BenchmarkScreen() {
             </tbody>
           </table>
         </div>
-        <p className="table-note">Siete métricas por fila. B mejora, Empate y B empeora cuentan comparaciones por semilla (semillas × métricas).</p>
+        <p className="note">Siete métricas por fila. B mejora, Empate y B empeora cuentan comparaciones por semilla (semillas × métricas).</p>
       </section>
-      <div className="tabs" role="group" aria-label="Escenario">
-        {view.scenarios.map((item, index) => (
-          <button
-            key={item.id}
-            type="button"
-            className={index === scenarioIndex ? "tab active" : "tab"}
-            aria-pressed={index === scenarioIndex}
-            onClick={() => setScenarioIndex(index)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      {scenario !== undefined && <ScenarioDetail key={scenario.id} scenario={scenario} />}
-      <section className="card" aria-labelledby="provenance-title">
+      <section className="panel" aria-labelledby="provenance-title">
         <h2 id="provenance-title">Procedencia</h2>
         <dl className="provenance">
           <div><dt>Archivo de datos</dt><dd>{BENCHMARK_SOURCES.results}</dd></div>
@@ -281,7 +308,7 @@ export function BenchmarkScreen() {
           <div><dt>Métodos</dt><dd>{provenance.methods.join(", ")}</dd></div>
           {execution !== null && <div><dt>Generado</dt><dd>{execution.finishedAt} con Node {execution.nodeVersion}</dd></div>}
         </dl>
-        <a className="text-button" href={BENCHMARK_REPORT_URL} target="_blank" rel="noreferrer">
+        <a className="link" href={BENCHMARK_REPORT_URL} target="_blank" rel="noreferrer">
           Abrir el informe completo ({BENCHMARK_SOURCES.report})
         </a>
       </section>

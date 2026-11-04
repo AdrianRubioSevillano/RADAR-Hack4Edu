@@ -8,7 +8,7 @@ import {
   type SkillId,
 } from "./engine.ts";
 import { PRACTICE_TEMPLATES } from "./practiceBank.ts";
-import { skillName } from "./teacher.ts";
+import { readableMessage, skillName } from "./teacher.ts";
 
 export const COLLECTIVE_EXERCISES = 3;
 
@@ -136,7 +136,7 @@ export function collectiveActivities(
         null,
       warnings: ranking.warnings
         .filter((warning) => warning.skill === item.skill)
-        .map((warning) => warning.message),
+        .map((warning) => readableMessage(warning.message)),
       shortage,
     };
   });

@@ -1,47 +1,42 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { ClassScreen } from "./screens/ClassScreen.tsx";
+import logo from "./assets/radar-logo.png";
+import mark from "./assets/radar-mark.png";
+import { Icon } from "./components/art.tsx";
 import { PreferencesPanel } from "./components/PreferencesPanel.tsx";
 import { useRadar } from "./components/RadarProvider.tsx";
-import { ErrorBoundary, Notice, SyntheticBadge } from "./components/ui.tsx";
+import { ErrorBoundary, Notice } from "./components/ui.tsx";
+import { ClassScreen } from "./screens/ClassScreen.tsx";
 
 // Cada pantalla pesada se carga al entrar en ella.
 const StudentDiagnosticScreen = lazy(() =>
-  import("./screens/StudentDiagnosticScreen.tsx").then((m) => ({
-    default: m.StudentDiagnosticScreen,
-  })),
+  import("./screens/StudentDiagnosticScreen.tsx").then((m) => ({ default: m.StudentDiagnosticScreen })),
 );
 const PracticeScreen = lazy(() =>
-  import("./screens/PracticeScreen.tsx").then((m) => ({
-    default: m.PracticeScreen,
-  })),
+  import("./screens/PracticeScreen.tsx").then((m) => ({ default: m.PracticeScreen })),
 );
 const TeacherScreen = lazy(() =>
-  import("./screens/TeacherScreen.tsx").then((m) => ({
-    default: m.TeacherScreen,
-  })),
+  import("./screens/TeacherScreen.tsx").then((m) => ({ default: m.TeacherScreen })),
 );
 const PlansScreen = lazy(() =>
   import("./screens/PlansScreen.tsx").then((m) => ({ default: m.PlansScreen })),
 );
 const ActivitiesScreen = lazy(() =>
-  import("./screens/ActivitiesScreen.tsx").then((m) => ({
-    default: m.ActivitiesScreen,
-  })),
+  import("./screens/ActivitiesScreen.tsx").then((m) => ({ default: m.ActivitiesScreen })),
 );
 const BenchmarkScreen = lazy(() =>
-  import("./screens/BenchmarkScreen.tsx").then((m) => ({
-    default: m.BenchmarkScreen,
-  })),
+  import("./screens/BenchmarkScreen.tsx").then((m) => ({ default: m.BenchmarkScreen })),
 );
 
+type Mode = "teacher" | "student";
+
 const ROUTES = [
-  { id: "clase", label: "Clase", icon: "◎", group: "Demo", Screen: ClassScreen },
-  { id: "diagnostico", label: "Diagnóstico", icon: "◈", group: "Alumno", Screen: StudentDiagnosticScreen },
-  { id: "practica", label: "Práctica", icon: "✎", group: "Alumno", Screen: PracticeScreen },
-  { id: "docente", label: "Panel de clase", icon: "⌘", group: "Docente", Screen: TeacherScreen },
-  { id: "planes", label: "Planes", icon: "⇄", group: "Docente", Screen: PlansScreen },
-  { id: "actividades", label: "Actividades", icon: "❖", group: "Docente", Screen: ActivitiesScreen },
-  { id: "benchmark", label: "Benchmark", icon: "▤", group: "Evidencia", Screen: BenchmarkScreen },
+  { id: "clase", label: "Mi clase", icon: "class", mode: "teacher", Screen: ClassScreen },
+  { id: "docente", label: "Radar", icon: "radar", mode: "teacher", Screen: TeacherScreen },
+  { id: "planes", label: "Planes", icon: "plans", mode: "teacher", Screen: PlansScreen },
+  { id: "actividades", label: "Actividades", icon: "activities", mode: "teacher", Screen: ActivitiesScreen },
+  { id: "benchmark", label: "Evidencia", icon: "evidence", mode: "teacher", Screen: BenchmarkScreen },
+  { id: "diagnostico", label: "Diagnóstico", icon: "student", mode: "student", Screen: StudentDiagnosticScreen },
+  { id: "practica", label: "Práctica", icon: "practice", mode: "student", Screen: PracticeScreen },
 ] as const;
 
 type RouteId = (typeof ROUTES)[number]["id"];
@@ -66,12 +61,15 @@ export default function App() {
   const { notice, dismissNotice, canPersist, resetAll } = useRadar();
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const current = ROUTES.find((item) => item.id === route) ?? ROUTES[0];
+  const mode: Mode = current.mode;
+  const items = ROUTES.filter((item) => item.mode === mode);
   const { Screen } = current;
   const main = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
 
   // Al navegar, el foco va al título para que teclado y lector sigan el cambio.
   useEffect(() => {
+    document.title = `${current.label} · RADAR`;
     if (firstRender.current) {
       firstRender.current = false;
       return;
@@ -79,65 +77,59 @@ export default function App() {
     window.scrollTo(0, 0);
     const timer = setTimeout(
       () => main.current?.querySelector<HTMLElement>("#page-title")?.focus(),
-      50,
+      60,
     );
-    document.title = `${current.label} · RADAR`;
     return () => clearTimeout(timer);
   }, [current.label]);
 
+  const links = items.map((item) => (
+    <a
+      key={item.id}
+      href={`#/${item.id}`}
+      className={item.id === route ? "active" : ""}
+      aria-current={item.id === route ? "page" : undefined}
+    >
+      <Icon name={item.icon} /> <span>{item.label}</span>
+    </a>
+  ));
+
   return (
-    <div className="shell">
-      <a className="skip-link" href="#contenido" onClick={(event) => {
-        event.preventDefault();
-        main.current?.focus();
-      }}>
+    <div className="shell" data-world={mode}>
+      <a
+        className="skip-link"
+        href="#contenido"
+        onClick={(event) => {
+          event.preventDefault();
+          main.current?.focus();
+        }}
+      >
         Saltar al contenido
       </a>
-      <aside>
-        <a className="brand" href="#/clase">
-          <span className="logo" aria-hidden="true">◉</span> RADAR
-          <span className="brand-dot" aria-hidden="true">.</span>
+      <header className="topbar">
+        <a className="brand" href="#/clase" aria-label="RADAR, ir a Mi clase">
+          <img className="brand-full" src={logo} alt="" width="86" height="70" />
+          <img className="brand-mark" src={mark} alt="" width="46" height="43" />
         </a>
-        <nav aria-label="Principal">
-          {ROUTES.map((item, index) => (
-            <div key={item.id} className="nav-item">
-              {ROUTES[index - 1]?.group !== item.group && (
-                <div className="workspace-label">{item.group}</div>
-              )}
-              <a
-                href={`#/${item.id}`}
-                className={item.id === route ? "active" : ""}
-                aria-current={item.id === route ? "page" : undefined}
-              >
-                <span aria-hidden="true">{item.icon}</span> {item.label}
-              </a>
-            </div>
-          ))}
+        <nav className="mode-switch" aria-label="Modo">
+          <a href="#/clase" aria-current={mode === "teacher" ? "true" : undefined}>Docente</a>
+          <a href="#/diagnostico" aria-current={mode === "student" ? "true" : undefined}>Alumno</a>
         </nav>
-        <div className="aside-note">
-          <span className="status-dot" aria-hidden="true" /> Motor en el navegador
-          <p>Sin servidor, cuentas ni servicios de IA.</p>
+        <nav className="main-nav" aria-label="Principal">{links}</nav>
+        <div className="top-actions">
+          <span className="synthetic-tag" title="Todos los alumnos y respuestas de esta demo son ficticios">
+            Datos sintéticos
+          </span>
+          <button type="button" className="btn btn-ghost" aria-label="Accesibilidad" onClick={() => setPreferencesOpen(true)}>
+            <Icon name="access" /> <span>Accesibilidad</span>
+          </button>
         </div>
-      </aside>
+      </header>
       <main ref={main} id="contenido" tabIndex={-1}>
-        <header>
-          <div>
-            RADAR <span aria-hidden="true">/</span> {current.group} <span aria-hidden="true">/</span> {current.label}
-          </div>
-          <div className="header-actions">
-            <SyntheticBadge />
-            <button type="button" className="secondary" onClick={() => setPreferencesOpen(true)}>
-              Accesibilidad
-            </button>
-          </div>
-        </header>
         <div className="content">
           {notice !== null && (
             <Notice tone="warning">
               {notice}{" "}
-              <button type="button" className="text-button" onClick={dismissNotice}>
-                Entendido
-              </button>
+              <button type="button" className="link" onClick={dismissNotice}>Entendido</button>
             </Notice>
           )}
           {!canPersist && (
@@ -146,16 +138,17 @@ export default function App() {
             </Notice>
           )}
           <ErrorBoundary key={route} onReset={resetAll}>
-            <Suspense fallback={<p role="status">Cargando…</p>}>
+            <Suspense fallback={<p role="status" className="loading">Cargando…</p>}>
               <Screen />
             </Suspense>
           </ErrorBoundary>
-          <footer>
-            RADAR · Hacer visible el aprendizaje.
-            <span>Prototipo experimental · Hack4Edu 2026 · Sin validación educativa</span>
-          </footer>
         </div>
+        <footer>
+          <span>RADAR · Hack4Edu 2026</span>
+          <span>Prototipo experimental, sin validación educativa. Se ejecuta en tu navegador: sin servidor, cuentas ni IA externa.</span>
+        </footer>
       </main>
+      <nav className="tabbar" aria-label="Principal móvil">{links}</nav>
       <PreferencesPanel open={preferencesOpen} onClose={() => setPreferencesOpen(false)} />
     </div>
   );

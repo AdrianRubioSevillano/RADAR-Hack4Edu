@@ -23,6 +23,14 @@ export function skillName(id: SkillId): string {
   return KNOWLEDGE_GRAPH.nodes.find((node) => node.id === id)?.name ?? id;
 }
 
+// Los avisos del motor citan ids de competencia; el docente lee sus nombres.
+export function readableMessage(message: string): string {
+  return KNOWLEDGE_GRAPH.nodes.reduce(
+    (text, node) => text.replace(new RegExp(`\\b${node.id}\\b`, "g"), node.name),
+    message,
+  );
+}
+
 export function classDiagnosticOf(
   states: readonly DiagnosticState[],
 ): ClassDiagnostic {

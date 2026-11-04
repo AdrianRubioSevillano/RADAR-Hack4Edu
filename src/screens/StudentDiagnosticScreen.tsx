@@ -1,25 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import {
-  Bar,
-  BarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { KnowledgeMap, levelOf } from "../components/KnowledgeMap.tsx";
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Avatar, Icon, Speech, SkillBadge } from "../components/art.tsx";
+import { KnowledgeMap } from "../components/KnowledgeMap.tsx";
 import { ReadAloud } from "../components/ReadAloud.tsx";
 import { usePreferences, useRadar } from "../components/RadarProvider.tsx";
-import {
-  ConfirmButton,
-  EmptyClassNotice,
-  Metric,
-  Notice,
-  PageTitle,
-  StudentPicker,
-} from "../components/ui.tsx";
+import { ConfirmButton, EmptyClassNotice, PageTitle, Stat, StudentPicker } from "../components/ui.tsx";
 import { diagnosticView, type DiagnosticView } from "../services/diagnostic.ts";
-import { percent } from "../services/format.ts";
+import { originText, percent, percentBounded } from "../services/format.ts";
 import { stateOf } from "../services/session.ts";
 
 function questionText(question: NonNullable<DiagnosticView["question"]>) {
@@ -30,12 +17,29 @@ function questionText(question: NonNullable<DiagnosticView["question"]>) {
     : question.statement;
 }
 
-function Estimates({ view }: { view: DiagnosticView }) {
+export function Trail({ done, total }: { done: number; total: number }) {
+  return (
+    <div className="trail" role="img" aria-label={`${done} de ${total} preguntas respondidas`}>
+      {Array.from({ length: total }, (_, index) => (
+        <span key={index} className={index < done ? "on" : index === done ? "now" : ""} />
+      ))}
+    </div>
+  );
+}
+
+export function Confetti() {
+  return (
+    <div className="confetti" aria-hidden="true">
+      {Array.from({ length: 14 }, (_, index) => <i key={index} style={{ "--i": index } as React.CSSProperties} />)}
+    </div>
+  );
+}
+
+function ModelPanel({ view }: { view: DiagnosticView }) {
   const measured = view.skills.filter((skill) => skill.hasEvidence);
   return (
-    <section className="card estimates" aria-labelledby="estimates-title">
-      <p className="eyebrow">ASÍ EVOLUCIONA EL DIAGNÓSTICO</p>
-      <h2 id="estimates-title">Una imagen en construcción</h2>
+    <details className="more teacher-peek">
+      <summary>Para docentes: cómo va la estimación del modelo</summary>
       {!view.hasEvidence ? (
         <p>
           Todavía no hay respuestas, así que no hay evidencia sobre este alumno.
@@ -43,53 +47,40 @@ function Estimates({ view }: { view: DiagnosticView }) {
           partida, no un resultado.
         </p>
       ) : (
-        <p>
-          Probabilidad de dominio estimada por un modelo sin calibrar. No es una
-          nota.
-        </p>
+        <p>Probabilidad de dominio estimada por un modelo sin calibrar. No es una nota.</p>
       )}
-      {measured.length > 0 && (
-        <div className="chart" aria-hidden="true">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={measured} layout="vertical" margin={{ left: 8, right: 15 }}>
-              <XAxis type="number" domain={[0, 1]} hide />
-              <YAxis type="category" dataKey="id" width={42} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(v) => percent(Number(v))} />
-              <Bar dataKey="probability" fill="var(--mark)" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-      <ul className="skill-list">
-        {view.skills.map((skill) => (
-          <li key={skill.id}>
-            <span>{skill.name}</span>
-            <strong>{skill.hasEvidence ? percent(skill.probability) : "Sin evidencia"}</strong>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function SkillTable({ view }: { view: DiagnosticView }) {
-  return (
-    <section className="card map-card" aria-labelledby="map-title">
-      <p className="eyebrow">SEIS COMPETENCIAS CONECTADAS</p>
-      <h2 id="map-title">Mapa de conocimientos</h2>
-      <p>
-        Las flechas indican prerrequisitos propuestos: son hipótesis pedagógicas,
-        sin causalidad demostrada.
-      </p>
+      <div className="peek-grid">
+        <ul className="skill-rows">
+          {view.skills.map((skill) => (
+            <li key={skill.id}>
+              <SkillBadge id={skill.id} size="sm" />
+              <span>{skill.name}</span>
+              <strong>{skill.hasEvidence ? percentBounded(skill.probability) : "Sin evidencia"}</strong>
+            </li>
+          ))}
+        </ul>
+        {measured.length > 0 && (
+          <div className="chart chart-sm" aria-hidden="true">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart accessibilityLayer={false} data={measured} layout="vertical" margin={{ left: 8, right: 15 }}>
+                <XAxis type="number" domain={[0, 1]} hide />
+                <YAxis type="category" dataKey="id" width={42} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v) => percent(Number(v))} />
+                <Bar dataKey="probability" fill="var(--blue)" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+      <h3>Camino entre competencias</h3>
+      <p>Las flechas son hipótesis pedagógicas, sin causalidad demostrada.</p>
       <KnowledgeMap
         skills={view.skills.map((skill) => ({
           id: skill.id,
           name: skill.name,
           prerequisites: skill.prerequisites,
-          valueText: skill.hasEvidence
-            ? `${percent(skill.probability)} de dominio estimado`
-            : "Sin evidencia",
-          level: skill.hasEvidence ? levelOf(skill.probability) : "none",
+          valueText: skill.hasEvidence ? `${percentBounded(skill.probability)} de dominio estimado` : "Sin evidencia",
+          value: skill.hasEvidence ? skill.probability : null,
         }))}
       />
       <div className="table-scroll" tabIndex={0} role="region" aria-label="Estimaciones por competencia">
@@ -108,7 +99,7 @@ function SkillTable({ view }: { view: DiagnosticView }) {
             {view.skills.map((skill) => (
               <tr key={skill.id}>
                 <th scope="row">{skill.name}</th>
-                <td>{skill.hasEvidence ? percent(skill.probability) : "Sin evidencia"}</td>
+                <td>{skill.hasEvidence ? percentBounded(skill.probability) : "Sin evidencia"}</td>
                 <td>{skill.hasEvidence ? `${skill.uncertainty.toFixed(2)} bits` : "—"}</td>
                 <td>{skill.observedResponses}</td>
                 <td>{skill.prerequisites.join(", ") || "Ninguno"}</td>
@@ -117,19 +108,7 @@ function SkillTable({ view }: { view: DiagnosticView }) {
           </tbody>
         </table>
       </div>
-    </section>
-  );
-}
-
-function Feedback({ view }: { view: DiagnosticView }) {
-  if (view.feedback === null) return null;
-  return (
-    <section className="feedback" role="status">
-      <strong>
-        {view.feedback.correct ? "✓ Respuesta anterior correcta" : "✗ Respuesta anterior incorrecta"}
-      </strong>
-      <p>{view.feedback.explanation}</p>
-    </section>
+    </details>
   );
 }
 
@@ -144,7 +123,7 @@ export function StudentDiagnosticScreen() {
   const [error, setError] = useState("");
   const [awaitingNext, setAwaitingNext] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
-  const submitted = useRef(false);
+  const advanced = useRef(false);
 
   useEffect(() => {
     setAnswer("");
@@ -152,30 +131,28 @@ export function StudentDiagnosticScreen() {
     setAwaitingNext(false);
   }, [studentId]);
 
-  // Tras responder, el foco pasa a la pregunta nueva.
+  // Tras pasar de la corrección, el foco va a la pregunta nueva.
   useEffect(() => {
-    if (submitted.current && !awaitingNext) {
-      submitted.current = false;
+    if (advanced.current && !awaitingNext) {
+      advanced.current = false;
       heading.current?.focus();
     }
-  }, [view?.question?.id, awaitingNext]);
+  }, [awaitingNext]);
 
-  if (studentId === null || view === null) {
+  if (studentId === null || view === null)
     return (
       <>
-        <PageTitle
-          eyebrow="DIAGNÓSTICO INDIVIDUAL"
-          title="Entender antes de avanzar."
-          intro="Elige un alumno para responder sus preguntas."
-        />
+        <PageTitle eyebrow="Diagnóstico" title="Sin alumnos" intro="Elige un alumno para responder sus preguntas." />
         <EmptyClassNotice />
       </>
     );
-  }
 
-  const student = session.students.find((s) => s.studentId === studentId);
+  const index = session.students.findIndex((s) => s.studentId === studentId);
+  const student = session.students[index];
   const origin = session.origins[studentId];
   const focused = preferences.onePerScreen;
+  const question = view.question;
+  const number = Math.min(view.completed + (awaitingNext ? 0 : 1), view.total);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -185,163 +162,142 @@ export function StudentDiagnosticScreen() {
       setError(result.error.message);
       return;
     }
-    submitted.current = true;
     setAnswer("");
     setError("");
-    if (focused) setAwaitingNext(true);
+    setAwaitingNext(true);
   }
 
-  const question = view.question;
-
   return (
-    <>
-      <PageTitle
-        eyebrow="DIAGNÓSTICO INDIVIDUAL"
-        title="Entender antes de avanzar."
-        intro="Responde como el alumno elegido. RADAR elige la siguiente pregunta según la información que espera obtener."
-      >
-        <StudentPicker />
-        <ConfirmButton
-          label="Reiniciar este alumno"
-          confirmLabel="¿Seguro? Pulsa otra vez"
-          onConfirm={() => radar.resetStudent(studentId)}
-        />
-      </PageTitle>
+    <div className="quest">
+      <div className="quest-head">
+        <div className="quest-who">
+          <Avatar index={index + 1} size={56} />
+          <PageTitle
+            eyebrow={student?.displayName ?? studentId}
+            title={question === null && !awaitingNext ? "¡Banco terminado!" : `Pregunta ${number}`}
+          />
+        </div>
+        {!focused && (
+          <div className="page-actions">
+            <StudentPicker />
+            <ConfirmButton label="Reiniciar" confirmLabel="¿Seguro? Pulsa otra vez" onConfirm={() => radar.resetStudent(studentId)} />
+          </div>
+        )}
+      </div>
+      <Trail done={view.completed} total={view.total} />
+      <section className="quest-stage" aria-label={awaitingNext ? "Corrección" : "Pregunta"}>
+        {awaitingNext && view.feedback !== null ? (
+          <>
+            {view.feedback.correct && <Confetti />}
+            <Speech mood={view.feedback.correct ? "cheer" : "try"} size={120}>
+              <strong className="bubble-title" role="status">
+                {view.feedback.correct ? "¡Respuesta correcta!" : "Esta vez no era esa."}
+              </strong>
+              {view.feedback.explanation}
+            </Speech>
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              autoFocus
+              onClick={() => {
+                advanced.current = true;
+                setAwaitingNext(false);
+              }}
+            >
+              {question === null ? "Ver el final" : "Siguiente pregunta"} <Icon name="arrow" />
+            </button>
+          </>
+        ) : question !== null ? (
+          <>
+            <Speech mood="think" size={84}>
+              {question.format === "numeric"
+                ? "Escribe un entero o una fracción. Las fracciones equivalentes valen."
+                : "Elige una opción. No hay límite de tiempo."}
+            </Speech>
+            <form onSubmit={submit} key={question.id}>
+              <h2 tabIndex={-1} ref={heading} className="statement">{question.statement}</h2>
+              <ReadAloud text={questionText(question)} />
+              {question.format === "multipleChoice" ? (
+                <fieldset className="choices">
+                  <legend className="sr-only">Elige una respuesta</legend>
+                  {question.options.map((option, i) => (
+                    <label className={answer === option.id ? "choice on" : "choice"} key={option.id}>
+                      <input
+                        type="radio"
+                        name="answer"
+                        value={option.id}
+                        checked={answer === option.id}
+                        onChange={() => {
+                          setAnswer(option.id);
+                          setError("");
+                        }}
+                      />
+                      <span className="choice-letter" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
+                      <span>{option.text}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              ) : (
+                <div className="answer-field">
+                  <label htmlFor="numeric-answer">Tu respuesta</label>
+                  <input
+                    id="numeric-answer"
+                    value={answer}
+                    onChange={(e) => {
+                      setAnswer(e.target.value);
+                      setError("");
+                    }}
+                    placeholder="Ej.: -3 o 2/5"
+                    autoComplete="off"
+                    aria-describedby={error === "" ? undefined : "answer-error"}
+                    aria-invalid={error !== ""}
+                  />
+                </div>
+              )}
+              {error !== "" && <p role="alert" id="answer-error" className="error"><Icon name="alert" /> {error}</p>}
+              <div className="quest-actions">
+                <button className="btn btn-primary btn-lg" disabled={answer.trim() === ""}>
+                  Enviar respuesta <Icon name="arrow" />
+                </button>
+              </div>
+            </form>
+            {view.expectedInformation !== null && !focused && (
+              <details className="more">
+                <summary>¿Por qué esta pregunta?</summary>
+                <p>
+                  El motor la selecciona por su ganancia de información esperada:{" "}
+                  <strong>{view.expectedInformation.toFixed(3)} bits</strong>. Es una
+                  expectativa del modelo, no una mejora educativa medida.
+                </p>
+              </details>
+            )}
+          </>
+        ) : (
+          <>
+            <Speech mood="cheer" size={120}>
+              <strong className="bubble-title">Ya no quedan preguntas para este alumno.</strong>
+              Ha respondido todo el banco, sin repetir ninguna pregunta. Las
+              estimaciones resumen esas respuestas según el modelo; no son una
+              evaluación validada.
+            </Speech>
+            <h2 tabIndex={-1} ref={heading} className="sr-only">Recorrido completado</h2>
+            <a className="btn btn-primary btn-lg" href="#/practica">Ir a la práctica <Icon name="arrow" /></a>
+          </>
+        )}
+      </section>
       {!focused && (
         <>
-          <Notice>
+          <div className="stats stats-quiet">
+            <Stat label="Respondidas" value={`${view.completed} / ${view.total}`} detail={originText(origin?.manual ?? 0, origin?.simulated ?? 0)} />
+            <Stat label="Aciertos" value={view.hasEvidence ? view.correct : "—"} detail={view.hasEvidence ? `De ${view.completed} respuestas` : "Sin respuestas"} />
+          </div>
+          <ModelPanel view={view} />
+          <p className="disclaimer">
             Es un diagnóstico de demostración, no un examen: la aplicación se
             ejecuta en el navegador y no protege las soluciones.
-          </Notice>
-          <div className="metrics">
-            <Metric
-              label="ALUMNO"
-              value={student?.displayName ?? studentId}
-              detail={`${origin?.manual ?? 0} manuales, ${origin?.simulated ?? 0} simuladas`}
-            />
-            <Metric
-              label="RECORRIDO"
-              value={<>{view.completed} <em>/ {view.total}</em></>}
-              detail="Preguntas respondidas"
-            />
-            <Metric
-              label="ACIERTOS"
-              value={view.hasEvidence ? view.correct : "—"}
-              detail={view.hasEvidence ? `De ${view.completed} respuestas` : "Sin respuestas"}
-            />
-          </div>
+          </p>
         </>
       )}
-      {focused && (
-        <p className="progress-line">
-          Pregunta {Math.min(view.completed + 1, view.total)} de {view.total}
-        </p>
-      )}
-      <div className={focused ? "diagnostic-single" : "diagnostic-grid"}>
-        <section className="card question-card" aria-label="Pregunta">
-          {awaitingNext ? (
-            <>
-              <Feedback view={view} />
-              <button
-                type="button"
-                className="primary"
-                autoFocus
-                onClick={() => setAwaitingNext(false)}
-              >
-                {question === null ? "Ver el final" : "Siguiente pregunta →"}
-              </button>
-            </>
-          ) : question !== null ? (
-            <>
-              <div className="section-heading">
-                <span className="eyebrow">SIGUIENTE PREGUNTA</span>
-                <span className="pill">
-                  {question.format === "numeric" ? "Respuesta numérica" : "Opción múltiple"}
-                </span>
-              </div>
-              <form onSubmit={submit} key={question.id}>
-                <h2 tabIndex={-1} ref={heading}>{question.statement}</h2>
-                <ReadAloud text={questionText(question)} />
-                {question.format === "multipleChoice" ? (
-                  <fieldset>
-                    <legend className="sr-only">Elige una respuesta</legend>
-                    {question.options.map((option, i) => (
-                      <label className={`option ${answer === option.id ? "selected" : ""}`} key={option.id}>
-                        <input
-                          type="radio"
-                          name="answer"
-                          value={option.id}
-                          checked={answer === option.id}
-                          onChange={() => {
-                            setAnswer(option.id);
-                            setError("");
-                          }}
-                        />
-                        <span className="option-letter" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
-                        <span>{option.text}</span>
-                      </label>
-                    ))}
-                  </fieldset>
-                ) : (
-                  <div className="numeric">
-                    <label htmlFor="numeric-answer">Tu respuesta</label>
-                    <input
-                      id="numeric-answer"
-                      value={answer}
-                      onChange={(e) => {
-                        setAnswer(e.target.value);
-                        setError("");
-                      }}
-                      placeholder="Ej.: -3 o 2/5"
-                      autoComplete="off"
-                      inputMode="text"
-                      aria-describedby="numeric-help"
-                      aria-invalid={error !== ""}
-                    />
-                    <small id="numeric-help">
-                      Escribe un entero o una fracción. Se aceptan fracciones equivalentes.
-                    </small>
-                  </div>
-                )}
-                {error !== "" && <p role="alert" className="error">{error}</p>}
-                <div className="question-footer">
-                  <span>Sin límite de tiempo</span>
-                  <button className="primary" disabled={answer.trim() === ""}>
-                    Enviar respuesta →
-                  </button>
-                </div>
-              </form>
-              {view.expectedInformation !== null && !focused && (
-                <details>
-                  <summary>¿Por qué esta pregunta?</summary>
-                  <p>
-                    El motor la selecciona por su ganancia de información
-                    esperada: <strong>{view.expectedInformation.toFixed(3)} bits</strong>.
-                    Es una expectativa del modelo, no una mejora educativa medida.
-                  </p>
-                </details>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="section-heading">
-                <span className="eyebrow">RECORRIDO COMPLETADO</span>
-                <span className="pill">{view.total} de {view.total}</span>
-              </div>
-              <h2 tabIndex={-1} ref={heading}>Ya no quedan preguntas para este alumno.</h2>
-              <p>
-                Ha respondido todo el banco, sin repetir ninguna pregunta. Las
-                estimaciones resumen esas respuestas según el modelo; no son una
-                evaluación validada.
-              </p>
-              <a className="primary" href="#/practica">Ir a la práctica →</a>
-            </>
-          )}
-        </section>
-        {!focused && <Estimates view={view} />}
-      </div>
-      {!awaitingNext && !focused && <Feedback view={view} />}
-      {!focused && <SkillTable view={view} />}
-    </>
+    </div>
   );
 }

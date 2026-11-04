@@ -5,6 +5,8 @@ import {
   PreferencesProvider,
   RadarProvider,
 } from "./components/RadarProvider.tsx";
+import "@fontsource-variable/fredoka";
+import "@fontsource-variable/atkinson-hyperlegible-next";
 import "@xyflow/react/dist/style.css";
 import "./styles.css";
 

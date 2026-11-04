@@ -9,9 +9,13 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
     "typecheck": "tsc --project tsconfig.engine.json && tsc --project tsconfig.json",
-    "bench": "node scripts/bench.ts"
+    "bench": "node scripts/bench.ts",
+    "e2e": "node scripts/e2e.ts",
+    "capturas": "node scripts/capturas.ts"
   },
   "dependencies": {
+    "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
+    "@fontsource-variable/fredoka": "^5.3.0",
     "@xyflow/react": "^12.10.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -23,6 +27,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.0",
+    "axe-core": "^4.14.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^7.0.2",
     "vite": "^7.2.0",
