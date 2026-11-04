@@ -494,6 +494,36 @@ Después se resumen las `d_s` como cualquier serie. No es la resta de medias: si
 
 **Límites.** El percentil bootstrap es aproximado y suele quedarse corto con pocas semillas: con `n` pequeño, el intervalo es más estrecho de lo que debería. Con un solo valor es degenerado y no informa sobre variabilidad. Solo refleja la variabilidad entre semillas bajo un generador y unos SUPUESTOS fijos, no la incertidumbre sobre esos SUPUESTOS. Varias comparaciones a la vez no se corrigen por multiplicidad. No es una prueba de eficacia educativa ni garantiza superioridad.
 
+## Ejecución de métodos
+
+`runDiagnosticMethod` aplica §2.9 a una réplica. El ejecutor posterior repetirá esto por semilla y escenario.
+
+**Métodos.** Todos parten de `createInitialDiagnosticState`, generan respuestas con `simulateResponse` y las registran con `submitAnswer`.
+
+| Método | Siguiente pregunta |
+|---|---|
+| A | La siguiente de `fixedQuestionOrder`, igual para todos los alumnos. |
+| B | `selectNextQuestion` sobre el estado observable actual: máxima EIG. |
+| C | La siguiente de una permutación por alumno. |
+
+**Permutación de C.** Fisher–Yates sobre los ids ordenados, con el flujo `randomOrder/["<id>"]` derivado de `randomOrderSeed`:
+
+```
+para last = n−1 … 1:
+  chosen = ⌊u · (last + 1)⌋
+  intercambiar order[last] y order[chosen]
+```
+
+La etiqueta no incluye presupuesto ni resultados: cada alumno conserva su orden aunque cambien la clase o los presupuestos. Cambia si cambia el conjunto de preguntas.
+
+**Presupuestos.** Cada alumno sigue una única trayectoria hasta el máximo presupuesto efectivo, `min(presupuesto, tamaño del banco)`. El estado de un presupuesto `b` es el de la trayectoria tras `b` preguntas. Por eso los menores son prefijos, también en B: su selección solo depende de las respuestas anteriores.
+
+**Comparabilidad.** Los métodos comparten clase y uniformes, de modo que dos métodos que hacen la misma pregunta al mismo alumno ven la misma respuesta. Solo difiere qué preguntas se hacen y en qué orden.
+
+**Todas las preguntas.** La actualización es un producto de verosimilitudes, conmutativo salvo redondeo. Con `all` y las mismas respuestas, A, B y C terminan con el mismo posterior, dentro de `1e-9`: en ese caso el orden no importa.
+
+**Límites.** Una réplica no permite comparar métodos: la comparación necesita varias semillas y la estadística emparejada. B elige con los parámetros asumidos; con mala especificación su criterio deja de coincidir con los datos. Los tiempos son de una ejecución y dependen de la máquina.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |

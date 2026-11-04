@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, de `src/simulation/index.ts`, hasta la Fase 6B, y de `src/benchmarks/index.ts`, hasta la Fase 7B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, de `src/simulation/index.ts`, hasta la Fase 6B, y de `src/benchmarks/index.ts`, hasta la Fase 7C. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -649,6 +649,11 @@ interface MetricSummary {
 | `INVALID_OBSERVATIONS` | Las observaciones no son una lista, repiten una semilla, o tienen una semilla que no es uint32 o un valor que no es finito ni `null`. |
 | `INVALID_STATS_CONFIG` | `seriesId`, `bootstrapSeed`, `resamples`, `direction` o `tieTolerance` inválidos. |
 | `NON_FINITE_STATISTIC` | Una diferencia, media, desviación o límite no es representable. Nunca se devuelve `Infinity` ni `NaN`. |
+| `INVALID_METHOD_INPUT` | Entrada, método, `priorConfig`, `randomOrderSeed`, `measureTiming` o presupuestos inválidos. |
+| `INVALID_RESPONSE_TABLE` | La tabla no tiene la forma esperada, no es de la ocasión `pretest`, tiene otra semilla o no cubre a todos los alumnos y preguntas. |
+| `INVALID_REAL_PARAMETERS` | `realParametersByQuestion` cita preguntas desconocidas o valores que no son objetos. |
+| `ANSWER_REJECTED` | `submitAnswer` rechaza una respuesta sintética. |
+| `SELECTION_FAILED` | No hay pregunta para un paso que debería tenerla. |
 
 Un estado inválido lanza `InferenceError` (`INVALID_STATE`, `INVALID_DISTRIBUTION`, `INVALID_HISTORY`) y una clase inválida, `SimulationError` con `INVALID_SYNTHETIC_CLASS`. La validación de estados no comprueba el historial contra un banco, porque esta función no lo recibe.
 
@@ -710,3 +715,61 @@ interface PairedComparison {
 - Un `null` nunca se convierte en 0. Sin valores válidos, media, desviación e intervalo son `null`.
 - Con un solo valor, el intervalo es degenerado: no significa ausencia de variabilidad.
 - El intervalo no es prueba de eficacia educativa ni garantía de superioridad.
+
+## Ejecución de métodos
+
+`src/benchmarks/index.ts`. Ejecuta un método sobre una réplica. No crea escenarios ni repite semillas.
+
+```ts
+runDiagnosticMethod(input: DiagnosticMethodInput): DiagnosticMethodRun
+```
+
+```ts
+type DiagnosticMethod = 'A' | 'B' | 'C';  // fijo, adaptativo EIG, aleatorio con semilla
+type QuestionBudget = number | 'all';     // entero positivo o todas las preguntas
+
+interface DiagnosticMethodInput {
+  readonly method: DiagnosticMethod;
+  readonly syntheticClass: SyntheticClass;
+  readonly questionBank: QuestionBank;
+  readonly knowledgeGraph: KnowledgeGraph;
+  readonly priorConfig: PriorConfig;
+  readonly uniforms: ResponseUniformTable;  // ocasión pretest; todos los alumnos y preguntas
+  readonly budgets: readonly QuestionBudget[];
+  readonly randomOrderSeed: number;         // uint32; obligatoria aunque solo la use C
+  readonly measureTiming?: boolean;
+  readonly realParametersByQuestion?: Readonly<Record<QuestionId, RealItemParameters>>;
+  readonly metricsConfig?: DiagnosticMetricsConfig;
+}
+
+interface DiagnosticMethodRun {
+  readonly results: DiagnosticMethodResults;       // determinista
+  readonly timing: DiagnosticMethodTiming | null;  // null si no se pide
+}
+
+interface DiagnosticMethodResults {
+  readonly method: DiagnosticMethod;
+  readonly config: DiagnosticMethodConfig;  // budgets, randomOrderSeed, populationSeed, occasion, generator, bankSize, priorConfig, metricsConfig, realParametersByQuestion
+  readonly students: readonly MethodStudentTrajectory[];  // studentId, steps: questionId, answer, isCorrect
+  readonly budgets: readonly MethodBudgetResult[];        // requestedBudget, effectiveBudget, states, metrics
+}
+
+interface DiagnosticMethodTiming {
+  readonly preparationMs: number;
+  readonly selectionMs: number;
+  readonly selectionCount: number;
+  readonly meanSelectionMs: number | null;
+  readonly definition: string;
+  readonly disclaimer: string;
+}
+```
+
+- Una réplica crea una sola clase y una sola tabla, y las comparte entre métodos: así todos ven la misma respuesta para el mismo alumno y pregunta.
+- `budgets` admite enteros positivos y `all`, sin duplicados. Se devuelven en orden canónico: números ascendentes y después `all`.
+- Los presupuestos menores son prefijos de una única trayectoria: añadir presupuestos no cambia los anteriores.
+- `all` consume todas las preguntas, sin parada anticipada. Un número mayor que el banco usa las disponibles: `requestedBudget` y `effectiveBudget` difieren.
+- `realParametersByQuestion` solo llega a `simulateResponse`. El diagnóstico usa los parámetros del banco.
+- `results` no contiene fechas ni tiempos, y medir no lo cambia. `results` sí contiene estados y métricas, pero no `trueMastery`, grupos ni uniformes.
+- Los alumnos salen ordenados por id.
+- `preparationMs` mide `fixedQuestionOrder` en A y las permutaciones en C; en B vale 0. `selectionMs` mide obtener cada pregunta: `selectNextQuestion` en B y leer el orden en A y C. No incluye simular, registrar ni calcular métricas. No son una comparación definitiva de rendimiento.
+- Una clase, tabla, banco, grafo o prior inválidos lanzan los errores de sus módulos. Los uniformes se validan en cada consulta de `simulateResponse`.

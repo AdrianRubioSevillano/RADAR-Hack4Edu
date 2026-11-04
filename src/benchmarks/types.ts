@@ -1,14 +1,28 @@
 // Tipos de evaluación. Comparan estimaciones con la verdad simulada: no pasan al
 // motor ni a tipos compartidos.
-import type { SkillId } from '../engine/index.ts';
-import type { GeneratorInfo } from '../simulation/index.ts';
+import type {
+  AnswerValue,
+  DiagnosticState,
+  EffectivePriorConfig,
+  KnowledgeGraph,
+  PriorConfig,
+  QuestionBank,
+  QuestionId,
+  SkillId,
+} from '../engine/index.ts';
+import type { GeneratorInfo, RealItemParameters, ResponseUniformTable, SyntheticClass } from '../simulation/index.ts';
 
 export type BenchmarkErrorCode =
   | 'INVALID_METRICS_CONFIG'
   | 'INCONSISTENT_STUDENTS'
   | 'INVALID_OBSERVATIONS'
   | 'INVALID_STATS_CONFIG'
-  | 'NON_FINITE_STATISTIC';
+  | 'NON_FINITE_STATISTIC'
+  | 'INVALID_METHOD_INPUT'
+  | 'INVALID_RESPONSE_TABLE'
+  | 'INVALID_REAL_PARAMETERS'
+  | 'ANSWER_REJECTED'
+  | 'SELECTION_FAILED';
 
 export interface DiagnosticMetricsConfig {
   // Umbral de detección de dificultad, en [0, 1]; 0.5 por defecto.
@@ -176,4 +190,91 @@ export interface PairedComparison {
   readonly tiedCount: number;
   readonly worsenedCount: number;
   readonly disclaimer: string;
+}
+
+// A: orden fijo. B: adaptativo EIG. C: aleatorio con semilla, por alumno.
+export type DiagnosticMethod = 'A' | 'B' | 'C';
+
+// Entero positivo o todas las preguntas, sin parada anticipada.
+export type QuestionBudget = number | 'all';
+
+export interface DiagnosticMethodInput {
+  readonly method: DiagnosticMethod;
+  readonly syntheticClass: SyntheticClass;
+  readonly questionBank: QuestionBank;
+  readonly knowledgeGraph: KnowledgeGraph;
+  readonly priorConfig: PriorConfig;
+  // Compartida entre métodos: ocasión pretest, con todos los alumnos y preguntas.
+  readonly uniforms: ResponseUniformTable;
+  readonly budgets: readonly QuestionBudget[];
+  // Entero uint32. Obligatoria aunque solo la use el método C.
+  readonly randomOrderSeed: number;
+  readonly measureTiming?: boolean;
+  // Solo los recibe el respondedor: el motor conserva los del banco.
+  readonly realParametersByQuestion?: Readonly<Record<QuestionId, RealItemParameters>>;
+  readonly metricsConfig?: DiagnosticMetricsConfig;
+}
+
+export interface DiagnosticMethodConfig {
+  // Orden canónico: números ascendentes y después 'all'.
+  readonly budgets: readonly QuestionBudget[];
+  readonly randomOrderSeed: number;
+  readonly populationSeed: number;
+  readonly occasion: string;
+  readonly generator: GeneratorInfo;
+  readonly bankSize: number;
+  readonly priorConfig: EffectivePriorConfig;
+  readonly metricsConfig: EffectiveDiagnosticMetricsConfig;
+  // Con las claves en el orden del banco.
+  readonly realParametersByQuestion: Readonly<Record<QuestionId, RealItemParameters>>;
+}
+
+export interface MethodStep {
+  readonly questionId: QuestionId;
+  readonly answer: AnswerValue;
+  readonly isCorrect: boolean;
+}
+
+export interface MethodStudentTrajectory {
+  readonly studentId: string;
+  // Hasta el máximo presupuesto efectivo.
+  readonly steps: readonly MethodStep[];
+}
+
+export interface MethodBudgetResult {
+  readonly requestedBudget: QuestionBudget;
+  // Preguntas usadas por alumno: como mucho, las del banco.
+  readonly effectiveBudget: number;
+  // Por id. Prefijo de la trayectoria de cada alumno.
+  readonly states: readonly DiagnosticState[];
+  readonly metrics: DiagnosticMetrics;
+}
+
+// Bloque determinista: sin fechas ni tiempos.
+export interface DiagnosticMethodResults {
+  readonly method: DiagnosticMethod;
+  readonly config: DiagnosticMethodConfig;
+  // Por id.
+  readonly students: readonly MethodStudentTrajectory[];
+  // En el orden canónico de los presupuestos.
+  readonly budgets: readonly MethodBudgetResult[];
+}
+
+// Variable entre ejecuciones: nunca entra en comparaciones de igualdad.
+export interface DiagnosticMethodTiming {
+  // Orden fijo (A) o permutaciones (C). 0 en B, que no prepara un orden.
+  readonly preparationMs: number;
+  // Obtener cada pregunta: la selección EIG en B; leer el orden en A y C.
+  readonly selectionMs: number;
+  readonly selectionCount: number;
+  // null sin selecciones.
+  readonly meanSelectionMs: number | null;
+  readonly definition: string;
+  readonly disclaimer: string;
+}
+
+export interface DiagnosticMethodRun {
+  readonly results: DiagnosticMethodResults;
+  // null si no se pidió medir.
+  readonly timing: DiagnosticMethodTiming | null;
 }

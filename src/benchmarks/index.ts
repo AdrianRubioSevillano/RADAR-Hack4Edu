@@ -1,9 +1,16 @@
 export { BenchmarkError, computeDiagnosticMetrics } from './metrics.ts';
+export { runDiagnosticMethod } from './methods.ts';
 export { comparePairedSeeds, summarizeSeedValues } from './stats.ts';
 export type {
   BenchmarkErrorCode,
   BootstrapProvenance,
   ConfidenceInterval,
+  DiagnosticMethod,
+  DiagnosticMethodConfig,
+  DiagnosticMethodInput,
+  DiagnosticMethodResults,
+  DiagnosticMethodRun,
+  DiagnosticMethodTiming,
   DiagnosticMetrics,
   DiagnosticMetricsConfig,
   DifficultyConfusion,
@@ -11,11 +18,15 @@ export type {
   ExcludedPair,
   ImprovementDirection,
   MetricDefinitions,
+  MethodBudgetResult,
+  MethodStep,
+  MethodStudentTrajectory,
   MetricSummary,
   PairExclusionReason,
   PairedComparison,
   PairedComparisonConfig,
   PairedDifference,
+  QuestionBudget,
   QuestionUsage,
   SeedObservation,
   SeedSeriesConfig,

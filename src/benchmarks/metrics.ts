@@ -41,7 +41,7 @@ const DISCLAIMER =
   'Métricas frente a un estado real simulado, con datos sintéticos y parámetros no calibrados: ' +
   'miden la recuperación de ese estado en esta simulación, no la calidad del diagnóstico con alumnos reales.';
 
-function effectiveConfig(config: DiagnosticMetricsConfig): EffectiveDiagnosticMetricsConfig {
+export function effectiveMetricsConfig(config: DiagnosticMetricsConfig): EffectiveDiagnosticMetricsConfig {
   if (typeof config !== 'object' || config === null) {
     throw new BenchmarkError('INVALID_METRICS_CONFIG', 'La configuración no tiene la forma esperada');
   }
@@ -156,7 +156,7 @@ export function computeDiagnosticMetrics(
   syntheticClass: SyntheticClass,
   config: DiagnosticMetricsConfig = {},
 ): DiagnosticMetrics {
-  const effective = effectiveConfig(config);
+  const effective = effectiveMetricsConfig(config);
   assertValidClass(syntheticClass);
   const sorted = matchedStates(states, syntheticClass);
 

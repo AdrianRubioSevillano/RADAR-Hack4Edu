@@ -37,7 +37,7 @@ function observationError(message: string): BenchmarkError {
   return new BenchmarkError('INVALID_OBSERVATIONS', message);
 }
 
-function isUint32(value: unknown): value is number {
+export function isUint32(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= MAX_SEED;
 }
 
