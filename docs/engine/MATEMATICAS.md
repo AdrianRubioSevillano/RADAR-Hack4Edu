@@ -420,6 +420,43 @@ La diferencia en diferencias existe solo si ambos grupos tienen parejas válidas
 
 **Límites.** En alumnos reales, una comparación antes y después no demuestra causalidad. La diferencia en diferencias es una estimación dentro de esta simulación, y sus datos siguen DINA con parámetros no calibrados. La asignación al control es pseudoaleatoria y grupos pequeños dan comparaciones inestables. No hay intervalos de confianza: una sola réplica no permite extraer conclusiones.
 
+## Métricas de diagnóstico
+
+`computeDiagnosticMetrics` aplica §2.9. Compara estimaciones con la verdad simulada, así que miden la recuperación de ese estado en simulación, no la calidad del diagnóstico con alumnos reales.
+
+**Por par.** Con `p` la marginal normalizada del motor y `α` el estado real, para cada par alumno‑competencia:
+
+```
+error absoluto = |p − α|
+Brier          = (p − α)²                                  (binario: sin multiplicar por dos)
+log-loss       = −[α·ln p' + (1−α)·ln(1−p')]               (en nats)
+p'             = p limitado a [1e-12, 1 − 1e-12]
+```
+
+El límite es exclusivo de la log‑loss: `p` no se modifica, y MAE, Brier y la predicción usan su valor original. `1 − p'` se calcula limitando `1 − p`, que es lo mismo, porque `1 − (1 − 1e-12)` pierde precisión en coma flotante y los dos extremos dejarían de penalizar igual. El máximo por par es `−ln(1e-12) ≈ 27.63` nats.
+
+**Detección.** Clase positiva: dificultad, `α = 0`. Se predice dificultad si `p < τ − 1e-12`, con la tolerancia de clasificación.
+
+| | Se predice dificultad | No se predice |
+|---|---|---|
+| `α = 0` | TP | FN |
+| `α = 1` | FP | TN |
+
+```
+precisión = TP/(TP+FP)          null si TP+FP = 0
+recall    = TP/(TP+FN)          null si TP+FN = 0
+F1        = 2TP/(2TP+FP+FN)     null solo si 2TP+FP+FN = 0
+exactitud = (TP+TN)/pares       null sin pares
+```
+
+F1 vale 0, no `null`, si hay errores y ningún acierto positivo: con `TP = 0` y `FN = 6`, la precisión es `null`, el recall 0 y F1 0.
+
+**Agregación.** Cada resumen, global, por alumno o por competencia, sale de sus propios pares y recuentos. No se promedian métricas individuales: con un alumno de F1 0.8 (`TP = 2`, `FP = 1`) y otro de F1 0 (`FN = 1`), el F1 global es `4/6`, no 0.4. Un `null` individual no cuenta como 0.
+
+**Vacíos.** Sin pares, MAE, Brier, log‑loss, exactitud y las demás razones son `null`, y los recuentos, 0. Sin alumnos, la media de preguntas es `null` y el total, 0.
+
+**Límites.** Los pares de un mismo alumno no son independientes, porque comparten respuestas y conjunta. La log‑loss depende del límite elegido cuando `p` es 0 o 1, que es un SUPUESTO. Con priors extremos, una sola competencia mal estimada puede dominar la media.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |
@@ -435,6 +472,7 @@ La diferencia en diferencias existe solo si ambos grupos tienen parejas válidas
 | `1e-9` | Tolerancia de `\|dominio medio + necesidad − 1\|` al validar un diagnóstico. |
 | `1e-12` | Distancia al mejor global de las candidatas restantes en los tres primeros criterios del plan B (§2.6.1). |
 | `1e-12` | Distancia de `n · controlFraction` a un entero dentro de la cual el recuento de controles usa ese entero (§2.8). |
+| `1e-12` | `ε_clip` de la log‑loss, solo en evaluación (§2.9). No se aplica a ninguna probabilidad del motor. |
 | `1e-9` | Diferencia entre `totalMinutes` y la suma de duraciones al validar un plan en la intervención sintética (§2.8). |
 | `1e-9` | Coherencia del detalle por alumno: entropía con probabilidad, cotas de la preparación y medias con el agregado (§2.6.1). |
 

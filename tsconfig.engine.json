@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src/engine/**/*.ts", "src/simulation/**/*.ts", "tests/engine/**/*.ts", "tests/simulation/**/*.ts", "vitest.config.ts"]
+  "include": ["src/engine/**/*.ts", "src/simulation/**/*.ts", "src/benchmarks/**/*.ts", "tests/engine/**/*.ts", "tests/simulation/**/*.ts", "tests/benchmarks/**/*.ts", "vitest.config.ts"]
 }

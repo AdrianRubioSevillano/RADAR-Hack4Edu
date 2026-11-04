@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 6B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, de `src/simulation/index.ts`, hasta la Fase 6B, y de `src/benchmarks/index.ts`, hasta la Fase 7A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -597,3 +597,54 @@ interface EvaluationCoverage {
 | `POSTTEST_FAILED` | `submitAnswer` rechaza una respuesta sintética. |
 
 Un grafo sin las seis competencias lanza `InferenceError` con `INVALID_GRAPH`. Un grafo con estructura inválida lanza `KnowledgeGraphError`. `slip` y `guess`, del ítem o reales, que incumplan la restricción DINA lanzan `InferenceError` con `INVALID_PARAMETERS`, y un `R_q` inválido, sus códigos habituales. En `simulatePostIntervention`, estados, historiales, banco y prior inválidos lanzan los errores del motor (`INVALID_STATE`, `INVALID_HISTORY`, `INVALID_BANK`, `INVALID_PRIOR`).
+
+## Métricas de evaluación
+
+`src/benchmarks/index.ts`. Comparan estimaciones con la verdad simulada: solo sirven en simulación.
+
+```ts
+computeDiagnosticMetrics(states: readonly DiagnosticState[], syntheticClass: SyntheticClass, config?: DiagnosticMetricsConfig): DiagnosticMetrics
+```
+
+```ts
+interface DiagnosticMetricsConfig {
+  readonly tau?: number;  // en [0, 1]; 0.5 por defecto
+}
+
+interface DiagnosticMetrics {
+  readonly config: EffectiveDiagnosticMetricsConfig;
+  readonly studentCount: number;
+  readonly pairCount: number;
+  readonly overall: MetricSummary;
+  readonly students: readonly StudentDiagnosticMetrics[];  // MetricSummary con studentId y questionsUsed; por id
+  readonly skills: readonly SkillDiagnosticMetrics[];      // MetricSummary con skill; en el orden de SKILL_ORDER
+  readonly questionsUsed: QuestionUsage;                   // total, mean
+  readonly definitions: MetricDefinitions;
+  readonly disclaimer: string;
+}
+
+interface MetricSummary {
+  readonly pairCount: number;
+  readonly mae: number | null;
+  readonly brier: number | null;
+  readonly logLoss: number | null;  // en nats
+  readonly confusion: DifficultyConfusion;  // truePositives, falsePositives, trueNegatives, falseNegatives
+  readonly precision: number | null;
+  readonly recall: number | null;
+  readonly f1: number | null;
+  readonly accuracy: number | null;
+}
+```
+
+- Exige que `states` corresponda exactamente a los alumnos de la clase, sin duplicados y en cualquier orden. El resultado no depende de ese orden.
+- La verdad simulada no se pasa a ninguna función diagnóstica: a la inferencia solo llega `state.joint`.
+- `null` indica que la métrica no está definida y nunca equivale a 0. Con la clase vacía, los recuentos y `questionsUsed.total` son 0, y las métricas y `questionsUsed.mean`, `null`. `skills` mantiene las seis competencias, con `pairCount` 0.
+- `questionsUsed` cuenta el historial completo de cada estado.
+- No mide tiempos: eso corresponde al ejecutor.
+
+| `BenchmarkError.code` | Causa |
+|---|---|
+| `INVALID_METRICS_CONFIG` | La configuración no es un objeto o `tau` no es finito en `[0, 1]`. |
+| `INCONSISTENT_STUDENTS` | `states` no es una lista, repite un alumno o no corresponde exactamente a la clase. |
+
+Un estado inválido lanza `InferenceError` (`INVALID_STATE`, `INVALID_DISTRIBUTION`, `INVALID_HISTORY`) y una clase inválida, `SimulationError` con `INVALID_SYNTHETIC_CLASS`. La validación de estados no comprueba el historial contra un banco, porque esta función no lo recibe.

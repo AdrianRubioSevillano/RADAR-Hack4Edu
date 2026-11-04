@@ -267,6 +267,13 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
   - Recall `= TP/(TP+FN)`, `null` si `TP+FN = 0`.
   - F1 `= 2TP/(2TP+FP+FN)`, `null` solo si su denominador es 0.
   - Exactitud: `null` si no hay observaciones.
+- Concreciones de la Fase 7A (métricas): `computeDiagnosticMetrics(states, syntheticClass, config?): DiagnosticMetrics`, con `config.tau` finito en `[0,1]` y 0.5 por defecto.
+  - Exige correspondencia exacta y sin duplicados entre estados y alumnos, y reutiliza los validadores de estados, conjuntas y clase. La verdad simulada solo se usa para evaluar: nunca se pasa a funciones diagnósticas.
+  - `p` es la marginal normalizada del motor, sin otra inferencia. Por par: `|p − α|`; Brier binario `(p − α)²`, sin multiplicar por dos; log‑loss `−[α·ln p' + (1−α)·ln(1−p')]`, con `p'` limitado a `[1e-12, 1−1e-12]` solo para esta métrica. Las probabilidades originales no se modifican.
+  - Clase positiva: `α = 0`. Predicción de dificultad: `isBelowThreshold(p, τ)`.
+  - Las métricas globales se agregan desde los pares y los recuentos, sin promediar F1 individuales. Se devuelven además desgloses por alumno y competencia, TP, FP, TN y FN, número de alumnos y pares, preguntas usadas por alumno, total y media, configuración efectiva, definiciones y advertencia sobre datos sintéticos.
+  - MAE, Brier, log‑loss y media de preguntas son `null` sin observaciones. Recuentos y total de preguntas son 0 con la clase vacía. `null` nunca se convierte en 0.
+  - Los tiempos de selección se miden en el ejecutor, no aquí.
 - ≥ 30 semillas; cada semilla es una réplica. Media, desviación típica muestral, IC 95 % percentil y diferencia **emparejada** B − A por semilla, con nº de semillas donde B es peor.
   - IC por bootstrap con semilla y 2000 remuestreos (SUPUESTO) sobre semillas completas, no sobre pares alumno‑competencia independientes.
   - Se informa de cuántos valores válidos hay; `null` no se convierte en 0. Las comparaciones emparejadas usan solo parejas válidas.
@@ -353,7 +360,7 @@ src/engine/       graph.ts, questionBank.ts, bayes.ts, entropy.ts, selection.ts,
                   classDiagnostic.ts, interventions.ts, planComparison.ts, types.ts, index.ts
 src/simulation/   rng.ts, syntheticClass.ts, responder.ts, postIntervention.ts, postInterventionReport.ts,
                   types.ts, index.ts
-src/benchmarks/   methods.ts, metrics.ts, stats.ts, runBenchmark.ts, index.ts
+src/benchmarks/   methods.ts, metrics.ts, stats.ts, runBenchmark.ts, types.ts, index.ts
 tests/engine|simulation|benchmarks/  *.test.ts
 docs/engine/      MATEMATICAS.md, API.md, INTEGRACION_REACT.md, LIMITACIONES.md,
                   RESULTADOS_BENCHMARK.md, PROPUESTA_TIPOS.md
