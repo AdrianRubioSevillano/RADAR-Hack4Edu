@@ -206,6 +206,16 @@ Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §
 - Números aleatorios comunes: se pre‑muestrea un uniforme `u` por (alumno, pregunta, ocasión de medida). Acierto si `u < P(Y_q = 1 | α actual)`.
   - Los métodos comparten los uniformes del pre‑test dentro de cada escenario y réplica, de modo que ven la misma respuesta si hacen la misma pregunta.
   - El post‑test usa otra ocasión, con uniformes independientes del pre‑test y compartidos entre comparaciones equivalentes.
+- Decisiones de la Fase 5B (respuestas sintéticas):
+  - Tabla privada y serializable de uniformes, preparada antes de ejecutar los métodos diagnósticos, estable por (semilla, ocasión, alumno, pregunta). El nombre del método no forma parte de la clave.
+  - Cada par tiene un uniforme de acierto o fallo y otro, separado, para elegir distractor. Las etiquetas de flujo son estructuradas: los ids no se concatenan sin escape.
+  - Ids ordenados de forma determinista, con duplicados rechazados y listas vacías admitidas. Añadir alumnos o preguntas, o permutar las entradas, no cambia los uniformes de los pares existentes. La tabla puede cubrir un subconjunto explícito.
+  - Consultar o repetir una respuesta no consume aleatoriedad ni modifica la tabla. Se guardan uniformes, no resultados: un cambio futuro de `α` puede cambiar la respuesta con el mismo `u`.
+  - `correctProbability` recibe solo `α`, requisitos y slip/guess. `realParameters` permite slip/guess reales distintos de los del ítem, con la misma restricción DINA y sin modificar banco ni motor.
+  - Se devuelve exclusivamente un `AnswerValue`. Si acierta: id correcto o respuesta canónica. Si falla en opción múltiple: uno de los distractores, elegido con el segundo uniforme.
+  - Si falla en numérica: `0/1`, o `1/1` si `0/1` es la correcta. Es un SUPUESTO simplificado: no reproduce errores reales ni concepciones equivocadas.
+  - Son flujos pseudoaleatorios, no independencia estadística demostrada.
+  - La validación no regenera la verdad, porque una intervención futura podrá cambiar `α` legítimamente, y el respondedor no llama a funciones de inferencia.
 
 ### 2.8 Evaluación posterior a la intervención
 

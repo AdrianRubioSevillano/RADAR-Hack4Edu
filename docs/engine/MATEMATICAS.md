@@ -317,6 +317,37 @@ Se comprueban todos los ancestros, no solo los prerrequisitos directos, y `f` se
 - La asignación `i mod G` es pública: quien conozca la regla y `G` deduce el grupo a partir del id. El motor no usa los ids para inferir, pero un análisis de resultados por id no sería ciego al grupo.
 - Todas las semillas recorren el mismo ciclo de `2^32` estados de mulberry32. Dos flujos podrían solaparse, y 32 bits no garantizan independencia estadística entre flujos.
 
+## Respuestas sintéticas
+
+Solo para demo y benchmarks (§2.7). Usan números aleatorios comunes: cada par (alumno, pregunta) de una ocasión tiene sus uniformes, preparados antes de ejecutar los métodos. Si dos métodos hacen la misma pregunta al mismo alumno, ven la misma respuesta.
+
+**Uniformes.** Cada par tiene su propio flujo:
+
+```
+etiqueta = "responses/" + JSON.stringify([ocasión, alumno, pregunta])
+u_acierto    = primer valor del flujo
+u_distractor = segundo valor del flujo
+```
+
+JSON escapa los ids, así que `('a/b', 'c')` y `('a', 'b/c')` no comparten etiqueta. Un par depende solo de la semilla, la ocasión y sus ids: añadir alumnos o preguntas, permutar las entradas o consultar en otro orden no lo cambia. El nombre del método no forma parte de la clave. Pretest y postest usan ocasiones distintas y, por tanto, flujos distintos.
+
+**Respuesta.** Con `(s, g)` los parámetros reales, por defecto los del ítem:
+
+```
+P = correctProbability(α actual, R_q, s, g)
+acierta si u_acierto < P
+```
+
+Si acierta, devuelve el id correcto o la respuesta canónica. Si falla en opción múltiple, ordena los distractores por id y toma el de posición `⌊u_distractor · nº de distractores⌋`.
+
+Si falla en numérica, devuelve `0/1`, o `1/1` si `0/1` es la correcta. Es un **SUPUESTO simplificado**: no reproduce errores reales ni concepciones equivocadas. No afecta a la inferencia, que solo usa acierto o fallo, pero una respuesta numérica sintética no sirve para estudiar errores.
+
+**Mala especificación.** `realParameters` permite que los datos se generen con `s` y `g` distintos de los del banco, que son los que asume el motor. El motor no recibe los reales.
+
+**Uniformes, no resultados.** La tabla no guarda aciertos. Si una intervención futura cambia `α`, el mismo `u` puede dar otra respuesta: con `s = 0.1` y `g = 0.25`, `u = 0.5` falla sin dominar `R_q` y acierta dominándolo. Si `u < g`, acierta en ambos casos.
+
+**Límites.** Son flujos pseudoaleatorios, no independencia estadística demostrada. La derivación tiene 32 bits, así que dos pares pueden recibir por azar la misma semilla de flujo, y con ella los mismos uniformes. Una tabla no se contrasta con su semilla: un uniforme alterado dentro de `[0, 1)` no se detecta.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |

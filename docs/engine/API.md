@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 5A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C, y de `src/simulation/index.ts`, hasta la Fase 5B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -372,6 +372,9 @@ Los detalles están en `GRAFO.md` y `BANCO.md`.
 createSyntheticClass(seed: number, studentCount: number, knowledgeGraph: KnowledgeGraph, config?: SimulationConfig): SyntheticClass
 observableStudents(syntheticClass: SyntheticClass): readonly ObservableStudent[]
 
+createResponseUniforms(seed: number, studentIds: readonly string[], questionIds: readonly string[], occasion: string): ResponseUniformTable
+simulateResponse(syntheticClass: SyntheticClass, studentId: string, question: Question, uniforms: ResponseUniformTable, realParameters?: RealItemParameters): AnswerValue
+
 mulberry32(seed: number): UniformStream
 deriveStreamSeed(seed: number, label: string): number
 createStream(seed: number, label: string): UniformStream
@@ -408,6 +411,27 @@ interface ObservableStudent {
   readonly studentId: string;
   readonly displayName: string;
 }
+
+interface ResponseUniformTable {
+  readonly generator: GeneratorInfo;
+  readonly seed: number;
+  readonly occasion: string;
+  readonly studentIds: readonly string[];   // ordenados y sin repetir
+  readonly questionIds: readonly string[];  // ordenados y sin repetir
+  readonly entries: readonly ResponseUniformEntry[];  // producto de ambas listas, por alumno y pregunta
+}
+
+interface ResponseUniformEntry {
+  readonly studentId: string;
+  readonly questionId: string;
+  readonly correctness: number;  // en [0, 1): acierto si es menor que P(Y_q = 1 | α)
+  readonly distractor: number;   // en [0, 1): elige el distractor
+}
+
+interface RealItemParameters {
+  readonly slip: number;
+  readonly guess: number;
+}
 ```
 
 - `seed` es un entero uint32, incluido 0. `studentCount` es un entero seguro no negativo, y la clase vacía es válida.
@@ -415,6 +439,12 @@ interface ObservableStudent {
 - Los grupos por defecto `G1`, `G2` y `G3` son SUPUESTOS de demo, no grupos educativos validados ni estimaciones observadas.
 - `UniformStream` es la única pieza con estado: cada flujo guarda el suyo y avanza al llamarlo. No hay estado global.
 - `STREAMS` nombra los flujos de §2.7 y `GENERATOR` declara algoritmo y versión.
+- `ResponseUniformTable` es privada: se prepara antes de ejecutar los métodos diagnósticos y no pasa al diagnóstico. Guarda uniformes, no resultados, de modo que un cambio de `α` puede cambiar la respuesta con el mismo `u`.
+- `occasion` es texto libre, como `pretest` o `posttest`. No debe contener el nombre de un método: todos los métodos comparten la tabla de una ocasión.
+- La tabla puede cubrir un subconjunto. Un par fuera de ella lanza `MISSING_UNIFORM`. Debe ser el producto ordenado de `studentIds` y `questionIds`; si no, se rechaza.
+- `simulateResponse` devuelve solo un `AnswerValue`, válido para `submitAnswer`. Por defecto usa `slip` y `guess` del ítem; `realParameters` los sustituye sin modificar el banco.
+- No regenera la verdad para validar la clase: una `α` distinta de la generada se acepta.
+- Cada llamada valida la clase y la tabla enteras, con coste proporcional a su tamaño.
 
 | `SimulationError.code` | Causa |
 |---|---|
@@ -422,6 +452,14 @@ interface ObservableStudent {
 | `INVALID_STREAM_LABEL` | La etiqueta del flujo no es un texto no vacío. |
 | `INVALID_STUDENT_COUNT` | El tamaño no es un entero seguro no negativo. |
 | `INVALID_SIMULATION_CONFIG` | Grupos, ids, probabilidades o factor inválidos. |
-| `INVALID_SYNTHETIC_CLASS` | `observableStudents` recibe algo sin la forma esperada. |
+| `INVALID_SYNTHETIC_CLASS` | La clase no tiene la forma esperada, otro generador u orden de competencias, alumnos repetidos o una `α` no binaria. |
+| `INVALID_OCCASION` | La ocasión no es un texto no vacío. |
+| `INVALID_ID_LIST` | La lista de ids no es una lista, repite un id o tiene un id vacío. |
+| `INVALID_UNIFORM_TABLE` | La tabla no tiene la forma esperada, repite o desordena claves, no cubre lo declarado o tiene uniformes fuera de `[0, 1)`. |
+| `INCOMPATIBLE_SEED` | La tabla y la clase tienen semillas distintas. |
+| `UNKNOWN_STUDENT` | El alumno no está en la clase. |
+| `MISSING_UNIFORM` | La tabla no cubre el par (alumno, pregunta). |
+| `INVALID_QUESTION` | Formato desconocido, opciones inválidas, sin distractores o respuesta numérica no canónica. |
+| `INVALID_REAL_PARAMETERS` | `realParameters` no es un objeto. |
 
-Un grafo sin las seis competencias lanza `InferenceError` con `INVALID_GRAPH`. Un grafo con estructura inválida lanza `KnowledgeGraphError`.
+Un grafo sin las seis competencias lanza `InferenceError` con `INVALID_GRAPH`. Un grafo con estructura inválida lanza `KnowledgeGraphError`. `slip` y `guess`, del ítem o reales, que incumplan la restricción DINA lanzan `InferenceError` con `INVALID_PARAMETERS`, y un `R_q` inválido, sus códigos habituales.

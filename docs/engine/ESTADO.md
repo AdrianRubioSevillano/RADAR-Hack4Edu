@@ -1,6 +1,6 @@
 # Estado del motor RADAR
 
-Traspaso al cerrar la Fase 5A. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+Traspaso al cerrar la Fase 5B. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
 
 ## Implementado
 
@@ -11,8 +11,9 @@ Traspaso al cerrar la Fase 5A. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - **Fase 4B:** `rankInterventions`: ranking y plan exacto con presupuesto.
 - **Fase 4C:** `compareInterventionPlans`: plan colectivo frente a plan por necesidad pendiente, con detalle por alumno y competencia.
 - **Fase 5A:** `src/simulation`: PRNG mulberry32 con flujos etiquetados, `createSyntheticClass` y `observableStudents`.
+- **Fase 5B:** `createResponseUniforms` y `simulateResponse`: respuestas sintéticas con números aleatorios comunes.
 
-**Verificación:** typecheck limpio y 957 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+**Verificación:** typecheck limpio y 1097 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
 
 ## Decisiones y limitaciones vigentes
 
@@ -32,10 +33,12 @@ Traspaso al cerrar la Fase 5A. Rama `motor`, trabajo local sin push. `CLAUDE.md`
 - Los grupos sintéticos y el factor por prerrequisitos son SUPUESTOS de demo, no grupos educativos validados.
 - La verdad simulada solo vive en `src/simulation`. La regla `i mod G` es pública: el id permite deducir el grupo generador.
 - mulberry32 no es criptográfico, y sus flujos comparten un ciclo de `2^32` estados: no hay independencia estadística garantizada.
+- Las respuestas sintéticas siguen DINA por construcción: no dicen nada sobre cómo responden alumnos reales.
+- El error numérico sintético (`0/1` o `1/1`) es un SUPUESTO simplificado, sin relación con errores reales.
+- `simulateResponse` valida clase y tabla enteras en cada llamada. Si en la Fase 7 pesa en los benchmarks, habrá que medirlo antes de cambiarlo.
 
 ## Próximo trabajo
 
-- Fase 5B: respuestas simuladas con números aleatorios comunes.
 - Fase 6: evaluación postintervención.
 - Fase 7: benchmarks e informes.
 
