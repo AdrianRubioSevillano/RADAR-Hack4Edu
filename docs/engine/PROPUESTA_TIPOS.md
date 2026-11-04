@@ -2,7 +2,7 @@
 
 `src/shared/types.ts` no existe todavía. Mientras tanto, estos tipos viven en `src/engine/types.ts` y se exportan desde `src/engine/index.ts`.
 
-Esta propuesta cubre lo implementado hasta la Fase 4B: grafo, banco de preguntas, inferencia, selección, respuestas, diagnóstico de clase e intervenciones. Los tipos de fases posteriores se añadirán cuando existan.
+Esta propuesta cubre lo implementado hasta la Fase 4C: grafo, banco de preguntas, inferencia, selección, respuestas, diagnóstico de clase, intervenciones y comparación de planes. Los tipos de fases posteriores se añadirán cuando existan.
 
 ## Tipos que deberían pasar a ser compartidos
 
@@ -289,6 +289,64 @@ export interface InterventionRanking {
   readonly assumptions: readonly string[];
   readonly disclaimer: string;
 }
+
+export interface StudentSkillNeed {
+  readonly skill: SkillId;
+  readonly need: number;
+  readonly importance: number;
+  readonly isScheduled: boolean;
+  readonly baseline: number | null;
+  readonly scheduled: number | null;
+  readonly pending: number | null;
+}
+
+export interface StudentPendingNeed {
+  readonly studentId: string;
+  readonly responseCount: number;
+  readonly basedOnPriorOnly: boolean;
+  readonly baseline: number | null;
+  readonly scheduled: number | null;
+  readonly pending: number | null;
+  readonly skills: readonly StudentSkillNeed[];
+}
+
+export interface PlanNeedAnalysis {
+  readonly scheduledSkills: readonly SkillId[];
+  readonly students: readonly StudentPendingNeed[];
+  readonly meanPending: number | null;
+  readonly maxPending: number | null;
+}
+
+export interface ComparedPlan {
+  readonly plan: InterventionPlan;
+  readonly analysis: PlanNeedAnalysis;
+}
+
+export type PlanComparisonWarningCode =
+  | InterventionWarningCode
+  | 'ZERO_TOTAL_IMPORTANCE'
+  | 'HYPOTHETICAL_ANALYSIS'
+  | 'PRIOR_ONLY_STUDENTS';
+
+export interface PlanComparisonWarning {
+  readonly code: PlanComparisonWarningCode;
+  readonly message: string;
+  readonly skill: SkillId | null;
+  readonly ancestor: SkillId | null;
+}
+
+export interface InterventionPlanComparison {
+  readonly config: EffectiveInterventionConfig;
+  readonly availableMinutes: number;
+  readonly basis: InterventionRankingBasis;
+  readonly evidence: InterventionEvidence;
+  readonly collectivePlan: ComparedPlan;
+  readonly pendingNeedPlan: ComparedPlan;
+  readonly plansCoincide: boolean;
+  readonly warnings: readonly PlanComparisonWarning[];
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
 ```
 
 | Tipo | Motivo |
@@ -312,6 +370,7 @@ export interface InterventionRanking {
 | `ClassDiagnostic` y sus tipos asociados | Es la salida que la interfaz muestra al docente. |
 | `InterventionConfig` | La interfaz puede dejar al docente ajustar duraciones e importancias. |
 | `InterventionRanking` y sus tipos asociados | La interfaz muestra el ranking, el plan y sus avisos. |
+| `InterventionPlanComparison` y sus tipos asociados | La interfaz muestra ambos planes y las necesidades pendientes por alumno y competencia. |
 
 ## Decisiones que conviene revisar con el integrador
 
@@ -325,6 +384,8 @@ export interface InterventionRanking {
 - La interfaz debe conservar `DiagnosticState` entero y no reconstruirlo campo a campo, porque el motor valida sus campos.
 - `QuestionSelection.question` incluye `correctAnswer`, y cada candidata incluye dos posteriores de 64 valores. Es útil para inspeccionar, pero puede convenir un tipo de presentación más ligero.
 - `InterventionRanking.basis` indica si el ranking es hipotético. La interfaz no debería presentar `hypotheticalPriorsOnly` como una recomendación respaldada por observaciones.
+- La interfaz no debería presentar `scheduled` como necesidades resueltas ni como alumnos beneficiados: programar no significa aprender. Con `basis` igual a `hypotheticalPriorsOnly`, el análisis es hipotético.
+- Los índices de `StudentPendingNeed` valen `null` si todas las importancias son 0, lo que no indica ausencia de necesidad: `need` se conserva.
 - Los campos `number | null` de `SkillClassSummary` obligan a la interfaz a tratar la clase vacía. La interfaz debería mostrar `warnings` y `disclaimer` junto a las cifras.
 - `AnswerError.causeCode` hace que `AnswerError` dependa de `InferenceErrorCode`, `QuestionBankErrorCode` y `KnowledgeGraphErrorCode`, así que esos tres tipos también pasarían a ser compartidos.
 - `PriorConfig.compatibility` acepta `null` para que `EffectivePriorConfig` sea también una configuración válida.

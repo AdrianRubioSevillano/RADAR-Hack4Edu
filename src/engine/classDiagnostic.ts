@@ -24,21 +24,29 @@ const DISCLAIMER =
   'El número esperado de refuerzo no es un recuento de alumnos observados con dificultad. ' +
   'El número de respuestas no indica cuántas competencias se han medido.';
 
+// Motivo por el que los umbrales no son válidos; null si lo son.
+export function classThresholdProblem(config: EffectiveClassDiagnosticConfig): string | null {
+  const { tau, lowerUncertainty, upperUncertainty } = config;
+  for (const value of [tau, lowerUncertainty, upperUncertainty]) {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+      return 'Los umbrales deben ser finitos en [0, 1]';
+    }
+  }
+  return lowerUncertainty >= upperUncertainty ? 'lowerUncertainty debe ser menor que upperUncertainty' : null;
+}
+
 function effectiveConfig(config: ClassDiagnosticConfig): EffectiveClassDiagnosticConfig {
   const {
     tau = DEFAULT_CONFIG.tau,
     lowerUncertainty = DEFAULT_CONFIG.lowerUncertainty,
     upperUncertainty = DEFAULT_CONFIG.upperUncertainty,
   } = config;
-  for (const value of [tau, lowerUncertainty, upperUncertainty]) {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
-      throw new InferenceError('INVALID_CLASS_CONFIG', 'Los umbrales deben ser finitos en [0, 1]');
-    }
+  const effective = { tau, lowerUncertainty, upperUncertainty };
+  const problem = classThresholdProblem(effective);
+  if (problem !== null) {
+    throw new InferenceError('INVALID_CLASS_CONFIG', problem);
   }
-  if (lowerUncertainty >= upperUncertainty) {
-    throw new InferenceError('INVALID_CLASS_CONFIG', 'lowerUncertainty debe ser menor que upperUncertainty');
-  }
-  return { tau, lowerUncertainty, upperUncertainty };
+  return effective;
 }
 
 function assertValidStudentStates(studentStates: readonly DiagnosticState[]): void {
@@ -75,7 +83,7 @@ function summarizeStudent(
   };
 }
 
-function summarizeSkill(
+export function summarizeSkill(
   skill: SkillId,
   students: readonly StudentClassSummary[],
   config: EffectiveClassDiagnosticConfig,

@@ -58,11 +58,11 @@ const NO_STUDENTS_MESSAGE = 'No hay alumnos para calcular recomendaciones';
 const COLLECT_RESPONSES_MESSAGE =
   'Ningún alumno tiene respuestas: el ranking es un cálculo hipotético basado solo en priors. Hay que recoger respuestas antes de planificar.';
 
-function emptyPlan(): InterventionPlan {
+export function emptyPlan(): InterventionPlan {
   return { interventions: [], totalMinutes: 0, coverage: 0, benefit: 0, cost: 0, netValue: 0 };
 }
 
-function compareIds(a: string, b: string): number {
+export function compareIds(a: string, b: string): number {
   if (a < b) return -1;
   return a > b ? 1 : 0;
 }
@@ -176,11 +176,11 @@ function finiteValue(value: number, label: string): number {
   return value;
 }
 
-function diagnosticError(message: string): InferenceError {
+export function diagnosticError(message: string): InferenceError {
   return new InferenceError('INVALID_DIAGNOSTIC', message);
 }
 
-function isCount(value: unknown, maximum: number): boolean {
+export function isCount(value: unknown, maximum: number): boolean {
   return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= maximum;
 }
 
@@ -216,7 +216,7 @@ function assertCoherentCounts(diagnostic: ClassDiagnostic): void {
 }
 
 // Comprueba y ajusta una magnitud derivada de [0, 1]: solo absorbe el redondeo.
-function derivedUnit(value: number, label: string): number {
+export function derivedUnit(value: number, label: string): number {
   if (!Number.isFinite(value) || value < -DERIVED_RANGE_TOLERANCE || value > 1 + DERIVED_RANGE_TOLERANCE) {
     throw diagnosticError(`${label} está fuera de [0, 1]: ${value}`);
   }
@@ -290,7 +290,7 @@ interface SkillMetrics {
   readonly mastery: number;
 }
 
-interface Model {
+export interface Model {
   readonly config: EffectiveInterventionConfig;
   readonly metrics: ReadonlyMap<SkillId, SkillMetrics>;
   readonly durationSeconds: ReadonlyMap<SkillId, number>;
@@ -446,7 +446,7 @@ function allSubsets(): readonly (readonly SkillId[])[] {
   );
 }
 
-interface PlanCandidate {
+export interface PlanCandidate {
   readonly skills: readonly SkillId[];
   readonly ids: readonly string[];
   readonly seconds: number;
@@ -455,8 +455,8 @@ interface PlanCandidate {
 
 // Enumeración exacta de los 64 subconjuntos, incluido el vacío. Solo se valoran
 // los que caben en el presupuesto.
-function bestSubset(model: Model, availableSeconds: number): readonly SkillId[] {
-  const feasible: readonly PlanCandidate[] = allSubsets()
+export function feasibleCandidates(model: Model, availableSeconds: number): readonly PlanCandidate[] {
+  return allSubsets()
     .filter((skills) => totalSeconds(model, skills) <= availableSeconds)
     .map((skills) => ({
       skills,
@@ -464,15 +464,24 @@ function bestSubset(model: Model, availableSeconds: number): readonly SkillId[] 
       seconds: totalSeconds(model, skills),
       value: finiteValue(benefit(model, skills) - cost(model, skills), 'El valor de un subconjunto'),
     }));
+}
 
-  const best = Math.max(...feasible.map((candidate) => candidate.value));
-  const [selected] = feasible
-    .filter((candidate) => best - candidate.value <= VALUE_TIE_TOLERANCE)
-    .sort((a, b) => a.seconds - b.seconds || compareIdLists(a.ids, b.ids));
+// Filtra respecto al máximo global de las candidatas, nunca por pares.
+export function keepHighest<T>(candidates: readonly T[], valueOf: (candidate: T) => number): readonly T[] {
+  const best = Math.max(...candidates.map(valueOf));
+  return candidates.filter((candidate) => best - valueOf(candidate) <= VALUE_TIE_TOLERANCE);
+}
+
+export function shortestThenIds(candidates: readonly PlanCandidate[]): readonly SkillId[] {
+  const [selected] = [...candidates].sort((a, b) => a.seconds - b.seconds || compareIdLists(a.ids, b.ids));
   return selected?.skills ?? [];
 }
 
-function planFor(model: Model, skills: readonly SkillId[], ranking: readonly InterventionScore[]): InterventionPlan {
+function bestSubset(model: Model, availableSeconds: number): readonly SkillId[] {
+  return shortestThenIds(keepHighest(feasibleCandidates(model, availableSeconds), (candidate) => candidate.value));
+}
+
+export function planFor(model: Model, skills: readonly SkillId[], ranking: readonly InterventionScore[]): InterventionPlan {
   const benefitOfPlan = benefit(model, skills);
   const costOfPlan = cost(model, skills);
   return {
@@ -539,12 +548,23 @@ function basisOf(diagnostic: ClassDiagnostic): InterventionRankingBasis {
   return diagnostic.evidenceStatus === 'priorsOnly' ? 'hypotheticalPriorsOnly' : 'withResponses';
 }
 
-export function rankInterventions(
+export function totalImportanceOf(config: EffectiveInterventionConfig): number {
+  return SKILL_ORDER.reduce((sum, skill) => sum + (config.importance[skill] ?? 0), 0);
+}
+
+export interface InterventionAnalysis {
+  readonly result: InterventionRanking;
+  // null con la clase vacía: sin alumnos no hay magnitudes que evaluar.
+  readonly model: Model | null;
+  readonly availableSeconds: number;
+}
+
+export function analyzeInterventions(
   classDiagnostic: ClassDiagnostic,
   knowledgeGraph: KnowledgeGraph,
   availableMinutes: number,
-  config: InterventionConfig = {},
-): InterventionRanking {
+  config: InterventionConfig,
+): InterventionAnalysis {
   const effective = effectiveConfig(config);
   const durationSeconds = secondsBySkill(effective.durations);
   assertInferenceGraph(knowledgeGraph);
@@ -564,12 +584,10 @@ export function rankInterventions(
   };
 
   if (classDiagnostic.studentCount === 0) {
-    return {
-      ...common,
-      ranking: [],
-      plan: emptyPlan(),
-      warnings: [{ code: 'NO_STUDENTS', message: NO_STUDENTS_MESSAGE, skill: null, ancestor: null }],
-    };
+    const warnings: readonly InterventionWarning[] = [
+      { code: 'NO_STUDENTS', message: NO_STUDENTS_MESSAGE, skill: null, ancestor: null },
+    ];
+    return { result: { ...common, ranking: [], plan: emptyPlan(), warnings }, model: null, availableSeconds };
   }
 
   assertRootsFullyPrepared(summaries, knowledgeGraph);
@@ -584,7 +602,7 @@ export function rankInterventions(
     ),
     durationSeconds,
     descendantsOf: new Map(SKILL_ORDER.map((skill) => [skill, descendants(knowledgeGraph, skill)])),
-    totalImportance: SKILL_ORDER.reduce((sum, skill) => sum + (effective.importance[skill] ?? 0), 0),
+    totalImportance: totalImportanceOf(effective),
   };
 
   const titleOf = (skill: SkillId): string =>
@@ -599,9 +617,22 @@ export function rankInterventions(
     : [];
 
   return {
-    ...common,
-    ranking,
-    plan,
-    warnings: [...collect, ...scores.flatMap((score) => skillWarnings(model, score, knowledgeGraph))],
+    result: {
+      ...common,
+      ranking,
+      plan,
+      warnings: [...collect, ...scores.flatMap((score) => skillWarnings(model, score, knowledgeGraph))],
+    },
+    model,
+    availableSeconds,
   };
+}
+
+export function rankInterventions(
+  classDiagnostic: ClassDiagnostic,
+  knowledgeGraph: KnowledgeGraph,
+  availableMinutes: number,
+  config: InterventionConfig = {},
+): InterventionRanking {
+  return analyzeInterventions(classDiagnostic, knowledgeGraph, availableMinutes, config).result;
 }

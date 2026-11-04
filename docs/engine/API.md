@@ -1,6 +1,6 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4C. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
 ## Intervenciones
 
@@ -83,6 +83,80 @@ interface InterventionWarning {
 - Esta función solo prioriza. Las actividades se seleccionarán desde servicios de aplicación.
 
 Fórmulas y reglas detalladas en `MATEMATICAS.md`.
+
+## Comparación de planes
+
+```ts
+compareInterventionPlans(classDiagnostic: ClassDiagnostic, knowledgeGraph: KnowledgeGraph, availableMinutes: number, config?: InterventionConfig): InterventionPlanComparison
+```
+
+```ts
+interface InterventionPlanComparison {
+  readonly config: EffectiveInterventionConfig;
+  readonly availableMinutes: number;
+  readonly basis: InterventionRankingBasis;
+  readonly evidence: InterventionEvidence;
+  readonly collectivePlan: ComparedPlan;   // plan A: el de rankInterventions
+  readonly pendingNeedPlan: ComparedPlan;  // plan B: menor máximo pendiente
+  readonly plansCoincide: boolean;
+  readonly warnings: readonly PlanComparisonWarning[];
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
+
+interface ComparedPlan {
+  readonly plan: InterventionPlan;
+  readonly analysis: PlanNeedAnalysis;
+}
+
+interface PlanNeedAnalysis {
+  readonly scheduledSkills: readonly SkillId[];  // en el orden de SKILL_ORDER
+  readonly students: readonly StudentPendingNeed[];  // por id
+  readonly meanPending: number | null;
+  readonly maxPending: number | null;
+}
+
+interface StudentPendingNeed {
+  readonly studentId: string;
+  readonly responseCount: number;
+  readonly basedOnPriorOnly: boolean;
+  readonly baseline: number | null;
+  readonly scheduled: number | null;
+  readonly pending: number | null;
+  readonly skills: readonly StudentSkillNeed[];  // en el orden de SKILL_ORDER
+}
+
+interface StudentSkillNeed {
+  readonly skill: SkillId;
+  readonly need: number;        // n_ik = 1 - p_ik
+  readonly importance: number;  // w_k
+  readonly isScheduled: boolean;
+  readonly baseline: number | null;   // w_k·n_ik/D
+  readonly scheduled: number | null;  // baseline si está programada; si no, 0
+  readonly pending: number | null;    // baseline si no está programada; si no, 0
+}
+
+interface PlanComparisonWarning {
+  readonly code: PlanComparisonWarningCode;  // InterventionWarningCode | 'ZERO_TOTAL_IMPORTANCE' | 'HYPOTHETICAL_ANALYSIS' | 'PRIOR_ONLY_STUDENTS'
+  readonly message: string;
+  readonly skill: SkillId | null;
+  readonly ancestor: SkillId | null;
+}
+```
+
+- `baseline`, `scheduled` y `pending` son índices de necesidad estimada según el modelo, no probabilidades de mejora.
+- **Programar una competencia no significa que se haya aprendido** ni que la intervención sea eficaz. Solo cuentan las competencias directamente programadas: no se asume nada de sus descendientes.
+- El plan A es el `plan` de `rankInterventions`, sin cambios. `warnings` empieza por sus avisos.
+- `plan.coverage`, `benefit`, `cost` y `netValue` son los de la Fase 4B para cada subconjunto. `coverage` no es necesidad atendida ni alumnos atendidos.
+- Los dos planes pueden coincidir.
+- Con la suma de importancias a 0, los índices son `null`, `need` se conserva y el plan B queda vacío, con el aviso `ZERO_TOTAL_IMPORTANCE`. El plan A no cambia.
+- Con la clase vacía, planes y alumnos quedan vacíos y `meanPending` y `maxPending` son `null`.
+- Con `priorsOnly`, ambos planes quedan vacíos y `basis` es `hypotheticalPriorsOnly`, con el aviso `HYPOTHETICAL_ANALYSIS`.
+- Con `mixed` se incluyen todos los alumnos. `basedOnPriorOnly` los identifica, `evidence.warnings` conserva el aviso del diagnóstico y `PRIOR_ONLY_STUDENTS` da el recuento.
+- A diferencia de `rankInterventions`, esta función exige el detalle por alumno: un diagnóstico sin él se rechaza con `INVALID_DIAGNOSTIC`.
+- No genera ejercicios. Un servicio de aplicación podrá elegir después la práctica individual a partir de estos resultados.
+
+Criterio del plan B y validación en `MATEMATICAS.md`.
 
 ## Diagnóstico de clase
 
@@ -268,7 +342,7 @@ Las funciones de inferencia lanzan `InferenceError`, con un `code`:
 | `INVALID_INTERVENTION_CONFIG` | Pesos, `lambda`, `t_ref`, duraciones, importancias o umbrales inválidos, o duraciones sin resolución de un segundo. |
 | `INVALID_BUDGET` | El presupuesto no es finito, es negativo, no tiene resolución de un segundo o está fuera del rango seguro. |
 | `NON_FINITE_VALUE` | Una magnitud calculada o una puntuación no son representables. |
-| `INVALID_DIAGNOSTIC` | El diagnóstico tiene competencias, magnitudes, rangos o recuentos incoherentes. |
+| `INVALID_DIAGNOSTIC` | El diagnóstico tiene competencias, magnitudes, rangos o recuentos incoherentes, o su detalle por alumno no es válido o no concuerda con el agregado. |
 
 Un grafo con estructura inválida lanza `KnowledgeGraphError`, como en `validateKnowledgeGraph`. En `selectNextQuestion`, un banco que no pasa la validación lanza `QuestionBankError`.
 

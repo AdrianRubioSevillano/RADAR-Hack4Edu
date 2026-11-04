@@ -26,6 +26,7 @@ export {
   validateKnowledgeGraph,
 } from './graph.ts';
 export { rankInterventions } from './interventions.ts';
+export { compareInterventionPlans } from './planComparison.ts';
 export { QuestionBankError, RADAR_QUESTION_BANK, validateQuestionBank } from './questionBank.ts';
 export { isCanonicalRational, normalizeRational } from './rational.ts';
 export { fixedQuestionOrder, selectNextQuestion } from './selection.ts';
@@ -41,6 +42,7 @@ export type {
   ClassEvidenceStatus,
   ClassWarning,
   ClassWarningCode,
+  ComparedPlan,
   CompatiblePriorConfig,
   DiagnosticState,
   Difficulty,
@@ -54,6 +56,7 @@ export type {
   InterventionContributions,
   InterventionEvidence,
   InterventionPlan,
+  InterventionPlanComparison,
   InterventionPlanItem,
   InterventionRanking,
   InterventionRankingBasis,
@@ -68,6 +71,9 @@ export type {
   MultipleChoiceQuestion,
   NumericQuestion,
   OptionId,
+  PlanComparisonWarning,
+  PlanComparisonWarningCode,
+  PlanNeedAnalysis,
   PriorConfig,
   Question,
   QuestionBank,
@@ -81,5 +87,7 @@ export type {
   SkillId,
   SkillNode,
   StudentClassSummary,
+  StudentPendingNeed,
+  StudentSkillNeed,
   StudentSkillSummary,
 } from './types.ts';

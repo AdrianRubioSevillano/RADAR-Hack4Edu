@@ -129,6 +129,60 @@ Plan con presupuesto de tiempo `T`:
 - Solo priors (`evidenceStatus = priorsOnly`): el ranking puede mostrarse como cálculo hipotético basado solo en priors, pero el plan queda vacío con aviso de que hay que recoger respuestas. No se presentan recomendaciones respaldadas por observaciones cuando no existe ninguna. En `mixed` se mantienen explícitos los avisos y la proporción de alumnos sin respuestas.
 - Todo esto es una **heurística de priorización**, no una estimación de efecto causal ni una mejora educativa demostrada. Debe decirlo la documentación y el campo `disclaimer` de la salida.
 
+### 2.6.1 Comparación de planes y necesidad pendiente (Fase 4C)
+
+Ampliación de §2.6: no la contradice ni la sustituye. `compareInterventionPlans` compara dos planes y muestra qué necesidades quedan pendientes por alumno y competencia:
+
+- **Plan A:** el plan colectivo de `rankInterventions`, sin cambiar su criterio.
+- **Plan B:** un plan que reduce la mayor necesidad estimada pendiente de un alumno.
+
+Programar una competencia **no** significa que se haya aprendido ni que la intervención sea eficaz.
+
+Para el alumno `i`, la competencia `k` y un conjunto `S` de competencias programadas, con `w_k` la importancia efectiva de §2.6 y `D = Σ_k w_k`:
+
+```
+n_ik           = 1 − masteryProbability_ik
+baseline_i     = Σ_k (w_k · n_ik) / D
+pending_i(S)   = Σ_{k ∉ S} (w_k · n_ik) / D
+scheduled_i(S) = baseline_i − pending_i(S)
+```
+
+- Son índices de necesidad estimada según el modelo, no probabilidades de mejora.
+- Solo cuentan las competencias directamente programadas. No se asume que sus descendientes estén resueltos.
+- No se reutiliza ni se renombra `coverage` de §2.6, que tiene otro significado.
+- No se muestran “necesidades resueltas” ni “alumnos beneficiados”.
+
+Plan B: enumeración de los mismos 64 subconjuntos, con el presupuesto y los segundos enteros de §2.6. Se elige, en este orden:
+
+1. Menor máximo de `pending_i` entre alumnos.
+2. Menor media de `pending_i`.
+3. Mayor valor neto de §2.6.
+4. Menor duración.
+5. Lista ordenada de ids.
+
+- En los tres primeros criterios se filtra respecto al mejor global de las candidatas restantes, con tolerancia absoluta `1e-12`. No se usan comparadores aproximados por pares.
+- Los dos planes pueden coincidir: no se fuerza una diferencia.
+- Es una heurística distinta: el presupuesto limita el tiempo y el coste de §2.6 solo interviene en el tercer criterio. No se afirma superioridad ni equidad educativa demostrada.
+
+Casos:
+
+- `D = 0`: índices normalizados `null` con aviso de importancias nulas, plan B vacío sin afirmar ausencia de necesidad, y plan A con su comportamiento de §2.6.
+- Clase vacía: planes vacíos, alumnos vacíos e índices agregados `null`.
+- `priorsOnly`: ambos planes vacíos y análisis identificado como hipotético.
+- `mixed`: se incluyen todos los alumnos y se conservan los avisos de estimaciones basadas solo en priors.
+
+Salida: por alumno, `baseline`, `scheduled`, `pending` y desglose por competencia; por plan, media y máximo pendientes; además evidencia, configuración efectiva, avisos y `disclaimer`. No se generan ejercicios: estos resultados permitirán al servicio de aplicación elegir práctica individual después.
+
+Validación antes de usar `students`:
+
+- Ids únicos, `responseCount` y las seis competencias únicas.
+- Probabilidades, entropías y preparación finitas en rango, y entropía coherente con la probabilidad.
+- Totales, medias y recuentos reconciliados con el agregado dentro de tolerancias documentadas.
+- El detalle manipulado o incoherente se rechaza con error tipado.
+- No se intenta demostrar que el diagnóstico proceda de respuestas reales ni se reconstruyen posteriores: aquí no se reciben conjuntas.
+
+Se reutilizan la validación, los tiempos y la evaluación de subconjuntos de §2.6 mediante helpers internos, sin duplicar fórmulas ni cambiar el comportamiento público de `rankInterventions`.
+
 ### 2.7 Simulador (solo para benchmarks y demo)
 
 - PRNG con semilla. Igual configuración, versión y semilla ⇒ mismos resultados deterministas. Los tiempos y metadatos variables se guardan aparte y se excluyen de las comprobaciones de igualdad.
@@ -193,6 +247,7 @@ selectNextQuestion(state: DiagnosticState, questionBank: QuestionBank): Question
 submitAnswer(state: DiagnosticState, questionId: string, answer: AnswerValue, questionBank: QuestionBank): Result<DiagnosticState, AnswerError>
 getClassDiagnostic(studentStates: DiagnosticState[], knowledgeGraph: KnowledgeGraph, config?: ClassDiagnosticConfig): ClassDiagnostic
 rankInterventions(classDiagnostic: ClassDiagnostic, knowledgeGraph: KnowledgeGraph, availableMinutes: number, config?: InterventionConfig): InterventionRanking
+compareInterventionPlans(classDiagnostic: ClassDiagnostic, knowledgeGraph: KnowledgeGraph, availableMinutes: number, config?: InterventionConfig): InterventionPlanComparison
 fixedQuestionOrder(questionBank: QuestionBank, knowledgeGraph: KnowledgeGraph): readonly string[]
 
 // src/simulation/index.ts
@@ -254,7 +309,7 @@ interface PostInterventionInput {
 
 ```
 src/engine/       graph.ts, questionBank.ts, bayes.ts, entropy.ts, selection.ts,
-                  classDiagnostic.ts, interventions.ts, types.ts, index.ts
+                  classDiagnostic.ts, interventions.ts, planComparison.ts, types.ts, index.ts
 src/simulation/   rng.ts, syntheticClass.ts, responder.ts, postIntervention.ts, index.ts
 src/benchmarks/   methods.ts, metrics.ts, stats.ts, runBenchmark.ts, index.ts
 tests/engine|simulation|benchmarks/  *.test.ts
@@ -265,7 +320,7 @@ scripts/          bench.ts
 
 ## 6. Tests obligatorios
 
-Actualización bayesiana (caso calculado a mano), entropía e EIG (valores conocidos, EIG ≥ 0, EIG = 0 si la pregunta no informa, empates respecto al máximo global), prior compatible (`ε` válido e inválido, una sola aplicación por estado, `ε = 1` igual al independiente), no repetición, reproducibilidad con semilla (excluyendo tiempos y metadatos variables), independencia del orden de ejecución de los métodos, validación de respuestas (id inexistente, repetida, opción inválida, denominador cero, formato no admitido, fracción equivalente aceptada, forma canónica `numerador/denominador` con `5/1` y `0/1`, opciones racionalmente equivalentes, ids de opción sin cambios), validación de `slip`/`guess` (no finitos o fuera de `0 < g < 1 − s < 1`, rechazados), validación de pesos, `λ`, `t_ref`, duraciones y presupuesto, integridad del grafo (acíclico, ids estables, orden topológico determinista, `ancestors` y `descendants` únicos y en ese orden, detecta ciclo inyectado), ordenación de intervenciones (grupo empatado completo respecto al máximo, valores no positivos incluidos), cobertura sin doble conteo, plan vacío, plan distinto de un prefijo del ranking, respeto del presupuesto de tiempo (incluido presupuesto 0), datos vacíos (clase vacía en diagnóstico y recomendaciones sin `0/0`, banco vacío), `D = 0`, priors extremos (0, 1, 1e-12) sin NaN ni modificación, normalización inválida con error tipado, métricas `null` sin convertirlas en 0, log‑loss en nats con clipping solo en evaluación, permutación del método C por alumno sin alterar los uniformes comunes, escenario “todas” con tolerancia `1e-9`, reglas de postintervención (plan vacío, cambios simultáneos sin cascada, sin pérdida de dominio, reducción única por ancestros, diagnóstico de post‑test separado, sin reutilizar ítems, falta de preguntas con `null` y aviso, alcance independiente del plan, selección por `fixedQuestionOrder` sin EIG, misma selección entre ramas y planes con igual historial, `questionBudgetPerStudent` inválido rechazado, entradas inconsistentes de alumnos, ids o preguntas rechazadas, cambio etiquetado como descriptivo no equiparado), ausencia de `Math.random` en `src/engine`, `src/simulation` y `src/benchmarks`, `src/engine` no importa `src/simulation` ni `src/benchmarks`, el motor no recibe el estado real salvo en las funciones puras DINA, que no mutan sus entradas (§2.7).
+Actualización bayesiana (caso calculado a mano), entropía e EIG (valores conocidos, EIG ≥ 0, EIG = 0 si la pregunta no informa, empates respecto al máximo global), prior compatible (`ε` válido e inválido, una sola aplicación por estado, `ε = 1` igual al independiente), no repetición, reproducibilidad con semilla (excluyendo tiempos y metadatos variables), independencia del orden de ejecución de los métodos, validación de respuestas (id inexistente, repetida, opción inválida, denominador cero, formato no admitido, fracción equivalente aceptada, forma canónica `numerador/denominador` con `5/1` y `0/1`, opciones racionalmente equivalentes, ids de opción sin cambios), validación de `slip`/`guess` (no finitos o fuera de `0 < g < 1 − s < 1`, rechazados), validación de pesos, `λ`, `t_ref`, duraciones y presupuesto, integridad del grafo (acíclico, ids estables, orden topológico determinista, `ancestors` y `descendants` únicos y en ese orden, detecta ciclo inyectado), ordenación de intervenciones (grupo empatado completo respecto al máximo, valores no positivos incluidos), cobertura sin doble conteo, plan vacío, plan distinto de un prefijo del ranking, respeto del presupuesto de tiempo (incluido presupuesto 0), comparación de planes (necesidad pendiente calculada a mano sin atribuirla a descendientes, planes que difieren y que coinciden, empates y permutación de entradas, `D = 0`, clase vacía, `priorsOnly`, `mixed`, detalle de alumnos inválido o incoherente con los agregados), datos vacíos (clase vacía en diagnóstico y recomendaciones sin `0/0`, banco vacío), `D = 0`, priors extremos (0, 1, 1e-12) sin NaN ni modificación, normalización inválida con error tipado, métricas `null` sin convertirlas en 0, log‑loss en nats con clipping solo en evaluación, permutación del método C por alumno sin alterar los uniformes comunes, escenario “todas” con tolerancia `1e-9`, reglas de postintervención (plan vacío, cambios simultáneos sin cascada, sin pérdida de dominio, reducción única por ancestros, diagnóstico de post‑test separado, sin reutilizar ítems, falta de preguntas con `null` y aviso, alcance independiente del plan, selección por `fixedQuestionOrder` sin EIG, misma selección entre ramas y planes con igual historial, `questionBudgetPerStudent` inválido rechazado, entradas inconsistentes de alumnos, ids o preguntas rechazadas, cambio etiquetado como descriptivo no equiparado), ausencia de `Math.random` en `src/engine`, `src/simulation` y `src/benchmarks`, `src/engine` no importa `src/simulation` ni `src/benchmarks`, el motor no recibe el estado real salvo en las funciones puras DINA, que no mutan sus entradas (§2.7).
 
 ## 7. Fases
 
@@ -275,6 +330,7 @@ Esta planificación se define aquí porque `PROMPTS_RADAR.md` no está disponibl
 - **Fase 2:** DINA, prior, posterior exacto y entropías.
 - **Fase 3:** EIG, selección explicable y registro de respuestas.
 - **Fase 4:** diagnóstico de clase e intervenciones con optimización exacta.
+- **Fase 4C:** comparación de planes y necesidades pendientes (§2.6.1).
 - **Fase 5:** simulación reproducible y respuestas comunes.
 - **Fase 6:** evaluación postintervención.
 - **Fase 7:** benchmarks, informes y documentación de integración.

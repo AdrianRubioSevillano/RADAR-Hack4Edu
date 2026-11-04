@@ -366,6 +366,80 @@ export interface InterventionRanking {
   readonly disclaimer: string;
 }
 
+// Desglose de un alumno en una competencia. Índices normalizados por D: null si D = 0.
+export interface StudentSkillNeed {
+  readonly skill: SkillId;
+  // n_ik = 1 - p_ik. Se conserva aunque D = 0: no se afirma ausencia de necesidad.
+  readonly need: number;
+  // w_k: importancia efectiva.
+  readonly importance: number;
+  // Programada no significa aprendida ni que la intervención sea eficaz.
+  readonly isScheduled: boolean;
+  // w_k·n_ik/D.
+  readonly baseline: number | null;
+  // baseline si está programada; 0 si no.
+  readonly scheduled: number | null;
+  // baseline si no está programada; 0 si lo está.
+  readonly pending: number | null;
+}
+
+// Índices de necesidad estimada según el modelo, no probabilidades de mejora.
+export interface StudentPendingNeed {
+  readonly studentId: string;
+  readonly responseCount: number;
+  // Sin respuestas: su estimación procede únicamente del prior.
+  readonly basedOnPriorOnly: boolean;
+  readonly baseline: number | null;
+  readonly scheduled: number | null;
+  readonly pending: number | null;
+  // En el orden de SKILL_ORDER.
+  readonly skills: readonly StudentSkillNeed[];
+}
+
+export interface PlanNeedAnalysis {
+  // Competencias directamente programadas, en el orden de SKILL_ORDER.
+  readonly scheduledSkills: readonly SkillId[];
+  // Por id lexicográfico.
+  readonly students: readonly StudentPendingNeed[];
+  // null si no hay alumnos o D = 0.
+  readonly meanPending: number | null;
+  readonly maxPending: number | null;
+}
+
+export interface ComparedPlan {
+  // `coverage`, `benefit`, `cost` y `netValue` son los de §2.6 para este subconjunto.
+  readonly plan: InterventionPlan;
+  readonly analysis: PlanNeedAnalysis;
+}
+
+export type PlanComparisonWarningCode =
+  | InterventionWarningCode
+  | 'ZERO_TOTAL_IMPORTANCE'
+  | 'HYPOTHETICAL_ANALYSIS'
+  | 'PRIOR_ONLY_STUDENTS';
+
+export interface PlanComparisonWarning {
+  readonly code: PlanComparisonWarningCode;
+  readonly message: string;
+  readonly skill: SkillId | null;
+  readonly ancestor: SkillId | null;
+}
+
+export interface InterventionPlanComparison {
+  readonly config: EffectiveInterventionConfig;
+  readonly availableMinutes: number;
+  readonly basis: InterventionRankingBasis;
+  readonly evidence: InterventionEvidence;
+  // Plan A: el de rankInterventions.
+  readonly collectivePlan: ComparedPlan;
+  // Plan B: reduce la mayor necesidad estimada pendiente de un alumno.
+  readonly pendingNeedPlan: ComparedPlan;
+  readonly plansCoincide: boolean;
+  readonly warnings: readonly PlanComparisonWarning[];
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
+
 export type InferenceErrorCode =
   | 'INVALID_STATE_INDEX'
   | 'INVALID_MASTERY'

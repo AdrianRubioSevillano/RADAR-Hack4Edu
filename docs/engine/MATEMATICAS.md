@@ -223,6 +223,58 @@ La cobertura se calcula directamente sobre el conjunto: cada descendiente cuenta
 
 **Ajuste de magnitudes derivadas.** Una magnitud derivada de `[0, 1]`, como `confianza_k`, puede desviarse del intervalo por redondeo. Hasta `1e-12` se ajusta al extremo; más allá se lanza `INVALID_DIAGNOSTIC`. No autoriza ningún recorte del posterior.
 
+## Comparación de planes y necesidad pendiente
+
+`compareInterventionPlans` aplica §2.6.1. Compara el plan colectivo de `rankInterventions` (A) con un plan que reduce la mayor necesidad estimada pendiente de un alumno (B), y muestra qué queda pendiente por alumno y competencia. Es una heurística distinta de §2.6: no se afirma superioridad ni equidad educativa demostrada.
+
+**Índices.** Con `w_k` la importancia efectiva, `D = Σ_k w_k` y `S` las competencias programadas:
+
+```
+n_ik           = 1 − masteryProbability_ik
+baseline_i     = Σ_k (w_k · n_ik) / D
+pending_i(S)   = Σ_{k ∉ S} (w_k · n_ik) / D
+scheduled_i(S) = baseline_i − pending_i(S)
+```
+
+Son necesidad estimada según el modelo, no probabilidades de mejora. **Programar no significa aprender.** Solo se descuentan las competencias directamente programadas: programar `OPS` no reduce la necesidad de `NEG`, aunque `NEG` dependa de `OPS`. Tampoco tienen relación con `coverage` de §2.6, que mide descendientes del grafo.
+
+**Ejemplo.** Un alumno con necesidades `OPS = 0.8`, `NEG = 0.5` y `ECU = 0.5`, e importancias 1, tiene `baseline = 1.8/6 = 0.3`. Con `S = {OPS}`, `pending = 1/6` y `scheduled = 0.8/6`.
+
+**Plan B.** Se enumeran los mismos subconjuntos que en §2.6 y se conservan los que caben en el presupuesto, en segundos enteros. Después, en este orden:
+
+1. Menor máximo de `pending_i` entre alumnos.
+2. Menor media de `pending_i`.
+3. Mayor valor neto de §2.6.
+4. Menor duración.
+5. Lista ordenada de ids.
+
+En los tres primeros criterios se conservan las candidatas a distancia `≤ 1e-12` del mejor global de las que quedan; no se comparan por pares. El presupuesto limita el tiempo y el coste solo interviene en el tercer criterio, así que el plan B puede tener un valor neto negativo.
+
+**Compromiso.** Con `ECU = 0.8` en un alumno y `OPS = 0.6` en otros dos, y tiempo para una sola competencia, A programa `OPS` y deja un máximo de `0.8/6` y una media de `0.8/18`. B programa `ECU` y deja un máximo de `0.6/6` y una media de `1.2/18`, con menor valor neto. Ninguno es mejor en todo. Los dos planes también pueden coincidir.
+
+**Casos.**
+
+| Caso | Plan A | Plan B | Índices |
+|---|---|---|---|
+| `D = 0` | El de §2.6 | Vacío, sin afirmar ausencia de necesidad | `null`, con aviso; `need` se conserva |
+| `emptyClass` | Vacío | Vacío | Sin alumnos; agregados `null` |
+| `priorsOnly` | Vacío | Vacío | Análisis hipotético: `pending = baseline` |
+| `mixed` | El de §2.6 | Calculado con todos los alumnos | Avisos de estimaciones basadas solo en priors |
+| `allWithResponses` | El de §2.6 | Calculado | Calculados |
+
+**Validación del detalle.** Antes de usar `students` se aplica la validación de §2.6 y además:
+
+- Umbrales de `config` válidos, ids no vacíos y únicos, `responseCount` entero no negativo y las seis competencias sin repetir.
+- Probabilidad y preparación finitas en `[0, 1]`, y entropía en `[0, 1]` salvo redondeo.
+- `|entropy − H_b(masteryProbability)| ≤ 1e-9`.
+- La preparación de una competencia sin ancestros es 1. Con ancestros cumple las cotas de Fréchet, que valen para cualquier conjunta: `1 − Σ_a (1 − p_a) ≤ preparación ≤ min_a p_a`, con tolerancia `1e-9`.
+- `studentsWithResponses` y `totalResponseCount` coinciden exactamente con el detalle.
+- Cada resumen se recalcula con `summarizeSkill`. `belowTauCount` y `uncertainCount` coinciden exactamente; `meanMastery`, `meanEntropy`, `meanPrerequisiteProbability` y `expectedReinforcementCount / n` coinciden con tolerancia `1e-9`.
+
+Esto detecta detalle manipulado o incoherente, **no prueba que el diagnóstico proceda de respuestas reales**: aquí no se reciben conjuntas y no se reconstruyen posteriores. Un diagnóstico falso pero coherente se acepta.
+
+Los alumnos se ordenan por id antes de sumar y las competencias siguen `SKILL_ORDER`, de modo que el orden de entrada no cambia el resultado.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |
@@ -236,6 +288,8 @@ La cobertura se calcula directamente sobre el conjunto: cada descendiente cuenta
 | `1e-12` | Desviación de una magnitud derivada de `[0, 1]` que se ajusta al extremo. |
 | `1e-9` | Tolerancia de `\|Σ w − 1\|` en los pesos (§2.6). |
 | `1e-9` | Tolerancia de `\|dominio medio + necesidad − 1\|` al validar un diagnóstico. |
+| `1e-12` | Distancia al mejor global de las candidatas restantes en los tres primeros criterios del plan B (§2.6.1). |
+| `1e-9` | Coherencia del detalle por alumno: entropía con probabilidad, cotas de la preparación y medias con el agregado (§2.6.1). |
 
 Una distribución dentro de la tolerancia se acepta sin modificar. La actualización la renormaliza como cualquier otra, y las consultas y `jointEntropy` la interpretan normalizada. Nunca se muta la entrada ni se recortan probabilidades.
 
