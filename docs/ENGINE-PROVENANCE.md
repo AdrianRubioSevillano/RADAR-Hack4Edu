@@ -1,3 +1,9 @@
+# Procedencia del motor
+
+**Resuelto.** El motor provisional se sustituyó por el final en `7604c99`, y `vendor/engine-phase3` y pnpm se retiraron. El gestor único es npm. El resto de este documento se conserva como registro histórico; el snapshot sigue recuperable en `feature/frontend` (`6420927`).
+
+---
+
 # Motor provisional de Fase 3
 
 El remoto main consultado el 4 de noviembre de 2026 solo contenía README (2aaacc43bc560fcbd185061e8ad3c0991edf8423).

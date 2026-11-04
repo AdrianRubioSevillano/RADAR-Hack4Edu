@@ -11,6 +11,14 @@ Este archivo es la especificación que manda. Si un prompt contradice este archi
 - Si necesitas un cambio en `src/shared/types.ts`: **no lo hagas**. Escribe la propuesta en `docs/engine/PROPUESTA_TIPOS.md` (diff exacto + motivo) y avisa en tu respuesta.
 - Si `src/shared/types.ts` no existe todavía: define los tipos del motor en `src/engine/types.ts`, expórtalos desde `src/engine/index.ts` y deja en `docs/engine/PROPUESTA_TIPOS.md` lo que debería pasar a ser compartido.
 
+### Actualización de ámbito: frontend e integración
+
+Autorizado por el equipo el 4 de noviembre de 2026. Prevalece sobre las restricciones anteriores de esta sección y de la regla 5, solo para la aplicación:
+
+- Se pueden modificar pantallas, componentes, estilos y configuración de Vite (`src/*.tsx`, `src/components`, `src/screens`, `src/services`, `tests/app`, `docs/app`).
+- Se admiten las dependencias de la aplicación: React, React Flow, Recharts, Tailwind, las fuentes y `axe-core` como desarrollo.
+- **Sigue vigente sin cambios:** todas las reglas matemáticas de §2, y las reglas de §1 aplicadas a `src/engine`, `src/simulation` y `src/benchmarks`. `src/engine`, `src/simulation` y `src/benchmarks` no se modifican salvo incompatibilidad demostrada y documentada.
+
 ## 1. Reglas de trabajo (obligatorias)
 
 1. TypeScript con `strict: true`. Prohibido `any` (usa `unknown` y estrecha). Sin `// @ts-ignore`.

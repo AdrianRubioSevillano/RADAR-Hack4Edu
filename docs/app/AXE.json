@@ -1,0 +1,180 @@
+[
+  {
+    "screen": "escritorio/clase-vacia-de-respuestas",
+    "passes": 43,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/clase",
+    "passes": 43,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/docente",
+    "passes": 51,
+    "incomplete": [
+      "aria-prohibited-attr",
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/planes",
+    "passes": 55,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/actividades",
+    "passes": 41,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/benchmark",
+    "passes": 52,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/diagnostico",
+    "passes": 46,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/practica",
+    "passes": 44,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/correccion",
+    "passes": 45,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/preferencias",
+    "passes": 24,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "escritorio/alto-contraste",
+    "passes": 51,
+    "incomplete": [
+      "aria-prohibited-attr",
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/clase-vacia-de-respuestas",
+    "passes": 42,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/clase",
+    "passes": 42,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/docente",
+    "passes": 50,
+    "incomplete": [
+      "aria-prohibited-attr",
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/planes",
+    "passes": 54,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/actividades",
+    "passes": 40,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/benchmark",
+    "passes": 52,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/diagnostico",
+    "passes": 45,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/practica",
+    "passes": 43,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/correccion",
+    "passes": 44,
+    "incomplete": [
+      "color-contrast"
+    ],
+    "violations": []
+  },
+  {
+    "screen": "movil/preferencias",
+    "passes": 25,
+    "incomplete": [],
+    "violations": []
+  },
+  {
+    "screen": "movil/alto-contraste",
+    "passes": 50,
+    "incomplete": [
+      "aria-prohibited-attr",
+      "color-contrast"
+    ],
+    "violations": []
+  }
+]

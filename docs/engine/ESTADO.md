@@ -73,10 +73,10 @@ Traspaso al cerrar el motor: Fases 1–7 terminadas. Rama `motor`, trabajo local
 
 ## Próximo trabajo
 
-- Integrar el motor en la aplicación, siguiendo `INTEGRACION_REACT.md`.
+- Integración hecha en `integracion/mvp`. Propuesta visual de Claude en `frontend/claude-alternativa`: ver `docs/app/`.
 
 ## Reglas para continuar
 
-- El frontend se desarrolla en paralelo en otro ordenador: no modificar sus directorios.
+- Hay dos propuestas de frontend, la de Codex y la de Claude: no fusionarlas hasta que el equipo elija.
 - No presentar las heurísticas como mejoras educativas demostradas ni afirmar exclusividad mundial.
 - Una fase por sesión; anunciar los comandos de git; sin push salvo petición.

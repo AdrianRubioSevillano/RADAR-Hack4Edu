@@ -1,38 +1,62 @@
 # RADAR
 
-Prototipo de diagnóstico adaptativo de matemáticas de 1.º–2.º ESO. React, TypeScript, Vite, Tailwind, React Flow y Recharts. El motor se ejecuta en el navegador, sin servidor ni servicios de IA.
+Diagnóstico adaptativo y planificación para matemáticas de 1.º–2.º de ESO. Pensado para docentes, con una vista de alumno preparada. Proyecto para Hack4Edu 2026.
 
-## Arranque
+Se ejecuta entero en el navegador: sin servidor, cuentas ni servicios de IA. Todos los alumnos de la demo son ficticios. Es un prototipo experimental sin validación educativa: lee [las limitaciones](docs/app/LIMITACIONES.md) antes de sacar conclusiones.
 
-Node 22.12 o posterior y pnpm 11.25.0. Desde esta carpeta:
+> **Esta rama es la propuesta visual de Claude** (`frontend/claude-alternativa`), para compararla con la de Codex. Comparten motor, servicios y datos. Dirección de diseño en [DISENO.md](docs/app/DISENO.md) y capturas en [docs/capturas](docs/capturas).
 
-```sh
-pnpm install --frozen-lockfile
-pnpm dev
+## Puesta en marcha
+
+Comprobado con Node 26.0.0 y npm 11.12.1. No se afirma compatibilidad con otras versiones: `npm run bench` y los scripts de Chrome ejecutan TypeScript directamente con Node.
+
+```bash
+npm ci
 ```
 
-Abrir la dirección que muestre Vite (habitualmente http://127.0.0.1:5173). El gestor de este checkout es pnpm 11.25.0 y el lockfile activo es pnpm-lock.yaml. El snapshot del motor conserva su package-lock.json de npm intacto; no se instala por separado. Antes de la integración definitiva se acordará un solo gestor con el equipo (ver docs/ENGINE-PROVENANCE.md).
-
-```sh
-pnpm test
-pnpm build
-pnpm preview
+```bash
+npm run dev
 ```
 
-## Recorrido disponible
+Abre la dirección que indique Vite, normalmente http://127.0.0.1:5173.
 
-Iniciar diagnóstico → responder como alumno ficticio → siguiente pregunta adaptativa → estimaciones individuales y mapa. El reinicio borra las respuestas de la sesión. No hay persistencia: recargar también reinicia. Las entradas inválidas no modifican el diagnóstico. Se agota el banco tras 30 respuestas; no hay criterio de parada anticipado validado.
+## Comandos
 
-El servicio src/services/diagnostic.ts coordina selección, envío, marginales y entropía. React solo representa esos resultados. No se simulan alumnos ni se fabrican resultados colectivos, recomendaciones o benchmarks: quedan pendientes de sus módulos reales.
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run typecheck` | Tipos del motor y de la aplicación |
+| `npm test` | Tests del motor y de la aplicación |
+| `npm run build` | Tipos y build de producción en `dist/` |
+| `npm run preview` | Sirve `dist/` |
+| `npm run e2e` | Prueba extremo a extremo en Chrome (necesita `npx vite preview --host 127.0.0.1 --port 4173`) |
+| `npm run capturas` | Regenera `docs/capturas` y la auditoría axe (mismo requisito) |
+| `npm run bench` | Repite el experimento completo: unos 145 s. No hace falta si el motor no cambia |
 
-## Motor y colaboración
+`npm run e2e` y `npm run capturas` buscan Google Chrome en la ruta de macOS.
 
-Checkout aislado en feature/frontend, sobre main 2aaacc4. Snapshot provisional íntegro en vendor/engine-phase3. Consultar docs/ENGINE-PROVENANCE.md antes de incorporar la rama motor real. src/engine, src/simulation y src/benchmarks corresponden a Adrián y no se han creado ni modificado aquí.
+## Qué incluye
 
-## Límites
+- **Mi clase:** 30 alumnos ficticios con semilla fija, respuestas simuladas por el motor real y reinicio.
+- **Radar:** diagnóstico colectivo, con cada alumno situado por su mayor necesidad medida.
+- **Planes:** presupuesto de tiempo, ranking y comparación del plan colectivo con el que minimiza la mayor necesidad estimada pendiente.
+- **Actividades y Práctica:** actividades para lo priorizado y ejercicios individuales según lo que el plan deja pendiente, separados del diagnóstico.
+- **Evidencia:** los informes reales del benchmark, con sus empates y pérdidas.
+- **Accesibilidad:** tamaño, espaciado, contraste, presentación legible, una pregunta por pantalla, menos distracciones, teclado y lectura en voz alta.
 
-Prior inicial de 0,5 por competencia, sin compatibilidad activada. Las probabilidades son estimaciones de un modelo experimental, no calificaciones. R_q, slip, guess y prerrequisitos son hipótesis sin calibración ni validación docente. No se deben interpretar como evidencia de mejora educativa real ni causalidad. El alumno de demostración es ficticio; las respuestas se introducen manualmente.
+## Documentación
 
-## Verificación del 4 de noviembre de 2026
+- [Guion de demo](docs/app/GUION_DEMO.md)
+- [Arquitectura e integración](docs/app/ARQUITECTURA.md)
+- [Diseño](docs/app/DISENO.md)
+- [Verificación](docs/app/VERIFICACION.md)
+- [Limitaciones de la aplicación](docs/app/LIMITACIONES.md)
+- [Motor: estado, API y matemáticas](docs/engine/ESTADO.md)
 
-503 pruebas pasadas (501 del snapshot + 2 de integración), TypeScript y build correctos. Prueba de navegador: inicio, respuesta numérica correcta, actualización del mapa, rechazo de texto inválido. Sin push ni merge.
+## Despliegue
+
+`npm run build` genera un sitio estático en `dist/`, con rutas relativas y navegación por `#`, que funciona en la raíz o en una subcarpeta. No se ha desplegado.
+
+## Licencia
+
+El repositorio no tiene licencia: es una decisión pendiente del equipo. Fredoka y Atkinson Hyperlegible Next tienen licencia OFL-1.1.
