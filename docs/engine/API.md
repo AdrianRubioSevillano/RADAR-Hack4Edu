@@ -1,8 +1,83 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4B. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
-Aún no existe `rankInterventions`.
+## Intervenciones
+
+```ts
+rankInterventions(classDiagnostic: ClassDiagnostic, knowledgeGraph: KnowledgeGraph, availableMinutes: number, config?: InterventionConfig): InterventionRanking
+```
+
+```ts
+interface InterventionConfig {
+  readonly weights?: Partial<InterventionWeights>;  // preparation, confidence, priority, relevance
+  readonly lambda?: number;
+  readonly referenceMinutes?: number;  // t_ref
+  readonly durations?: Readonly<Record<SkillId, number>>;
+  readonly importance?: Readonly<Record<SkillId, number>>;
+  readonly lowPreparationThreshold?: number;
+  readonly lowConfidenceThreshold?: number;
+}
+
+interface InterventionRanking {
+  readonly config: EffectiveInterventionConfig;
+  readonly availableMinutes: number;
+  readonly basis: InterventionRankingBasis;  // 'noStudents' | 'hypotheticalPriorsOnly' | 'withResponses'
+  readonly evidence: InterventionEvidence;
+  readonly ranking: readonly InterventionScore[];
+  readonly plan: InterventionPlan;
+  readonly warnings: readonly InterventionWarning[];
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
+
+interface InterventionScore {
+  readonly id: string;  // reinforce-OPS, reinforce-NEG, ...
+  readonly skill: SkillId;
+  readonly title: string;
+  readonly durationMinutes: number;
+  readonly components: InterventionComponents;        // need, relevance, preparation, confidence, priority
+  readonly contributions: InterventionContributions;  // preparation, confidence, priority, coverage
+  readonly benefit: number;
+  readonly cost: number;
+  readonly netValue: number;
+  readonly valuePerMinute: number;
+}
+
+interface InterventionPlan {
+  readonly interventions: readonly InterventionPlanItem[];  // id, skill, title, durationMinutes; por id
+  readonly totalMinutes: number;
+  readonly coverage: number;
+  readonly benefit: number;
+  readonly cost: number;
+  readonly netValue: number;
+}
+
+interface InterventionEvidence {
+  readonly status: ClassEvidenceStatus;
+  readonly studentCount: number;
+  readonly studentsWithResponses: number;
+  readonly totalResponseCount: number;
+  readonly proportionWithoutResponses: number | null;
+  readonly warnings: readonly ClassWarning[];
+}
+
+interface InterventionWarning {
+  readonly code: InterventionWarningCode;  // 'NO_STUDENTS' | 'COLLECT_RESPONSES' | 'LOW_PREPARATION' | 'LOW_CONFIDENCE'
+  readonly message: string;
+  readonly skill: SkillId | null;
+  readonly ancestor: SkillId | null;
+}
+```
+
+- Los valores por defecto son SUPUESTOS no calibrados: pesos 0.30, 0.20, 0.30 y 0.20, `lambda` 0.10, `referenceMinutes` 30, duraciones de 15 minutos, importancias de 1 y umbrales bajos de 0.5.
+- `weights` puede indicar solo algunos pesos, pero los cuatro efectivos deben sumar 1.
+- Con `priorsOnly`, `ranking` es un cálculo hipotético, `plan` queda vacío y hay un aviso `COLLECT_RESPONSES`.
+- Con la clase vacía, `ranking` y `plan` quedan vacíos y hay un aviso `NO_STUDENTS`. No es un fallo.
+- Los títulos salen del nombre de la competencia en el grafo.
+- Esta función solo prioriza. Las actividades se seleccionarán desde servicios de aplicación.
+
+Fórmulas y reglas detalladas en `MATEMATICAS.md`.
 
 ## Diagnóstico de clase
 
@@ -185,6 +260,9 @@ Las funciones de inferencia lanzan `InferenceError`, con un `code`:
 | `INVALID_EIG` | La EIG no es finita o es menor que `-1e-12`. |
 | `INVALID_CLASS_CONFIG` | Un umbral está fuera de `[0, 1]` o `lowerUncertainty` no es menor que `upperUncertainty`. |
 | `DUPLICATE_STUDENT` | Dos estados tienen el mismo `studentId`. |
+| `INVALID_INTERVENTION_CONFIG` | Pesos, `lambda`, `t_ref`, duraciones, importancias o umbrales inválidos. |
+| `INVALID_BUDGET` | El presupuesto no es finito o es negativo. |
+| `INVALID_DIAGNOSTIC` | El diagnóstico tiene competencias, magnitudes, rangos o recuentos incoherentes. |
 
 Un grafo con estructura inválida lanza `KnowledgeGraphError`, como en `validateKnowledgeGraph`. En `selectNextQuestion`, un banco que no pasa la validación lanza `QuestionBankError`.
 

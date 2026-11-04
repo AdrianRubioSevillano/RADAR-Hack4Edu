@@ -2,7 +2,7 @@
 
 `src/shared/types.ts` no existe todavía. Mientras tanto, estos tipos viven en `src/engine/types.ts` y se exportan desde `src/engine/index.ts`.
 
-Esta propuesta cubre lo implementado hasta la Fase 4A: grafo, banco de preguntas, inferencia, selección, respuestas y diagnóstico de clase. Los tipos de fases posteriores se añadirán cuando existan.
+Esta propuesta cubre lo implementado hasta la Fase 4B: grafo, banco de preguntas, inferencia, selección, respuestas, diagnóstico de clase e intervenciones. Los tipos de fases posteriores se añadirán cuando existan.
 
 ## Tipos que deberían pasar a ser compartidos
 
@@ -185,6 +185,109 @@ export interface ClassDiagnostic {
   readonly skills: readonly SkillClassSummary[];
   readonly students: readonly StudentClassSummary[];
 }
+
+export interface InterventionWeights {
+  readonly preparation: number;
+  readonly confidence: number;
+  readonly priority: number;
+  readonly relevance: number;
+}
+
+export interface InterventionConfig {
+  readonly weights?: Partial<InterventionWeights>;
+  readonly lambda?: number;
+  readonly referenceMinutes?: number;
+  readonly durations?: Readonly<Record<SkillId, number>>;
+  readonly importance?: Readonly<Record<SkillId, number>>;
+  readonly lowPreparationThreshold?: number;
+  readonly lowConfidenceThreshold?: number;
+}
+
+export interface EffectiveInterventionConfig {
+  readonly weights: InterventionWeights;
+  readonly lambda: number;
+  readonly referenceMinutes: number;
+  readonly durations: Readonly<Record<SkillId, number>>;
+  readonly importance: Readonly<Record<SkillId, number>>;
+  readonly lowPreparationThreshold: number;
+  readonly lowConfidenceThreshold: number;
+}
+
+export interface InterventionComponents {
+  readonly need: number;
+  readonly relevance: number;
+  readonly preparation: number;
+  readonly confidence: number;
+  readonly priority: number;
+}
+
+export interface InterventionContributions {
+  readonly preparation: number;
+  readonly confidence: number;
+  readonly priority: number;
+  readonly coverage: number;
+}
+
+export interface InterventionScore {
+  readonly id: string;
+  readonly skill: SkillId;
+  readonly title: string;
+  readonly durationMinutes: number;
+  readonly components: InterventionComponents;
+  readonly contributions: InterventionContributions;
+  readonly benefit: number;
+  readonly cost: number;
+  readonly netValue: number;
+  readonly valuePerMinute: number;
+}
+
+export interface InterventionPlanItem {
+  readonly id: string;
+  readonly skill: SkillId;
+  readonly title: string;
+  readonly durationMinutes: number;
+}
+
+export interface InterventionPlan {
+  readonly interventions: readonly InterventionPlanItem[];
+  readonly totalMinutes: number;
+  readonly coverage: number;
+  readonly benefit: number;
+  readonly cost: number;
+  readonly netValue: number;
+}
+
+export type InterventionRankingBasis = 'noStudents' | 'hypotheticalPriorsOnly' | 'withResponses';
+
+export type InterventionWarningCode = 'NO_STUDENTS' | 'COLLECT_RESPONSES' | 'LOW_PREPARATION' | 'LOW_CONFIDENCE';
+
+export interface InterventionWarning {
+  readonly code: InterventionWarningCode;
+  readonly message: string;
+  readonly skill: SkillId | null;
+  readonly ancestor: SkillId | null;
+}
+
+export interface InterventionEvidence {
+  readonly status: ClassEvidenceStatus;
+  readonly studentCount: number;
+  readonly studentsWithResponses: number;
+  readonly totalResponseCount: number;
+  readonly proportionWithoutResponses: number | null;
+  readonly warnings: readonly ClassWarning[];
+}
+
+export interface InterventionRanking {
+  readonly config: EffectiveInterventionConfig;
+  readonly availableMinutes: number;
+  readonly basis: InterventionRankingBasis;
+  readonly evidence: InterventionEvidence;
+  readonly ranking: readonly InterventionScore[];
+  readonly plan: InterventionPlan;
+  readonly warnings: readonly InterventionWarning[];
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
 ```
 
 | Tipo | Motivo |
@@ -206,6 +309,8 @@ export interface ClassDiagnostic {
 | `CandidateExplanation`, `QuestionSelection` | La interfaz muestra la pregunta elegida y puede explicar la elección. |
 | `AnswerError`, `AnswerErrorCode` | La interfaz necesita distinguir un formato inválido de una respuesta incorrecta. |
 | `ClassDiagnostic` y sus tipos asociados | Es la salida que la interfaz muestra al docente. |
+| `InterventionConfig` | La interfaz puede dejar al docente ajustar duraciones e importancias. |
+| `InterventionRanking` y sus tipos asociados | La interfaz muestra el ranking, el plan y sus avisos. |
 
 ## Decisiones que conviene revisar con el integrador
 
@@ -218,6 +323,7 @@ export interface ClassDiagnostic {
 - `JointDistribution` depende de la codificación de `docs/engine/MATEMATICAS.md`. La interfaz no debería interpretar sus índices: para eso están `marginals` y `masteryProbability`.
 - La interfaz debe conservar `DiagnosticState` entero y no reconstruirlo campo a campo, porque el motor valida sus campos.
 - `QuestionSelection.question` incluye `correctAnswer`, y cada candidata incluye dos posteriores de 64 valores. Es útil para inspeccionar, pero puede convenir un tipo de presentación más ligero.
+- `InterventionRanking.basis` indica si el ranking es hipotético. La interfaz no debería presentar `hypotheticalPriorsOnly` como una recomendación respaldada por observaciones.
 - Los campos `number | null` de `SkillClassSummary` obligan a la interfaz a tratar la clase vacía. La interfaz debería mostrar `warnings` y `disclaimer` junto a las cifras.
 - `AnswerError.causeCode` hace que `AnswerError` dependa de `InferenceErrorCode`, `QuestionBankErrorCode` y `KnowledgeGraphErrorCode`, así que esos tres tipos también pasarían a ser compartidos.
 - `PriorConfig.compatibility` acepta `null` para que `EffectivePriorConfig` sea también una configuración válida.

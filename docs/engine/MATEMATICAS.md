@@ -1,6 +1,6 @@
 # Matemáticas del motor
 
-Este documento cubre lo implementado hasta la Fase 4A: modelo DINA, prior, actualización bayesiana exacta, consultas, entropías, selección adaptativa, registro de respuestas y diagnóstico de clase. Las recomendaciones de intervención aún no existen.
+Este documento cubre lo implementado hasta la Fase 4B: modelo DINA, prior, actualización bayesiana exacta, consultas, entropías, selección adaptativa, registro de respuestas, diagnóstico de clase y priorización de intervenciones. La simulación y los benchmarks aún no existen.
 
 Los parámetros no están calibrados con datos reales. Este motor no demuestra precisión diagnóstica ni eficacia educativa.
 
@@ -157,7 +157,7 @@ Las comparaciones son estrictas, con una tolerancia de `1e-12` que trata como si
 
 Sin esa tolerancia decidiría el redondeo. Una competencia sin evidencia vale matemáticamente 0.5, igual que `τ`, pero en coma flotante puede quedar en `0.4999999999999997`. En una medida puntual con el banco real, 901 de 2064 casos quedaban por debajo de 0.5 solo por redondeo, con una desviación máxima de `1.1e-15`. Son resultados de ese caso concreto, no un límite general del error.
 
-La tolerancia no es configurable, y `CLAUDE.md` §2.5 no la menciona.
+La tolerancia no es configurable. Es la tolerancia de clasificación de `CLAUDE.md` §2.5, implementada en `src/engine/thresholds.ts`. Un valor a esa distancia de un umbral se considera igual a él solo para clasificar: no cambia probabilidades, medias, posteriores ni entropías, y no es incertidumbre estadística.
 
 **Cobertura.** `evidenceStatus` vale `emptyClass`, `priorsOnly`, `mixed` o `allWithResponses`. Se avisa cuando las estimaciones de algún alumno proceden únicamente del prior.
 
@@ -169,6 +169,56 @@ La tolerancia no es configurable, y `CLAUDE.md` §2.5 no la menciona.
 
 Los umbrales y el número esperado de refuerzo no son diagnósticos confirmados.
 
+## Priorización de intervenciones
+
+`rankInterventions` aplica §2.6 sobre un diagnóstico de clase. Es una **heurística de priorización**, no una estimación de efecto causal ni una mejora educativa demostrada. Prioriza competencias: no genera actividades ni afirma que las duraciones sean eficaces.
+
+**Componentes,** con `D = Σ_j imp_j`:
+
+- `n_k = Σ_i (1 − p_ik) / n`, a partir de `expectedReinforcementCount`.
+- `relevancia_k = Σ_{j ∈ desc(k)} imp_j / D`; 0 si `D = 0`.
+- `preparacion_k`: `meanPrerequisiteProbability`. Vale 1 sin ancestros.
+- `confianza_k = 1 − meanEntropy`.
+- `prioridad_k = imp_k`.
+
+**Valor de un subconjunto `S`.**
+
+```
+b_k          = n_k · (w_prep·preparacion_k + w_conf·confianza_k + w_prio·imp_k)
+cobertura(S) = Σ_j [ imp_j · max({ n_k : k ∈ S, j ∈ desc(k) } ∪ {0}) ] / D      (0 si D = 0)
+beneficio(S) = Σ_{k ∈ S} b_k + w_rel·cobertura(S)
+coste(S)     = λ · Σ_{k ∈ S} d_k / t_ref
+valor(S)     = beneficio(S) − coste(S)
+```
+
+La cobertura se calcula directamente sobre el conjunto: cada descendiente cuenta una vez, con la mayor necesidad de las competencias de `S` de las que depende. No es la suma de coberturas individuales.
+
+**Valores por defecto, SUPUESTOS no calibrados.** `w_prep = 0.30`, `w_conf = 0.20`, `w_prio = 0.30`, `w_rel = 0.20`, `λ = 0.10`, `t_ref = 30`, `d_k = 15` e `imp_k = 1`. Los umbrales de preparación y confianza bajas valen 0.5.
+
+**Ranking.** Por `valor_k = valor({k})` descendente. En cada iteración se añade todo el grupo a distancia `≤ 1e-12` del máximo actual, ordenado por duración e id, se elimina y se continúa. Incluye los valores no positivos. `valor_k / d_k` es solo informativo.
+
+**Plan.** Enumeración exacta de los 64 subconjuntos, incluido el vacío, que cumplen `Σ d_k ≤ T`. Entre los subconjuntos a distancia `≤ 1e-12` del máximo global se elige la menor duración y después la lista de ids ordenada, comparada elemento a elemento. El plan no es un prefijo del ranking. El coste permite descartar incorporaciones que no compensan, y el presupuesto puede agotarse si compensa.
+
+**Avisos.** Usan la tolerancia de clasificación y no alteran la puntuación.
+
+- `LOW_PREPARATION`: indica el ancestro con menor dominio medio. Entre ancestros a distancia `≤ 1e-12` del mínimo, el menor id. Con priors uniformes, sin esa tolerancia decidiría el redondeo.
+- `LOW_CONFIDENCE`: recomienda más evaluación antes de intervenir.
+
+**Evidencia.**
+
+| `evidenceStatus` | Ranking | Plan |
+|---|---|---|
+| `emptyClass` | Vacío | Vacío, con el aviso “No hay alumnos para calcular recomendaciones” |
+| `priorsOnly` | Cálculo hipotético basado solo en priors | Vacío, con aviso de recoger respuestas |
+| `mixed` | Calculado | Calculado, con los avisos y la proporción de alumnos sin respuestas |
+| `allWithResponses` | Calculado | Calculado |
+
+`allWithResponses` no significa que todas las competencias estén medidas.
+
+**Validación del diagnóstico.** `ClassDiagnostic` es una entrada serializable y no se da por válida. Se comprueban las seis competencias, los rangos, los recuentos y su coherencia. Una competencia sin ancestros debe tener preparación 1. Fuera de la clase vacía, `null` se rechaza y no se sustituye por 0.
+
+**Ajuste de magnitudes derivadas.** Una magnitud derivada de `[0, 1]`, como `confianza_k`, puede desviarse del intervalo por redondeo. Hasta `1e-12` se ajusta al extremo; más allá se lanza `INVALID_DIAGNOSTIC`. No autoriza ningún recorte del posterior.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |
@@ -177,7 +227,11 @@ Los umbrales y el número esperado de refuerzo no son diagnósticos confirmados.
 | `1e-300` | Masa total mínima para renormalizar (§2.3). Por debajo, o si no es finita, se lanza `INVALID_NORMALIZATION`. |
 | `1e-12` | Distancia absoluta al máximo global de EIG para considerar un empate (§2.4). |
 | `1e-12` | Residuo negativo de EIG que se convierte en 0. Por debajo se lanza `INVALID_EIG`. |
-| `1e-12` | Distancia a un umbral del diagnóstico de clase dentro de la cual el valor se trata como situado en él. |
+| `1e-12` | Tolerancia de clasificación: distancia a un umbral dentro de la cual el valor se considera igual a él (§2.5). |
+| `1e-12` | Distancia al máximo global para los empates del ranking y del plan, y al mínimo para el ancestro más débil (§2.6). |
+| `1e-12` | Desviación de una magnitud derivada de `[0, 1]` que se ajusta al extremo. |
+| `1e-9` | Tolerancia de `\|Σ w − 1\|` en los pesos (§2.6). |
+| `1e-9` | Tolerancia de `\|dominio medio + necesidad − 1\|` al validar un diagnóstico. |
 
 Una distribución dentro de la tolerancia se acepta sin modificar. La actualización la renormaliza como cualquier otra, y las consultas y `jointEntropy` la interpretan normalizada. Nunca se muta la entrada ni se recortan probabilidades.
 

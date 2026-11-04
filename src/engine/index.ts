@@ -25,6 +25,7 @@ export {
   topologicalOrder,
   validateKnowledgeGraph,
 } from './graph.ts';
+export { rankInterventions } from './interventions.ts';
 export { QuestionBankError, RADAR_QUESTION_BANK, validateQuestionBank } from './questionBank.ts';
 export { isCanonicalRational, normalizeRational } from './rational.ts';
 export { fixedQuestionOrder, selectNextQuestion } from './selection.ts';
@@ -45,8 +46,21 @@ export type {
   Difficulty,
   DinaQuestion,
   EffectiveClassDiagnosticConfig,
+  EffectiveInterventionConfig,
   EffectivePriorConfig,
   InferenceErrorCode,
+  InterventionComponents,
+  InterventionConfig,
+  InterventionContributions,
+  InterventionEvidence,
+  InterventionPlan,
+  InterventionPlanItem,
+  InterventionRanking,
+  InterventionRankingBasis,
+  InterventionScore,
+  InterventionWarning,
+  InterventionWarningCode,
+  InterventionWeights,
   JointDistribution,
   KnowledgeGraph,
   KnowledgeGraphErrorCode,

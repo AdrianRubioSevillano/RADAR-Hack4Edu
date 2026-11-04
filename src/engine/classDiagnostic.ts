@@ -3,6 +3,7 @@ import { assertInferenceGraph, marginals, masteryProbability } from './bayes.ts'
 import { InferenceError, SKILL_ORDER } from './dina.ts';
 import { binaryEntropy } from './entropy.ts';
 import { ancestors } from './graph.ts';
+import { isBelowThreshold, isStrictlyBetween } from './thresholds.ts';
 import type {
   ClassDiagnostic,
   ClassDiagnosticConfig,
@@ -17,11 +18,6 @@ import type {
 } from './types.ts';
 
 const DEFAULT_CONFIG: EffectiveClassDiagnosticConfig = { tau: 0.5, lowerUncertainty: 0.3, upperUncertainty: 0.7 };
-
-// Un valor a esta distancia de un umbral se trata como si estuviera en él. Sin
-// ella, el redondeo decidiría el recuento: una competencia sin evidencia vale
-// 0.5 = tau, pero en coma flotante puede quedar en 0.4999999999999997.
-const THRESHOLD_TOLERANCE = 1e-12;
 
 const DISCLAIMER =
   'Son estimaciones de un modelo con parámetros no calibrados, no diagnósticos confirmados. ' +
@@ -93,11 +89,9 @@ function summarizeSkill(
     skill,
     meanMastery: mean(probabilities),
     expectedReinforcementCount: sum(probabilities.map((probability) => 1 - probability)),
-    belowTauCount: probabilities.filter((probability) => probability < config.tau - THRESHOLD_TOLERANCE).length,
-    uncertainCount: probabilities.filter(
-      (probability) =>
-        config.lowerUncertainty + THRESHOLD_TOLERANCE < probability &&
-        probability < config.upperUncertainty - THRESHOLD_TOLERANCE,
+    belowTauCount: probabilities.filter((probability) => isBelowThreshold(probability, config.tau)).length,
+    uncertainCount: probabilities.filter((probability) =>
+      isStrictlyBetween(probability, config.lowerUncertainty, config.upperUncertainty),
     ).length,
     meanEntropy: mean(rows.map((row) => row.entropy)),
     meanPrerequisiteProbability: mean(rows.map((row) => row.prerequisiteProbability)),

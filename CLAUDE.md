@@ -76,11 +76,13 @@ Este archivo es la especificación que manda. Si un prompt contradice este archi
 Por competencia: media de `P(dominio)`, nº esperado que necesita refuerzo `Σ_i (1 − p_ik)`, nº con `p_ik < τ` (τ = 0.5 configurable), nº con estimación incierta (`0.3 < p < 0.7`, configurable), entropía media.
 Por alumno y competencia: `P(prerrequisitos dominados)`, probabilidad conjunta de dominar **todos los ancestros** de la competencia, calculada **exactamente desde su conjunta**; vale 1 si no tiene ancestros.
 
+Tolerancia de clasificación: las clasificaciones y avisos por umbral de §2.5 y §2.6 y la detección de §2.9 usan una tolerancia absoluta de `1e-12`. Un valor a esa distancia o menos de un umbral se considera igual a él, exclusivamente para clasificar: `p < τ` se evalúa como `p < τ − 1e-12`. No cambia probabilidades, medias, posteriores ni entropías. No es incertidumbre estadística ni debe confundirse con las tolerancias de otros cálculos.
+
 Clase vacía: `getClassDiagnostic([], ...)` no evalúa `0/0`. Devuelve `studentCount = 0`, sumas y contadores a 0, medias, proporciones, entropías medias y preparación agregada a `null`, y un indicador explícito de datos insuficientes. Los tipos afectados (esos campos como `number | null` y el indicador) se definen en `src/engine/types.ts` y se proponen en `docs/engine/PROPUESTA_TIPOS.md`, sin tocar `src/shared/types.ts`.
 
 ### 2.6 Recomendación de intervenciones (parte principal)
 
-Una intervención por competencia `k`, con duración `d_k` (minutos, SUPUESTO configurable) e importancia `imp_k ∈ [0,1]` (configurable).
+Una intervención por competencia `k`, con duración `d_k` (minutos, SUPUESTO configurable) e importancia `imp_k ∈ [0,1]` (configurable). Por defecto, `d_k = 15` e `imp_k = 1` para cada competencia, SUPUESTOS no calibrados.
 
 Sea `D = Σ_j imp_j`, suma de todas las importancias. Componentes normalizados a [0,1] para cada `k`:
 - `n_k = necesidad_k = Σ_i (1 − p_ik) / n`
@@ -115,6 +117,7 @@ No se selecciona un solo elemento para recalcular el grupo, ni se usan comparado
 Avisos explicables (no ocultos en la puntuación):
 - Si `preparacion_k` es menor que el umbral de preparación baja (0.5, SUPUESTO configurable, independiente del umbral diagnóstico τ): “conviene reforzar antes el prerrequisito X”, donde X es el ancestro de `k` con menor dominio medio; desempate por `id`.
 - Si `confianza_k` es menor que el umbral de confianza baja (0.5, SUPUESTO configurable): “la estimación es incierta; considerar más evaluación antes de intervenir”.
+- Ambos avisos usan la tolerancia de clasificación de §2.5.
 
 Plan con presupuesto de tiempo `T`:
 - Selección discreta de un subconjunto `S` con `Σ d_k ≤ T` que maximiza `valor(S)`. El plan vacío es válido, con `valor(∅) = 0`.
@@ -122,6 +125,7 @@ Plan con presupuesto de tiempo `T`:
 - Desempate respecto al máximo global: entre los subconjuntos a distancia absoluta `≤ 1e-12` de ese máximo, menor duración total y después la lista ordenada de ids.
 - El coste permite descartar incorporaciones que no compensan el tiempo. No obliga a dejar presupuesto sin usar: puede agotarse si compensa.
 - Clase vacía: ranking y plan vacíos; duración, beneficio, coste y valor neto a 0; aviso “No hay alumnos para calcular recomendaciones”. Es una salida válida sin evidencia, no un fallo.
+- Solo priors (`evidenceStatus = priorsOnly`): el ranking puede mostrarse como cálculo hipotético basado solo en priors, pero el plan queda vacío con aviso de que hay que recoger respuestas. No se presentan recomendaciones respaldadas por observaciones cuando no existe ninguna. En `mixed` se mantienen explícitos los avisos y la proporción de alumnos sin respuestas.
 - Todo esto es una **heurística de priorización**, no una estimación de efecto causal ni una mejora educativa demostrada. Debe decirlo la documentación y el campo `disclaimer` de la salida.
 
 ### 2.7 Simulador (solo para benchmarks y demo)
@@ -161,7 +165,7 @@ Plan con presupuesto de tiempo `T`:
 
 - Métodos: **A** fijo (orden de preguntas decidido de antemano y mismo para todos los alumnos: rondas por competencia principal en orden topológico; dentro de cada competencia, dificultad 2, 1, 3 y después `id`; cada pregunta aparece una sola vez), **B** adaptativo EIG, **C** aleatorio con semilla (control de cordura: permutación sin reemplazo por alumno, con flujo sembrado separado y estable; no un único orden para toda la clase; no altera los uniformes comunes de respuesta).
 - Mismo presupuesto de preguntas para todos. Presupuestos: 4, 6, 9, 12 y “todas”.
-- Métricas por alumno y competencia vs estado real: MAE, Brier, log‑loss (logaritmo natural, en nats; clipping `ε_clip = 1e-12`, SUPUESTO, exclusivo de esta evaluación); detección de “dificultad” (`α_k = 0`, clase positiva) con umbral τ: precisión, exhaustividad (recall), F1, exactitud; preguntas usadas; tiempo de cálculo por selección (ms).
+- Métricas por alumno y competencia vs estado real: MAE, Brier, log‑loss (logaritmo natural, en nats; clipping `ε_clip = 1e-12`, SUPUESTO, exclusivo de esta evaluación); detección de “dificultad” (`α_k = 0`, clase positiva) con umbral τ y la tolerancia de clasificación de §2.5: precisión, exhaustividad (recall), F1, exactitud; preguntas usadas; tiempo de cálculo por selección (ms).
 - La detección agrega los pares alumno‑competencia dentro de cada semilla:
   - Precisión `= TP/(TP+FP)`, `null` si `TP+FP = 0`.
   - Recall `= TP/(TP+FN)`, `null` si `TP+FN = 0`.

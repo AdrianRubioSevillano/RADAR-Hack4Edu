@@ -249,6 +249,121 @@ export interface ClassDiagnostic {
   readonly students: readonly StudentClassSummary[];
 }
 
+export interface InterventionWeights {
+  readonly preparation: number;
+  readonly confidence: number;
+  readonly priority: number;
+  readonly relevance: number;
+}
+
+export interface InterventionConfig {
+  readonly weights?: Partial<InterventionWeights>;
+  // λ del coste.
+  readonly lambda?: number;
+  // t_ref, en minutos.
+  readonly referenceMinutes?: number;
+  // d_k, en minutos, por competencia; las que falten usan el valor por defecto.
+  readonly durations?: Readonly<Record<SkillId, number>>;
+  // imp_k en [0, 1], por competencia; las que falten usan el valor por defecto.
+  readonly importance?: Readonly<Record<SkillId, number>>;
+  readonly lowPreparationThreshold?: number;
+  readonly lowConfidenceThreshold?: number;
+}
+
+export interface EffectiveInterventionConfig {
+  readonly weights: InterventionWeights;
+  readonly lambda: number;
+  readonly referenceMinutes: number;
+  readonly durations: Readonly<Record<SkillId, number>>;
+  readonly importance: Readonly<Record<SkillId, number>>;
+  readonly lowPreparationThreshold: number;
+  readonly lowConfidenceThreshold: number;
+}
+
+export interface InterventionComponents {
+  readonly need: number;
+  readonly relevance: number;
+  readonly preparation: number;
+  readonly confidence: number;
+  readonly priority: number;
+}
+
+// Aportaciones a valor({k}): las tres primeras suman b_k y `coverage` es
+// w_rel·cobertura({k}). Su suma es el beneficio.
+export interface InterventionContributions {
+  readonly preparation: number;
+  readonly confidence: number;
+  readonly priority: number;
+  readonly coverage: number;
+}
+
+export interface InterventionScore {
+  readonly id: string;
+  readonly skill: SkillId;
+  readonly title: string;
+  readonly durationMinutes: number;
+  readonly components: InterventionComponents;
+  readonly contributions: InterventionContributions;
+  readonly benefit: number;
+  readonly cost: number;
+  // valor_k = valor({k}).
+  readonly netValue: number;
+  // valor_k / d_k, solo como información.
+  readonly valuePerMinute: number;
+}
+
+export interface InterventionPlanItem {
+  readonly id: string;
+  readonly skill: SkillId;
+  readonly title: string;
+  readonly durationMinutes: number;
+}
+
+export interface InterventionPlan {
+  // Por id lexicográfico.
+  readonly interventions: readonly InterventionPlanItem[];
+  readonly totalMinutes: number;
+  readonly coverage: number;
+  readonly benefit: number;
+  readonly cost: number;
+  readonly netValue: number;
+}
+
+export type InterventionRankingBasis = 'noStudents' | 'hypotheticalPriorsOnly' | 'withResponses';
+
+export type InterventionWarningCode = 'NO_STUDENTS' | 'COLLECT_RESPONSES' | 'LOW_PREPARATION' | 'LOW_CONFIDENCE';
+
+export interface InterventionWarning {
+  readonly code: InterventionWarningCode;
+  readonly message: string;
+  readonly skill: SkillId | null;
+  // Ancestro con menor dominio medio, en LOW_PREPARATION.
+  readonly ancestor: SkillId | null;
+}
+
+export interface InterventionEvidence {
+  readonly status: ClassEvidenceStatus;
+  readonly studentCount: number;
+  readonly studentsWithResponses: number;
+  readonly totalResponseCount: number;
+  // Proporción de alumnos sin respuestas; null con la clase vacía.
+  readonly proportionWithoutResponses: number | null;
+  // Avisos del diagnóstico de clase.
+  readonly warnings: readonly ClassWarning[];
+}
+
+export interface InterventionRanking {
+  readonly config: EffectiveInterventionConfig;
+  readonly availableMinutes: number;
+  readonly basis: InterventionRankingBasis;
+  readonly evidence: InterventionEvidence;
+  readonly ranking: readonly InterventionScore[];
+  readonly plan: InterventionPlan;
+  readonly warnings: readonly InterventionWarning[];
+  readonly assumptions: readonly string[];
+  readonly disclaimer: string;
+}
+
 export type InferenceErrorCode =
   | 'INVALID_STATE_INDEX'
   | 'INVALID_MASTERY'
@@ -269,4 +384,7 @@ export type InferenceErrorCode =
   | 'INVALID_HISTORY'
   | 'INVALID_EIG'
   | 'INVALID_CLASS_CONFIG'
-  | 'DUPLICATE_STUDENT';
+  | 'DUPLICATE_STUDENT'
+  | 'INVALID_INTERVENTION_CONFIG'
+  | 'INVALID_BUDGET'
+  | 'INVALID_DIAGNOSTIC';
