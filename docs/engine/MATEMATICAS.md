@@ -103,7 +103,7 @@ La entropía conjunta usa las masas normalizadas por la masa total. Sin esa divi
 
 **EIG exacta (§2.4), en bits.** `EIG(q) = I(α; Y_q) = H_b(P(Y_q = 1)) − Σ_α p(α) · H_b(P(Y_q = 1 | α))`.
 
-Cada entropía binaria se calcula sobre la menor de sus dos probabilidades complementarias. `H_b` es simétrica, y así se pierde menos precisión cuando una está muy cerca de 1, aunque no se elimina el error: con `s = 1e-12`, el error relativo baja de cerca de `1e-4` a menos de `1e-5`.
+Cada entropía binaria se calcula sobre la menor de sus dos probabilidades complementarias. `H_b` es simétrica, y así se pierde menos precisión cuando una está muy cerca de 1, aunque no se elimina el error. Por ejemplo, con `s = 1e-12` y la referencia `s·log2(1/s) + s/ln(2)`, el error relativo medido fue `2.13e-5` partiendo de `1 - s` y `7.73e-7` partiendo de `s`. Son resultados de ese caso concreto, no garantías generales de precisión.
 
 **Residuos negativos.** La EIG no puede ser negativa. Un valor entre `-1e-12` y 0 se convierte en 0 como corrección numérica. Un valor más negativo o no finito lanza `INVALID_EIG`: no se oculta con un recorte general.
 

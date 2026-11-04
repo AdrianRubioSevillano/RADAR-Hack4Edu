@@ -376,8 +376,8 @@ describe('sin candidatas', () => {
 
 describe('pairEntropy', () => {
   it('pierde menos precisión cuando una probabilidad está muy cerca de 1', () => {
-    // H_b(s) ≈ s·log2(1/s) + s/ln(2) para s muy pequeño. Partir de 1 - s daría
-    // un error relativo cercano a 1e-4; partir de s lo deja por debajo de 1e-5.
+    // H_b(s) ≈ s·log2(1/s) + s/ln(2) para s muy pequeño. En este caso concreto, el
+    // error relativo medido fue 2.13e-5 partiendo de 1 - s y 7.73e-7 partiendo de s.
     const small = 1e-12;
     const expected = small * Math.log2(1 / small) + small / Math.LN2;
 
