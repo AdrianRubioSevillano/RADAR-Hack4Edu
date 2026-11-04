@@ -6,6 +6,7 @@ export {
   masteryProbability,
   updatePosterior,
 } from './bayes.ts';
+export { getClassDiagnostic } from './classDiagnostic.ts';
 export {
   InferenceError,
   SKILL_ORDER,
@@ -34,10 +35,16 @@ export type {
   AnswerValue,
   CandidateExplanation,
   CanonicalRational,
+  ClassDiagnostic,
+  ClassDiagnosticConfig,
+  ClassEvidenceStatus,
+  ClassWarning,
+  ClassWarningCode,
   CompatiblePriorConfig,
   DiagnosticState,
   Difficulty,
   DinaQuestion,
+  EffectiveClassDiagnosticConfig,
   EffectivePriorConfig,
   InferenceErrorCode,
   JointDistribution,
@@ -56,6 +63,9 @@ export type {
   QuestionSelection,
   RationalErrorCode,
   Result,
+  SkillClassSummary,
   SkillId,
   SkillNode,
+  StudentClassSummary,
+  StudentSkillSummary,
 } from './types.ts';

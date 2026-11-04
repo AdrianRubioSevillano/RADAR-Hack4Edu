@@ -1,6 +1,6 @@
 # Grafo de competencias y configuración
 
-Este documento cubre el grafo y la configuración. Están implementados el grafo, el banco de preguntas (`BANCO.md`), la inferencia bayesiana exacta DINA y la selección adaptativa con registro de respuestas (`MATEMATICAS.md`). El diagnóstico de clase y las fases posteriores siguen pendientes.
+Este documento cubre el grafo y la configuración. Están implementados el grafo, el banco de preguntas (`BANCO.md`), la inferencia bayesiana exacta DINA, la selección adaptativa con registro de respuestas y el diagnóstico de clase (`MATEMATICAS.md`). Las recomendaciones de intervención y las fases posteriores siguen pendientes.
 
 ## API
 

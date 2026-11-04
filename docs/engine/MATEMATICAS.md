@@ -1,6 +1,6 @@
 # Matemáticas del motor
 
-Este documento cubre lo implementado hasta la Fase 3: modelo DINA, prior, actualización bayesiana exacta, consultas, entropías, selección adaptativa y registro de respuestas. El diagnóstico de clase y las intervenciones aún no existen.
+Este documento cubre lo implementado hasta la Fase 4A: modelo DINA, prior, actualización bayesiana exacta, consultas, entropías, selección adaptativa, registro de respuestas y diagnóstico de clase. Las recomendaciones de intervención aún no existen.
 
 Los parámetros no están calibrados con datos reales. Este motor no demuestra precisión diagnóstica ni eficacia educativa.
 
@@ -135,6 +135,40 @@ No se reconstruye el posterior ni se compara con el prior: tras observar respues
 
 `fixedQuestionOrder` da el orden del método A (§2.9): rondas por competencia principal en orden topológico. Dentro de cada competencia, dificultad 2, 1, 3 y después `id`. Cada ronda toma el siguiente ítem disponible de cada competencia.
 
+## Diagnóstico de clase
+
+`getClassDiagnostic` agrega las estimaciones existentes. No añade ninguna inferencia. Todos los estados recibidos participan, incluidos los que solo contienen el prior.
+
+**Por competencia,** con `p_ik` la marginal del alumno `i` y `n` el número de alumnos:
+
+- Media de dominio: `Σ_i p_ik / n`.
+- Número esperado que necesita refuerzo: `Σ_i (1 − p_ik)`. Es una estimación del modelo, no un recuento de alumnos observados con dificultad.
+- Número bajo `τ`, número con estimación incierta y entropía binaria media.
+- Preparación media: media de `P(dominar todos los ancestros)`.
+
+**Preparación por alumno.** Es la probabilidad conjunta de dominar todos los ancestros, calculada desde su distribución con `masteryProbability`. Sin ancestros vale 1. No se multiplican marginales: dos conjuntas con iguales marginales pueden dar preparaciones distintas si tienen distinta dependencia.
+
+**Umbrales.** Por defecto `τ = 0.5`, `lowerUncertainty = 0.3` y `upperUncertainty = 0.7`. Son configurables, finitos en `[0, 1]`, con `lowerUncertainty < upperUncertainty`. El resultado incluye los valores efectivos.
+
+Las comparaciones son estrictas, con una tolerancia de `1e-12` que trata como situado en el umbral a un valor muy próximo:
+
+- Bajo `τ`: `p < τ − 1e-12`.
+- Incierta: `lowerUncertainty + 1e-12 < p < upperUncertainty − 1e-12`.
+
+Sin esa tolerancia decidiría el redondeo. Una competencia sin evidencia vale matemáticamente 0.5, igual que `τ`, pero en coma flotante puede quedar en `0.4999999999999997`. En una medida puntual con el banco real, 901 de 2064 casos quedaban por debajo de 0.5 solo por redondeo, con una desviación máxima de `1.1e-15`. Son resultados de ese caso concreto, no un límite general del error.
+
+La tolerancia no es configurable, y `CLAUDE.md` §2.5 no la menciona.
+
+**Cobertura.** `evidenceStatus` vale `emptyClass`, `priorsOnly`, `mixed` o `allWithResponses`. Se avisa cuando las estimaciones de algún alumno proceden únicamente del prior.
+
+`allWithResponses` no significa que todas las competencias estén medidas. Un alumno con una respuesta de `OPS` conserva el prior en las competencias no relacionadas. Sin banco, el diagnóstico no puede saber qué competencias tocó cada respuesta. Por eso `totalResponseCount` no indica cuántas competencias se han medido.
+
+**Clase vacía.** Recuentos y sumas valen 0. Medias, entropías medias y preparación valen `null`. Hay seis competencias en `skills`, `students` está vacío, `insufficientData` es `true` y hay un aviso. No se evalúa `0/0` ni se lanza un error.
+
+**Validación sin banco.** La firma no recibe banco, así que se comprueba la forma del historial, no si una pregunta existe ni si la corrección es coherente. No se reconstruye el posterior ni se compara con el prior.
+
+Los umbrales y el número esperado de refuerzo no son diagnósticos confirmados.
+
 ## Tolerancias y umbrales
 
 | Valor | Uso |
@@ -143,6 +177,7 @@ No se reconstruye el posterior ni se compara con el prior: tras observar respues
 | `1e-300` | Masa total mínima para renormalizar (§2.3). Por debajo, o si no es finita, se lanza `INVALID_NORMALIZATION`. |
 | `1e-12` | Distancia absoluta al máximo global de EIG para considerar un empate (§2.4). |
 | `1e-12` | Residuo negativo de EIG que se convierte en 0. Por debajo se lanza `INVALID_EIG`. |
+| `1e-12` | Distancia a un umbral del diagnóstico de clase dentro de la cual el valor se trata como situado en él. |
 
 Una distribución dentro de la tolerancia se acepta sin modificar. La actualización la renormaliza como cualquier otra, y las consultas y `jointEntropy` la interpretan normalizada. Nunca se muta la entrada ni se recortan probabilidades.
 

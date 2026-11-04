@@ -84,7 +84,10 @@ export function assertValidEffectivePriorConfig(config: EffectivePriorConfig): v
   }
 }
 
-function assertInferenceGraph(graph: KnowledgeGraph): void {
+export function assertInferenceGraph(graph: KnowledgeGraph): void {
+  if (typeof graph !== 'object' || graph === null || !Array.isArray(graph.nodes)) {
+    throw new InferenceError('INVALID_GRAPH', 'El grafo no tiene la forma esperada');
+  }
   validateKnowledgeGraph(graph);
   const ids = new Set(graph.nodes.map((node) => node.id));
   if (ids.size !== SKILL_ORDER.length || !SKILL_ORDER.every((skill) => ids.has(skill))) {

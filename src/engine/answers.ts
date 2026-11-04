@@ -48,26 +48,40 @@ export function assertValidBank(bank: QuestionBank): void {
   validateQuestionBank(bank, KNOWLEDGE_GRAPH);
 }
 
-function assertValidHistory(state: DiagnosticState, bank: QuestionBank): void {
-  if (!Array.isArray(state.responses)) {
+// Forma del historial: tipos e ids únicos. No necesita banco.
+function assertValidHistoryShape(responses: readonly AnswerRecord[]): void {
+  if (!Array.isArray(responses)) {
     throw new InferenceError('INVALID_HISTORY', 'responses debe ser una lista');
   }
 
   const seen = new Set<QuestionId>();
-  for (const record of state.responses as readonly unknown[]) {
+  for (const record of responses as readonly unknown[]) {
     const { questionId, answer, normalizedAnswer, isCorrect } = (record ?? {}) as Partial<AnswerRecord>;
-    const question = bank.questions.find((candidate) => candidate.id === questionId);
-    if (question === undefined || questionId === undefined) {
-      throw new InferenceError('INVALID_HISTORY', `El historial cita una pregunta desconocida: ${String(questionId)}`);
+    if (
+      typeof questionId !== 'string' ||
+      questionId.trim() === '' ||
+      typeof answer !== 'string' ||
+      typeof normalizedAnswer !== 'string' ||
+      typeof isCorrect !== 'boolean'
+    ) {
+      throw new InferenceError('INVALID_HISTORY', 'El historial tiene un registro mal formado');
     }
     if (seen.has(questionId)) {
       throw new InferenceError('INVALID_HISTORY', `El historial repite la pregunta ${questionId}`);
     }
     seen.add(questionId);
+  }
+}
 
-    const evaluation = typeof answer === 'string' ? evaluateAnswer(question, answer) : null;
+function assertHistoryMatchesBank(responses: readonly AnswerRecord[], bank: QuestionBank): void {
+  for (const { questionId, answer, normalizedAnswer, isCorrect } of responses) {
+    const question = bank.questions.find((candidate) => candidate.id === questionId);
+    if (question === undefined) {
+      throw new InferenceError('INVALID_HISTORY', `El historial cita una pregunta desconocida: ${questionId}`);
+    }
+
+    const evaluation = evaluateAnswer(question, answer);
     if (
-      evaluation === null ||
       !evaluation.ok ||
       evaluation.value.normalizedAnswer !== normalizedAnswer ||
       evaluation.value.isCorrect !== isCorrect
@@ -77,9 +91,9 @@ function assertValidHistory(state: DiagnosticState, bank: QuestionBank): void {
   }
 }
 
-// Valida el estado antes de consumirlo. No reconstruye el posterior ni lo compara
-// con el prior: tras observar respuestas debe poder cambiar.
-export function assertValidDiagnosticState(state: DiagnosticState, bank: QuestionBank): void {
+// Valida el estado sin banco. No reconstruye el posterior ni lo compara con el
+// prior: tras observar respuestas debe poder cambiar.
+export function assertValidStateStructure(state: DiagnosticState): void {
   if (typeof state !== 'object' || state === null || typeof state.studentId !== 'string' || state.studentId.trim() === '') {
     throw new InferenceError('INVALID_STATE', 'El estado no tiene la forma esperada');
   }
@@ -93,7 +107,12 @@ export function assertValidDiagnosticState(state: DiagnosticState, bank: Questio
   }
   assertValidJoint(state.joint);
   assertValidEffectivePriorConfig(state.priorConfig);
-  assertValidHistory(state, bank);
+  assertValidHistoryShape(state.responses);
+}
+
+export function assertValidDiagnosticState(state: DiagnosticState, bank: QuestionBank): void {
+  assertValidStateStructure(state);
+  assertHistoryMatchesBank(state.responses, bank);
 }
 
 function failure(code: AnswerErrorCode, message: string, questionId: QuestionId | null): Result<never, AnswerError> {

@@ -185,6 +185,70 @@ export interface QuestionSelection {
   readonly candidates: readonly CandidateExplanation[];
 }
 
+export interface ClassDiagnosticConfig {
+  readonly tau?: number;
+  readonly lowerUncertainty?: number;
+  readonly upperUncertainty?: number;
+}
+
+export type EffectiveClassDiagnosticConfig = Required<ClassDiagnosticConfig>;
+
+export type ClassEvidenceStatus = 'emptyClass' | 'priorsOnly' | 'mixed' | 'allWithResponses';
+
+export type ClassWarningCode = 'INSUFFICIENT_DATA' | 'PRIOR_ONLY_ESTIMATES';
+
+export interface ClassWarning {
+  readonly code: ClassWarningCode;
+  readonly message: string;
+}
+
+export interface SkillClassSummary {
+  readonly skill: SkillId;
+  // null si la clase está vacía.
+  readonly meanMastery: number | null;
+  // Σ_i (1 - p_ik): estimación del modelo, no alumnos observados con dificultad.
+  readonly expectedReinforcementCount: number;
+  // Alumnos con p_ik < tau. Un valor a 1e-12 o menos de un umbral cuenta como
+  // situado en él, para que el redondeo no decida el recuento.
+  readonly belowTauCount: number;
+  // Alumnos con lowerUncertainty < p_ik < upperUncertainty, con la misma tolerancia.
+  readonly uncertainCount: number;
+  // null si la clase está vacía.
+  readonly meanEntropy: number | null;
+  // Media de P(dominar todos los ancestros); null si la clase está vacía.
+  readonly meanPrerequisiteProbability: number | null;
+}
+
+export interface StudentSkillSummary {
+  readonly skill: SkillId;
+  readonly masteryProbability: number;
+  readonly entropy: number;
+  // P(dominar todos los ancestros), desde la conjunta del alumno; 1 si no tiene ancestros.
+  readonly prerequisiteProbability: number;
+}
+
+export interface StudentClassSummary {
+  readonly studentId: string;
+  readonly responseCount: number;
+  readonly skills: readonly StudentSkillSummary[];
+}
+
+export interface ClassDiagnostic {
+  readonly config: EffectiveClassDiagnosticConfig;
+  readonly studentCount: number;
+  readonly studentsWithResponses: number;
+  // Respuestas registradas; no es el número de competencias medidas.
+  readonly totalResponseCount: number;
+  readonly evidenceStatus: ClassEvidenceStatus;
+  readonly insufficientData: boolean;
+  readonly warnings: readonly ClassWarning[];
+  readonly disclaimer: string;
+  // En el orden de SKILL_ORDER.
+  readonly skills: readonly SkillClassSummary[];
+  // Por id lexicográfico.
+  readonly students: readonly StudentClassSummary[];
+}
+
 export type InferenceErrorCode =
   | 'INVALID_STATE_INDEX'
   | 'INVALID_MASTERY'
@@ -203,4 +267,6 @@ export type InferenceErrorCode =
   | 'INVALID_BANK'
   | 'INVALID_STATE'
   | 'INVALID_HISTORY'
-  | 'INVALID_EIG';
+  | 'INVALID_EIG'
+  | 'INVALID_CLASS_CONFIG'
+  | 'DUPLICATE_STUDENT';

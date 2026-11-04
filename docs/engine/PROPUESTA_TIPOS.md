@@ -2,7 +2,7 @@
 
 `src/shared/types.ts` no existe todavía. Mientras tanto, estos tipos viven en `src/engine/types.ts` y se exportan desde `src/engine/index.ts`.
 
-Esta propuesta cubre lo implementado hasta la Fase 3: grafo, banco de preguntas, inferencia, selección y respuestas. Los tipos de fases posteriores se añadirán cuando existan.
+Esta propuesta cubre lo implementado hasta la Fase 4A: grafo, banco de preguntas, inferencia, selección, respuestas y diagnóstico de clase. Los tipos de fases posteriores se añadirán cuando existan.
 
 ## Tipos que deberían pasar a ser compartidos
 
@@ -132,6 +132,59 @@ export interface AnswerError {
   readonly questionId: QuestionId | null;
   readonly causeCode: InferenceErrorCode | QuestionBankErrorCode | KnowledgeGraphErrorCode | null;
 }
+
+export interface ClassDiagnosticConfig {
+  readonly tau?: number;
+  readonly lowerUncertainty?: number;
+  readonly upperUncertainty?: number;
+}
+
+export type EffectiveClassDiagnosticConfig = Required<ClassDiagnosticConfig>;
+
+export type ClassEvidenceStatus = 'emptyClass' | 'priorsOnly' | 'mixed' | 'allWithResponses';
+
+export type ClassWarningCode = 'INSUFFICIENT_DATA' | 'PRIOR_ONLY_ESTIMATES';
+
+export interface ClassWarning {
+  readonly code: ClassWarningCode;
+  readonly message: string;
+}
+
+export interface SkillClassSummary {
+  readonly skill: SkillId;
+  readonly meanMastery: number | null;
+  readonly expectedReinforcementCount: number;
+  readonly belowTauCount: number;
+  readonly uncertainCount: number;
+  readonly meanEntropy: number | null;
+  readonly meanPrerequisiteProbability: number | null;
+}
+
+export interface StudentSkillSummary {
+  readonly skill: SkillId;
+  readonly masteryProbability: number;
+  readonly entropy: number;
+  readonly prerequisiteProbability: number;
+}
+
+export interface StudentClassSummary {
+  readonly studentId: string;
+  readonly responseCount: number;
+  readonly skills: readonly StudentSkillSummary[];
+}
+
+export interface ClassDiagnostic {
+  readonly config: EffectiveClassDiagnosticConfig;
+  readonly studentCount: number;
+  readonly studentsWithResponses: number;
+  readonly totalResponseCount: number;
+  readonly evidenceStatus: ClassEvidenceStatus;
+  readonly insufficientData: boolean;
+  readonly warnings: readonly ClassWarning[];
+  readonly disclaimer: string;
+  readonly skills: readonly SkillClassSummary[];
+  readonly students: readonly StudentClassSummary[];
+}
 ```
 
 | Tipo | Motivo |
@@ -152,6 +205,7 @@ export interface AnswerError {
 | `AnswerValue`, `AnswerRecord` | La interfaz envía respuestas y puede mostrar el historial. |
 | `CandidateExplanation`, `QuestionSelection` | La interfaz muestra la pregunta elegida y puede explicar la elección. |
 | `AnswerError`, `AnswerErrorCode` | La interfaz necesita distinguir un formato inválido de una respuesta incorrecta. |
+| `ClassDiagnostic` y sus tipos asociados | Es la salida que la interfaz muestra al docente. |
 
 ## Decisiones que conviene revisar con el integrador
 
@@ -164,6 +218,7 @@ export interface AnswerError {
 - `JointDistribution` depende de la codificación de `docs/engine/MATEMATICAS.md`. La interfaz no debería interpretar sus índices: para eso están `marginals` y `masteryProbability`.
 - La interfaz debe conservar `DiagnosticState` entero y no reconstruirlo campo a campo, porque el motor valida sus campos.
 - `QuestionSelection.question` incluye `correctAnswer`, y cada candidata incluye dos posteriores de 64 valores. Es útil para inspeccionar, pero puede convenir un tipo de presentación más ligero.
+- Los campos `number | null` de `SkillClassSummary` obligan a la interfaz a tratar la clase vacía. La interfaz debería mostrar `warnings` y `disclaimer` junto a las cifras.
 - `AnswerError.causeCode` hace que `AnswerError` dependa de `InferenceErrorCode`, `QuestionBankErrorCode` y `KnowledgeGraphErrorCode`, así que esos tres tipos también pasarían a ser compartidos.
 - `PriorConfig.compatibility` acepta `null` para que `EffectivePriorConfig` sea también una configuración válida.
 

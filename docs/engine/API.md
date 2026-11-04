@@ -1,8 +1,58 @@
 # API del motor
 
-Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 3. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
+Exportaciones actuales de `src/engine/index.ts`, hasta la Fase 4A. Las funciones no mutan sus entradas y sus resultados son serializables como JSON.
 
-Aún no existen `getClassDiagnostic` ni `rankInterventions`.
+Aún no existe `rankInterventions`.
+
+## Diagnóstico de clase
+
+```ts
+getClassDiagnostic(studentStates: readonly DiagnosticState[], knowledgeGraph: KnowledgeGraph, config?: ClassDiagnosticConfig): ClassDiagnostic
+```
+
+```ts
+interface ClassDiagnosticConfig {
+  readonly tau?: number;               // 0.5 por defecto
+  readonly lowerUncertainty?: number;  // 0.3 por defecto
+  readonly upperUncertainty?: number;  // 0.7 por defecto
+}
+
+interface ClassDiagnostic {
+  readonly config: EffectiveClassDiagnosticConfig;
+  readonly studentCount: number;
+  readonly studentsWithResponses: number;
+  readonly totalResponseCount: number;
+  readonly evidenceStatus: ClassEvidenceStatus;  // 'emptyClass' | 'priorsOnly' | 'mixed' | 'allWithResponses'
+  readonly insufficientData: boolean;
+  readonly warnings: readonly ClassWarning[];    // { code, message }
+  readonly disclaimer: string;
+  readonly skills: readonly SkillClassSummary[];       // en el orden de SKILL_ORDER
+  readonly students: readonly StudentClassSummary[];   // por id lexicográfico
+}
+
+interface SkillClassSummary {
+  readonly skill: SkillId;
+  readonly meanMastery: number | null;
+  readonly expectedReinforcementCount: number;
+  readonly belowTauCount: number;
+  readonly uncertainCount: number;
+  readonly meanEntropy: number | null;
+  readonly meanPrerequisiteProbability: number | null;
+}
+
+interface StudentClassSummary {
+  readonly studentId: string;
+  readonly responseCount: number;
+  readonly skills: readonly StudentSkillSummary[];  // skill, masteryProbability, entropy, prerequisiteProbability
+}
+```
+
+- Los campos `number | null` valen `null` solo con la clase vacía.
+- `expectedReinforcementCount` es una estimación, no un recuento de alumnos observados con dificultad.
+- `belowTauCount` y `uncertainCount` usan una tolerancia de `1e-12` alrededor de los umbrales. Están detallados en `MATEMATICAS.md`.
+- `allWithResponses` no significa que todas las competencias estén medidas.
+- La firma no recibe banco: se valida la forma del historial, no si una pregunta existe ni si la corrección es coherente.
+- El grafo debe contener exactamente las seis competencias.
 
 ## Selección y respuestas
 
@@ -133,6 +183,8 @@ Las funciones de inferencia lanzan `InferenceError`, con un `code`:
 | `INVALID_STATE` | El estado no tiene la forma esperada o `skillOrder` no coincide con `SKILL_ORDER`. |
 | `INVALID_HISTORY` | `responses` no es una lista, repite una pregunta o tiene un registro incoherente con el banco. |
 | `INVALID_EIG` | La EIG no es finita o es menor que `-1e-12`. |
+| `INVALID_CLASS_CONFIG` | Un umbral está fuera de `[0, 1]` o `lowerUncertainty` no es menor que `upperUncertainty`. |
+| `DUPLICATE_STUDENT` | Dos estados tienen el mismo `studentId`. |
 
 Un grafo con estructura inválida lanza `KnowledgeGraphError`, como en `validateKnowledgeGraph`. En `selectNextQuestion`, un banco que no pasa la validación lanza `QuestionBankError`.
 
