@@ -1,2 +1,2 @@
-// Único punto de entrada provisional. Sustituir esta ruta al integrar la rama motor.
-export * from "../../vendor/engine-phase3/src/engine/index.ts";
+// Único punto de entrada de la aplicación al motor final (src/engine).
+export * from "../engine/index.ts";

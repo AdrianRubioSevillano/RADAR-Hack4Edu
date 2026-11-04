@@ -8,7 +8,7 @@ import {
   RADAR_QUESTION_BANK,
   type DiagnosticState,
   type Question,
-} from "./engine";
+} from "./engine.ts";
 export type PublicQuestion = {
   id: string;
   statement: string;
@@ -52,11 +52,16 @@ export function diagnosticView(state: DiagnosticState) {
     completed: state.responses.length,
     total: RADAR_QUESTION_BANK.questions.length,
     expectedInformation: candidate?.eig ?? null,
-    skills: KNOWLEDGE_GRAPH.nodes.map((skill) => ({
-      ...skill,
-      probability: probabilities[skill.id],
-      uncertainty: binaryEntropy(probabilities[skill.id]),
-    })),
+    skills: KNOWLEDGE_GRAPH.nodes.map((skill) => {
+      const probability = probabilities[skill.id];
+      if (probability === undefined)
+        throw new Error(`Falta la marginal de ${skill.id}`);
+      return {
+        ...skill,
+        probability,
+        uncertainty: binaryEntropy(probability),
+      };
+    }),
     feedback:
       last && answered
         ? { correct: last.isCorrect, explanation: answered.explanation }

@@ -6,10 +6,13 @@
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "tests", "vite.config.ts", "vendor/engine-phase3/src"]
+  "include": ["src/*.tsx", "src/*.ts", "src/services", "src/components", "src/screens", "tests/app", "tests/diagnostic.test.ts", "vite.config.ts"]
 }

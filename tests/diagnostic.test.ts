@@ -3,8 +3,8 @@ import {
   startDiagnostic,
   diagnosticView,
   answerQuestion,
-} from "../src/services/diagnostic";
-import { RADAR_QUESTION_BANK } from "../src/services/engine";
+} from "../src/services/diagnostic.ts";
+import { RADAR_QUESTION_BANK } from "../src/services/engine.ts";
 describe("recorrido manual integrado con el motor real", () => {
   it("recorre las 30 preguntas sin repetición y actualiza estimaciones", () => {
     let state = startDiagnostic();

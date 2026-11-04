@@ -13,11 +13,11 @@ import {
   diagnosticView,
   answerQuestion,
   type DiagnosticView,
-} from "./services/diagnostic";
-import type { DiagnosticState } from "./services/engine";
+} from "./services/diagnostic.ts";
+import type { DiagnosticState } from "./services/engine.ts";
 const percent = (p: number) => `${(p * 100).toFixed(0)} %`;
 function KnowledgeMap({ skills }: { skills: DiagnosticView["skills"] }) {
-  const positions: Record<string, { x: number; y: number }> = {
+  const positions: Record<string, { x: number; y: number } | undefined> = {
     OPS: { x: 180, y: 0 },
     NEG: { x: 0, y: 110 },
     FRA: { x: 360, y: 110 },
@@ -27,7 +27,7 @@ function KnowledgeMap({ skills }: { skills: DiagnosticView["skills"] }) {
   };
   const nodes = skills.map((s) => ({
     id: s.id,
-    position: positions[s.id],
+    position: positions[s.id] ?? { x: 0, y: 0 },
     data: {
       label: (
         <>
