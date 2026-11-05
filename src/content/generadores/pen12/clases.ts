@@ -443,14 +443,11 @@ const igualCantidades: Generador = (rng, dificultad) => {
 };
 
 // Dos cifras cambiadas de sitio: el error típico al copiar números.
-const igualNumero = (cifras: 2 | 3): Generador => (rng, dificultad) => {
-  const digitos = muestra(rng, [1, 2, 3, 4, 5, 6, 7, 8, 9], cifras);
-  const texto = digitos.join("");
-  const [a, b, c] = digitos as [number, number, number];
+const igualNumero: Generador = (rng, dificultad) => {
+  const [a, b] = muestra(rng, [1, 2, 3, 4, 5, 6, 7, 8, 9], 2) as [number, number];
+  const texto = `${a}${b}`;
   const otro = (a + 1) % 9 === 0 ? 9 : (a + 1) % 9;
-  const distractores = cifras === 2
-    ? [`${b}${a}`, `${otro === b ? (otro % 9) + 1 : otro}${b}`, `${a}${b === 9 ? 1 : b + 1}`]
-    : [`${b}${a}${c}`, `${a}${c}${b}`, `${c}${b}${a}`];
+  const distractores = [`${b}${a}`, `${otro === b ? (otro % 9) + 1 : otro}${b}`, `${a}${b === 9 ? 1 : b + 1}`];
   return pregunta(rng, {
     subhabilidad: SUB_IGUAL,
     dificultad,
@@ -491,8 +488,8 @@ const igualPalabra: Generador = (rng, dificultad) => {
 
 const encontrarIgual = porDificultad({
   1: [igualUno],
-  2: [igualFiguraCercana, igualNumero(2), igualPalabra],
-  3: [igualFila, igualCantidades, igualNumero(3)],
+  2: [igualFiguraCercana, igualNumero, igualPalabra],
+  3: [igualFila, igualCantidades, igualNumero],
 });
 
 // ---------- PEN1-T3-b: encontrar la diferencia ----------

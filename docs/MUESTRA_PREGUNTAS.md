@@ -758,12 +758,12 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 
 **Ejemplo 2** · dificultad 3 · formato opcion
 
-- Imagen: Serie en orden: 263.
-- Enunciado: ¿Qué número es igual a 263?
-- Fácil: Busca el número 263.
-- Opciones: 362 · 623 · 236 · **263** ✓
+- Imagen: Serie en orden: 26.
+- Enunciado: ¿Qué número es igual a 26?
+- Fácil: Busca el número 26.
+- Opciones: 27 · 62 · 36 · **26** ✓
 - Pista: Compara las cifras una a una, de izquierda a derecha.
-- Explicación: Solo 263 tiene las mismas cifras en el mismo orden.
+- Explicación: Solo 26 tiene las mismas cifras en el mismo orden.
 
 ##### PEN1-T3-b · Encontrar la diferencia
 
@@ -2258,8 +2258,8 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 
 **Ejemplo 1** · dificultad 1 · formato opcion
 
-- Enunciado: El autobús lleva 20 personas. En la parada bajan 5. ¿Cuántas personas siguen en el autobús? ¿Qué dato te da el problema?
-- Fácil: El autobús lleva 20 personas. Bajan 5. ¿Cuántas siguen? ¿Qué dato te da el problema?
+- Enunciado: El autobús lleva 20 personas. En la parada bajan 5. ¿Qué dato te da el problema?
+- Fácil: El autobús lleva 20 personas. Bajan 5. ¿Qué dato te da el problema?
 - Opciones: Siguen 15 personas en el autobús · Suben 5 personas en la parada · **Bajan 5 personas en la parada** ✓ · El autobús tarda 20 minutos
 - Pista: Un dato es algo que el problema ya te cuenta.
 - Explicación: El problema cuenta que bajan 5 personas. Las que siguen hay que calcularlas.
