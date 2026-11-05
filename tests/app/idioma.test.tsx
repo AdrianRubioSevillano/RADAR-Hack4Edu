@@ -11,7 +11,7 @@ import { Acerca } from "../../src/screens/Acerca.tsx";
 import { Inicio } from "../../src/screens/Inicio.tsx";
 import type { KeyValueStorage } from "../../src/services/almacen.ts";
 import { CLAVE_IDIOMA, cargarIdioma, guardarIdioma } from "../../src/services/idioma.ts";
-import { idiomaDeLectura, mathToSpeech, speak, vozDe, type SpeechPort } from "../../src/services/speech.ts";
+import { mathToSpeech, speak, vozDe, type SpeechPort } from "../../src/services/speech.ts";
 
 const claves = (i: Idioma) => Object.keys(DICCIONARIOS[i]).sort();
 const marcas = (texto: string) => [...texto.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -95,13 +95,7 @@ describe("voz", () => {
     expect(vozDe("gn", null)).toBeNull();
   });
 
-  it("las preguntas, aún en español, se leen en español; en guaraní no se leen", () => {
-    expect(idiomaDeLectura("es")).toBe("es");
-    expect(idiomaDeLectura("fr")).toBe("es");
-    expect(idiomaDeLectura("gn")).toBeNull();
-  });
-
-  it("con la interfaz en francés, la lectura usa voz y palabras en español", () => {
+  it("la voz es la del texto, no la de la interfaz", () => {
     class Lectura { lang = ""; voice: unknown = null; rate = 1; onerror = null; text: string; constructor(text: string) { this.text = text; } }
     vi.stubGlobal("SpeechSynthesisUtterance", Lectura);
     const dichas: Lectura[] = [];
@@ -141,9 +135,10 @@ describe("pantallas", () => {
     expect(pinta("gn", <Inicio />)).toContain("guaraníme");
   });
 
-  it("el aviso de contenido en español solo sale fuera del español", () => {
-    expect(pinta("es", <AvisoContenido />)).toBe("");
-    expect(pinta("fr", <AvisoContenido />)).toContain("Contenu disponible en espagnol pour l&#x27;instant");
-    expect(pinta("gn", <AvisoContenido />)).toContain("karaiñe");
+  it("el aviso sale solo si la pregunta que se ve sigue en español y la interfaz no", () => {
+    expect(pinta("es", <AvisoContenido pregunta={{}} />)).toBe("");
+    expect(pinta("fr", <AvisoContenido pregunta={{}} />)).toContain("Contenu disponible en espagnol pour l&#x27;instant");
+    expect(pinta("gn", <AvisoContenido pregunta={{}} />)).toContain("karaiñe");
+    expect(pinta("fr", <AvisoContenido pregunta={{ idioma: "fr" }} />)).toBe("");
   });
 });

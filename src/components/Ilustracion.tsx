@@ -1,9 +1,10 @@
 // Pinta cualquier Imagen del contenido. Todo es SVG o HTML propio: sin recursos externos.
 // Cada unidad del viewBox equivale a un píxel a 16 px de letra, y el ancho máximo va en rem:
 // así los dibujos y su texto crecen con la letra de la app (perfil de baja visión).
-import { useId } from "react";
+import { createContext, useContext, useId } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { describirImagen, numeroEnTexto } from "../content/imagenes.ts";
+import type { Lengua } from "../content/lengua.ts";
 import type { ColorId, ElementoSerie, FormaId, Imagen, ObjetoId } from "../content/tipos.ts";
 import "./ilustracion.css";
 
@@ -678,8 +679,11 @@ interface Comun {
 
 type De<T extends Imagen["tipo"]> = Comun & { readonly imagen: Extract<Imagen, { tipo: T }> };
 
-function accesibilidad(imagen: Imagen, decorativa: boolean) {
-  return decorativa ? ({ "aria-hidden": "true" } as const) : ({ role: "img", "aria-label": describirImagen(imagen) } as const);
+// La descripción accesible va en la lengua de la pregunta.
+export const LenguaImagen = createContext<Lengua>("es");
+
+function accesibilidad(imagen: Imagen, decorativa: boolean, lengua: Lengua) {
+  return decorativa ? ({ "aria-hidden": "true" } as const) : ({ role: "img", "aria-label": describirImagen(imagen, lengua) } as const);
 }
 
 // Ancho máximo en unidades del viewBox; `opcion` es el que tiene dentro de un botón.
@@ -691,6 +695,7 @@ function Lienzo({ imagen, decorativa, tamano, ancho, alto, maximo = ancho, opcio
   opcion?: number;
   children: ReactNode;
 }) {
+  const lengua = useContext(LenguaImagen);
   const estilo = { "--ilu-ancho": `${r2((tamano === "opcion" ? opcion : maximo) / 16)}rem` } as CSSProperties;
   return (
     <svg
@@ -698,7 +703,7 @@ function Lienzo({ imagen, decorativa, tamano, ancho, alto, maximo = ancho, opcio
       viewBox={`0 0 ${r2(ancho)} ${r2(alto)}`}
       style={estilo}
       focusable="false"
-      {...accesibilidad(imagen, decorativa)}
+      {...accesibilidad(imagen, decorativa, lengua)}
     >
       {children}
     </svg>

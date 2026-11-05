@@ -1,3 +1,4 @@
+import type { Pregunta } from "../content/tipos.ts";
 import { IDIOMAS, NOMBRE_IDIOMA, esIdioma, traducir } from "../i18n/index.ts";
 import { useIdioma } from "./IdiomaProvider.tsx";
 
@@ -38,8 +39,8 @@ export function AvisoRevision() {
   );
 }
 
-// Las preguntas siguen en español: se avisa sin robar sitio a la pregunta.
-export function AvisoContenido() {
+// La pregunta que se ve sigue en español: se avisa sin robarle sitio.
+export function AvisoContenido({ pregunta }: { pregunta: Pick<Pregunta, "idioma"> }) {
   const { idioma, t } = useIdioma();
-  return idioma === "es" ? null : <p className="aviso-contenido">{t("aviso.contenido")}</p>;
+  return idioma === "es" || pregunta.idioma === "fr" ? null : <p className="aviso-contenido">{t("aviso.contenido")}</p>;
 }

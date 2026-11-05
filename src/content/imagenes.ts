@@ -1,5 +1,7 @@
 // Descripción en español de cada Imagen, para lectores de pantalla y voz. Función pura.
 // Da lo necesario para responder sin ver: lo que hay dibujado, sin hacer las cuentas.
+import { describirImagenFr } from "./imagenesFr.ts";
+import type { Lengua } from "./lengua.ts";
 import type { ColorId, ElementoSerie, FormaId, Imagen, ObjetoId } from "./tipos.ts";
 
 type Genero = "m" | "f";
@@ -205,7 +207,8 @@ function describirTabla(imagen: Extract<Imagen, { tipo: "tabla" }>): string {
   return [inicio, `Columnas: ${imagen.cabeceras.join("; ")}.`, ...filas].join(" ");
 }
 
-export function describirImagen(imagen: Imagen): string {
+export function describirImagen(imagen: Imagen, lengua: Lengua = "es"): string {
+  if (lengua === "fr") return describirImagenFr(imagen);
   switch (imagen.tipo) {
     case "objetos":
       if (imagen.grupos.length === 0) return "Ningún objeto.";

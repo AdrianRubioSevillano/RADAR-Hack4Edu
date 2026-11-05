@@ -40,7 +40,7 @@ function PantallaPausa({ tipo, volver, onSeguir }: { tipo: Exclude<Pausa, null>;
 
 export function TestPantalla({ alumnoId, testId, presentacion }: { alumnoId: string; testId: string; presentacion: Presentacion }) {
   const { clase, actualizar } = useClase();
-  const { t } = useIdioma();
+  const { idioma, t } = useIdioma();
   const [pausa, setPausa] = useState<Pausa>(null);
   const test = testPorId(testId);
   const alumno = alumnoPorId(clase, alumnoId);
@@ -48,8 +48,8 @@ export function TestPantalla({ alumnoId, testId, presentacion }: { alumnoId: str
   const volver = enlace("alumno", alumnoId);
 
   useEffect(() => {
-    if (test !== undefined && alumno !== undefined && intento === undefined) actualizar((c) => empezarTest(c, alumnoId, testId));
-  }, [test, alumno, intento, actualizar, alumnoId, testId]);
+    if (test !== undefined && alumno !== undefined && intento === undefined) actualizar((c) => empezarTest(c, alumnoId, testId, idioma));
+  }, [test, alumno, intento, actualizar, alumnoId, testId, idioma]);
 
   if (test === undefined || alumno === undefined) {
     return (
@@ -91,7 +91,7 @@ export function TestPantalla({ alumnoId, testId, presentacion }: { alumnoId: str
         <Progreso actual={respondidas + 1} total={test.preguntas} barra={presentacion.barraProgreso} />
         <a className="tarea-salir" href={volver}><Icon name="close" /> {t("nav.salir")}</a>
       </header>
-      {!presentacion.sinExtras && <AvisoContenido />}
+      {!presentacion.sinExtras && <AvisoContenido pregunta={pregunta} />}
       <PreguntaVista
         key={pregunta.id}
         pregunta={pregunta}

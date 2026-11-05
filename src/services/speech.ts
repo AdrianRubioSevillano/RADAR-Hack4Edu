@@ -33,8 +33,8 @@ export function mathToSpeech(text: string, t: Traductor = crearT(IDIOMA_DEFECTO)
     .trim();
 }
 
-// Voz local del idioma elegido. Sin internet no sirven las voces remotas, y una voz de
-// otro idioma leería mal: en esos casos (casi siempre el guaraní) el botón no aparece.
+// Voz local del idioma en que está escrito el texto, no el de la interfaz. Sin internet no
+// sirven las voces remotas, y una voz de otro idioma leería mal: entonces no hay botón.
 export function vozDe(idioma: Idioma, port: SpeechPort | null = speechPort()): SpeechSynthesisVoice | null {
   try {
     const voces = port?.getVoices() ?? [];
@@ -42,12 +42,6 @@ export function vozDe(idioma: Idioma, port: SpeechPort | null = speechPort()): S
   } catch {
     return null;
   }
-}
-
-// Las preguntas aún están en español: se leen con voz española aunque la interfaz esté
-// en francés. En guaraní no hay lectura. Al traducir el contenido, devolverá `idioma`.
-export function idiomaDeLectura(idioma: Idioma): Idioma | null {
-  return idioma === "gn" ? null : "es";
 }
 
 export type SpeechOutcome =

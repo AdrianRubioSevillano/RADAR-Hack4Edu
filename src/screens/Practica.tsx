@@ -16,14 +16,14 @@ type Fase = "practica" | "reto" | "mini" | "superado" | "otraVez";
 
 export function Practica({ alumnoId, testId, subId, presentacion }: { alumnoId: string; testId: string; subId: string; presentacion: Presentacion }) {
   const { clase, actualizar } = useClase();
-  const { t } = useIdioma();
+  const { idioma, t } = useIdioma();
   const refuerzo = clase.intentos[alumnoId]?.[testId]?.refuerzos[subId];
   const volver = enlace("alumno", alumnoId);
   const [fase, setFase] = useState<Fase>(() => (refuerzo !== undefined && refuerzo.hechos >= 6 ? "reto" : "practica"));
   const [mini, setMini] = useState<readonly { readonly pregunta: Pregunta; readonly acierto: boolean }[]>([]);
   const ronda = refuerzo?.ronda;
-  const ejercicios = useMemo(() => (ronda === undefined ? [] : ejerciciosDe(clase, alumnoId, testId, subId)), [ronda, alumnoId, testId, subId]); // eslint-disable-line
-  const reto = useMemo(() => (ronda === undefined ? [] : miniTestDe(clase, alumnoId, testId, subId)), [ronda, alumnoId, testId, subId]); // eslint-disable-line
+  const ejercicios = useMemo(() => (ronda === undefined ? [] : ejerciciosDe(clase, alumnoId, testId, subId, idioma)), [ronda, alumnoId, testId, subId, idioma]); // eslint-disable-line
+  const reto = useMemo(() => (ronda === undefined ? [] : miniTestDe(clase, alumnoId, testId, subId, idioma)), [ronda, alumnoId, testId, subId, idioma]); // eslint-disable-line
 
   if (refuerzo === undefined) {
     return (
@@ -71,7 +71,7 @@ export function Practica({ alumnoId, testId, subId, presentacion }: { alumnoId: 
         <Progreso actual={indice + 1} total={lista.length} barra={presentacion.barraProgreso} />
         <a className="tarea-salir" href={volver}><Icon name="close" /> {t("nav.salir")}</a>
       </header>
-      {!presentacion.sinExtras && <AvisoContenido />}
+      {!presentacion.sinExtras && <AvisoContenido pregunta={pregunta} />}
       <PreguntaVista
         key={`${fase}-${pregunta.id}`}
         pregunta={pregunta}

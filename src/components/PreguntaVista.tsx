@@ -6,7 +6,7 @@ import type { Presentacion } from "../services/perfiles.ts";
 import { LARGO_RESPUESTA, enterEsDelControl, teclaRespuesta } from "../services/tecladoRespuesta.ts";
 import { Icon, Mascot } from "./art.tsx";
 import { useIdioma } from "./IdiomaProvider.tsx";
-import { Ilustracion } from "./Ilustracion.tsx";
+import { Ilustracion, LenguaImagen } from "./Ilustracion.tsx";
 import { ReadAloud } from "./ReadAloud.tsx";
 import { TecladoNumerico } from "./TecladoNumerico.tsx";
 
@@ -38,8 +38,8 @@ function Respuesta({ acierto, pregunta, presentacion, onSiguiente }: { acierto: 
           <span className="respuesta-icono"><Icon name={acierto ? "check" : "hint"} size={28} /></span>
           {t(frase(acierto ? ALEGRES : AMABLES, pregunta.id))}
         </h2>
-        {!acierto && <p className="respuesta-correcta">{t("pregunta.laRespuesta")} <strong lang="es">{textoRespuesta(pregunta)}</strong></p>}
-        <p lang="es">{pregunta.explicacion}</p>
+        {!acierto && <p className="respuesta-correcta">{t("pregunta.laRespuesta")} <strong lang={pregunta.idioma ?? "es"}>{textoRespuesta(pregunta)}</strong></p>}
+        <p lang={pregunta.idioma ?? "es"}>{pregunta.explicacion}</p>
         <button type="button" className="boton boton-principal boton-grande" onClick={onSiguiente}>
           {t("pregunta.siguiente")} <Icon name="arrow" size={26} />
         </button>
@@ -101,10 +101,12 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
   const acierto = respuesta === null ? null : esCorrecta(pregunta, respuesta);
   const enunciado = presentacion.enunciadoFacil ? pregunta.enunciadoFacil : pregunta.enunciado;
   const conLectura = pregunta.texto !== undefined;
+  const lengua = pregunta.idioma ?? "es";
 
   return (
+    <LenguaImagen.Provider value={lengua}>
     <div className={`pregunta ${conLectura ? "pregunta-lectura" : ""}`}>
-      <div className="pregunta-datos" lang="es">
+      <div className="pregunta-datos" lang={lengua}>
         {conLectura && (
           <article className="lectura">
             {pregunta.titulo !== undefined && <h2>{pregunta.titulo}</h2>}
@@ -114,11 +116,11 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
         {pregunta.imagen !== undefined && <Ilustracion imagen={pregunta.imagen} />}
       </div>
       <div className="pregunta-accion">
-        <h2 className="enunciado" lang="es">{enunciado}</h2>
-        {presentacion.escuchar && <ReadAloud text={textoParaEscuchar(pregunta, presentacion.enunciadoFacil)} />}
+        <h2 className="enunciado" lang={lengua}>{enunciado}</h2>
+        {presentacion.escuchar && <ReadAloud text={textoParaEscuchar(pregunta, presentacion.enunciadoFacil)} idioma={lengua} />}
         {pistaDisponible && acierto === null && (
           pista ? (
-            <p className="pista" role="status" lang="es"><Icon name="hint" /> {pregunta.pista}</p>
+            <p className="pista" role="status" lang={lengua}><Icon name="hint" /> {pregunta.pista}</p>
           ) : (
             <button type="button" className="boton boton-suave" onClick={() => setPista(true)}><Icon name="hint" /> {t("pregunta.pista")}</button>
           )
@@ -139,7 +141,7 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
                 <li key={o.id}>
                   <button type="button" className={`opcion ${marca}`} disabled={acierto !== null} onClick={() => setRespuesta(o.id)}>
                     {o.imagen !== undefined && <Ilustracion imagen={o.imagen} decorativa tamano="opcion" />}
-                    <span lang="es" className={pregunta.formato === "imagen" ? "sr-only" : "opcion-texto"}>{o.texto}</span>
+                    <span lang={lengua} className={pregunta.formato === "imagen" ? "sr-only" : "opcion-texto"}>{o.texto}</span>
                     {acierto !== null && correcta && <span className="opcion-marca"><Icon name="check" /><span className="sr-only">{t("pregunta.correcta")}</span></span>}
                     {acierto !== null && elegida && !correcta && <span className="opcion-marca"><Icon name="close" /><span className="sr-only">{t("pregunta.tuRespuesta")}</span></span>}
                   </button>
@@ -151,5 +153,6 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
         {acierto !== null && <Respuesta acierto={acierto} pregunta={pregunta} presentacion={presentacion} onSiguiente={() => onContinuar(acierto)} />}
       </div>
     </div>
+    </LenguaImagen.Provider>
   );
 }

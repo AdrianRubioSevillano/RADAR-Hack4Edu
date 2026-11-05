@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import type { Idioma } from "../i18n/index.ts";
-import { idiomaDeLectura, speak, speechPort, stopSpeaking, vozDe } from "../services/speech.ts";
+import { speak, speechPort, stopSpeaking, vozDe } from "../services/speech.ts";
 import { Icon } from "./art.tsx";
 import { useIdioma } from "./IdiomaProvider.tsx";
 
 // Las voces llegan después de cargar la página: hay que escuchar `voiceschanged`.
-export function useVozDisponible(idioma: Idioma | null): boolean {
-  const hayVoz = () => idioma !== null && vozDe(idioma) !== null;
+export function useVozDisponible(idioma: Idioma): boolean {
+  const hayVoz = () => vozDe(idioma) !== null;
   const [disponible, setDisponible] = useState(hayVoz);
   useEffect(() => {
     const synth = speechPort() as SpeechSynthesis | null;
@@ -20,16 +20,16 @@ export function useVozDisponible(idioma: Idioma | null): boolean {
 }
 
 // Si la voz no está disponible en el dispositivo, el botón no aparece.
-export function ReadAloud({ text }: { text: string }) {
-  const { idioma, t } = useIdioma();
-  const lectura = idiomaDeLectura(idioma);
-  const disponible = useVozDisponible(lectura);
+// `idioma` es el del texto que se lee.
+export function ReadAloud({ text, idioma }: { text: string; idioma: Idioma }) {
+  const { t } = useIdioma();
+  const disponible = useVozDisponible(idioma);
   const [fallo, setFallo] = useState<string | null>(null);
   useEffect(() => {
     setFallo(null);
     return () => stopSpeaking();
   }, [text]);
-  if (!disponible || lectura === null) return null;
+  if (!disponible) return null;
   return (
     <div className="escuchar">
       <button
@@ -37,7 +37,7 @@ export function ReadAloud({ text }: { text: string }) {
         className="boton boton-voz"
         onClick={() => {
           setFallo(null);
-          const salida = speak(text, lectura, t, setFallo);
+          const salida = speak(text, idioma, t, setFallo);
           if (salida.status === "unavailable") setFallo(salida.message);
         }}
       >
