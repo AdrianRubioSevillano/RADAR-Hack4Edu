@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { IdiomaProvider } from "../../src/components/IdiomaProvider.tsx";
 import { AvisoContenido } from "../../src/components/SelectorIdioma.tsx";
@@ -11,7 +11,7 @@ import { Acerca } from "../../src/screens/Acerca.tsx";
 import { Inicio } from "../../src/screens/Inicio.tsx";
 import type { KeyValueStorage } from "../../src/services/almacen.ts";
 import { CLAVE_IDIOMA, cargarIdioma, guardarIdioma } from "../../src/services/idioma.ts";
-import { mathToSpeech, speak, vozDe, type SpeechPort } from "../../src/services/speech.ts";
+import { idiomaDeLectura, mathToSpeech, speak, vozDe, type SpeechPort } from "../../src/services/speech.ts";
 
 const claves = (i: Idioma) => Object.keys(DICCIONARIOS[i]).sort();
 const marcas = (texto: string) => [...texto.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -93,6 +93,22 @@ describe("voz", () => {
     expect(vozDe("gn", puerto(voces))).toBeNull();
     expect(vozDe("fr", puerto([{ lang: "fr-FR", localService: false }]))).toBeNull();
     expect(vozDe("gn", null)).toBeNull();
+  });
+
+  it("las preguntas, aún en español, se leen en español; en guaraní no se leen", () => {
+    expect(idiomaDeLectura("es")).toBe("es");
+    expect(idiomaDeLectura("fr")).toBe("es");
+    expect(idiomaDeLectura("gn")).toBeNull();
+  });
+
+  it("con la interfaz en francés, la lectura usa voz y palabras en español", () => {
+    class Lectura { lang = ""; voice: unknown = null; rate = 1; onerror = null; text: string; constructor(text: string) { this.text = text; } }
+    vi.stubGlobal("SpeechSynthesisUtterance", Lectura);
+    const dichas: Lectura[] = [];
+    const port: SpeechPort = { ...puerto(voces), speak: (u) => void dichas.push(u as unknown as Lectura) };
+    speak("3 + 4", "es", crearT("fr"), () => undefined, port);
+    vi.unstubAllGlobals();
+    expect(dichas[0]).toMatchObject({ lang: "es-ES", text: "3 más 4" });
   });
 
   it("sin motor de voz, el aviso sale en el idioma elegido", () => {

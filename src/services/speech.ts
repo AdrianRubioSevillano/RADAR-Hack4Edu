@@ -44,6 +44,12 @@ export function vozDe(idioma: Idioma, port: SpeechPort | null = speechPort()): S
   }
 }
 
+// Las preguntas aún están en español: se leen con voz española aunque la interfaz esté
+// en francés. En guaraní no hay lectura. Al traducir el contenido, devolverá `idioma`.
+export function idiomaDeLectura(idioma: Idioma): Idioma | null {
+  return idioma === "gn" ? null : "es";
+}
+
 export type SpeechOutcome =
   | { readonly status: "started" }
   | { readonly status: "unavailable"; readonly message: string };
@@ -58,7 +64,7 @@ export function speak(
   if (port === null) return { status: "unavailable", message: t("voz.noDisponible") };
   try {
     port.cancel();
-    const utterance = new SpeechSynthesisUtterance(mathToSpeech(text, t));
+    const utterance = new SpeechSynthesisUtterance(mathToSpeech(text, crearT(idioma)));
     const voz = vozDe(idioma, port);
     utterance.lang = voz?.lang ?? idioma;
     if (voz !== null) utterance.voice = voz;
