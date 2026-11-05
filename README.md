@@ -1,62 +1,64 @@
 # RADAR
 
-Diagnóstico adaptativo y planificación para matemáticas de 1.º–2.º de ESO. Pensado para docentes, con una vista de alumno preparada. Proyecto para Hack4Edu 2026.
+RADAR detecta qué parte de cada tema le cuesta a cada alumno de primaria y le da ejercicios para esa parte. Funciona sin internet y se adapta a alumnos con dislexia, TDAH, baja visión o discapacidad auditiva.
 
-Se ejecuta entero en el navegador: sin servidor, cuentas ni servicios de IA. Todos los alumnos de la demo son ficticios. Es un prototipo experimental sin validación educativa: lee [las limitaciones](docs/app/LIMITACIONES.md) antes de sacar conclusiones.
+Hecho para Hack4Edu 2026 (ProFuturo), pensando en escuelas con tablets sencillas, sin conexión y con aulas grandes.
 
-> **Esta rama es la propuesta visual de Claude** (`frontend/claude-alternativa`), para compararla con la de Codex. Comparten motor, servicios y datos. Dirección de diseño en [DISENO.md](docs/app/DISENO.md) y capturas en [docs/capturas](docs/capturas).
+## Cómo ejecutarlo
 
-## Puesta en marcha
-
-Comprobado con Node 26.0.0 y npm 11.12.1. No se afirma compatibilidad con otras versiones: `npm run bench` y los scripts de Chrome ejecutan TypeScript directamente con Node.
+Comprobado con Node 26.
 
 ```bash
-npm ci
+npm install
 ```
 
 ```bash
 npm run dev
 ```
 
-Abre la dirección que indique Vite, normalmente http://127.0.0.1:5173.
+Para probar la versión final, con modo sin conexión:
 
-## Comandos
+```bash
+npm run build && npm run preview
+```
 
-| Comando | Qué hace |
+Otros comandos: `npm test`, `npm run muestras` (genera `docs/MUESTRA_PREGUNTAS.md`), `npm run e2e` y `npm run capturas` (estos dos usan Chrome y `npm run preview`).
+
+La demo trae una clase de 2.º de primaria con 20 alumnos simulados y 3 sin empezar. El recorrido para el jurado está en [docs/GUION_DEMO_5MIN.md](docs/GUION_DEMO_5MIN.md).
+
+## Cómo funciona
+
+- **Alumno:** elige su nombre, hace los tests asignados y recibe ejercicios de lo que necesita, sin notas.
+- **Profesor:** con un PIN ve una sola pantalla: "Mañana explica primero…", grupos y semáforo por alumno.
+- **Temario:** 6 cursos, 3 bloques (números, lectura, pensar y decidir), 90 temas, 221 subhabilidades y 126 tests, en [docs/TEMARIO.md](docs/TEMARIO.md). Las preguntas se generan con semilla.
+- **Motor:** modelo DINA con inferencia bayesiana exacta y selección de la pregunta que más información aporta. En `src/core`, sin mostrarse nunca en la interfaz.
+
+## Accesibilidad
+
+El profesor activa las ayudas por alumno, y se pueden combinar. Solo se guardan las ayudas, nunca un diagnóstico. Las preguntas son las mismas: cambia la presentación.
+
+| Ayuda | Qué cambia |
 |---|---|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run typecheck` | Tipos del motor y de la aplicación |
-| `npm test` | Tests del motor y de la aplicación |
-| `npm run build` | Tipos y build de producción en `dist/` |
-| `npm run preview` | Sirve `dist/` |
-| `npm run e2e` | Prueba extremo a extremo en Chrome (necesita `npx vite preview --host 127.0.0.1 --port 4173`) |
-| `npm run capturas` | Regenera `docs/capturas` y la auditoría axe (mismo requisito) |
-| `npm run bench` | Repite el experimento completo: unos 145 s. No hace falta si el motor no cambia |
+| Dislexia | Enunciado fácil, botón Escuchar, letra mayor y más interlineado |
+| TDAH | Sin elementos extra, barra de progreso, pausas cada 5 preguntas, test en 2 partes si es largo |
+| Baja visión | Letra al 150 %, alto contraste, botones grandes y Escuchar |
+| Auditiva | Nada depende del sonido: siempre icono y texto |
 
-`npm run e2e` y `npm run capturas` buscan Google Chrome en la ruta de macOS.
+## Limitaciones
 
-## Qué incluye
+- **Sin calibrar:** umbrales, slip, guess, ε y la transición de aprendizaje son supuestos, no medidas. No se ha probado con alumnos reales, ni demuestra mejora educativa.
+- **PIN local:** sin servidor, protege de forma sencilla pero no es seguridad fuerte. Los datos solo están en ese dispositivo y se pierden si se borra el navegador.
+- **Temario:** propuesta internacional basada en marcos de UNESCO-UIS y UNICEF, no el currículo oficial de ningún país.
+- **Contenido:** solo en español. Pendiente de revisión por docentes; empieza por `docs/MUESTRA_PREGUNTAS.md`.
+- **Voz:** depende de que el dispositivo tenga una voz en español. Si no, el botón se oculta.
+- **Sin conexión:** la app debe abrirse una vez con red para quedar instalada.
 
-- **Mi clase:** 30 alumnos ficticios con semilla fija, respuestas simuladas por el motor real y reinicio.
-- **Radar:** diagnóstico colectivo, con cada alumno situado por su mayor necesidad medida.
-- **Planes:** presupuesto de tiempo, ranking y comparación del plan colectivo con el que minimiza la mayor necesidad estimada pendiente.
-- **Actividades y Práctica:** actividades para lo priorizado y ejercicios individuales según lo que el plan deja pendiente, separados del diagnóstico.
-- **Evidencia:** los informes reales del benchmark, con sus empates y pérdidas.
-- **Accesibilidad:** tamaño, espaciado, contraste, presentación legible, una pregunta por pantalla, menos distracciones, teclado y lectura en voz alta.
+Las decisiones de diseño están en [docs/DECISIONES_V2.md](docs/DECISIONES_V2.md).
 
-## Documentación
+## Volver a la versión anterior
 
-- [Guion de demo](docs/app/GUION_DEMO.md)
-- [Arquitectura e integración](docs/app/ARQUITECTURA.md)
-- [Diseño](docs/app/DISENO.md)
-- [Verificación](docs/app/VERIFICACION.md)
-- [Limitaciones de la aplicación](docs/app/LIMITACIONES.md)
-- [Motor: estado, API y matemáticas](docs/engine/ESTADO.md)
+La versión de ESO, con el simulador y el benchmark, sigue intacta:
 
-## Despliegue
-
-`npm run build` genera un sitio estático en `dist/`, con rutas relativas y navegación por `#`, que funciona en la raíz o en una subcarpeta. No se ha desplegado.
-
-## Licencia
-
-El repositorio no tiene licencia: es una decisión pendiente del equipo. Fredoka y Atkinson Hyperlegible Next tienen licencia OFL-1.1.
+```bash
+git checkout v1-eso
+```

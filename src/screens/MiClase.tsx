@@ -98,7 +98,7 @@ export function MiClase() {
               {(["verde", "amarillo", "rojo"] as const).map((c) => <li key={c}><Semaforo color={c} /> {ETIQUETA_COLOR[c]}</li>)}
             </ul>
           </div>
-          <div className="cuadricula-marco" tabIndex={0} role="region" aria-labelledby="cuadricula-titulo">
+          <div className="cuadricula-marco" tabIndex={0} role="region" aria-label="Cuadrícula de alumnos y temas, con desplazamiento">
             <table className="cuadricula">
               <thead>
                 <tr>

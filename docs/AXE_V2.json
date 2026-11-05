@@ -1,0 +1,240 @@
+[
+ {
+  "pantalla": "1280/01-inicio",
+  "superadas": 29,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/02-acerca",
+  "superadas": 21,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/03-quien-eres",
+  "superadas": 23,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/04-mis-tests",
+  "superadas": 35,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/05-pin-crear",
+  "superadas": 32,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/06-mi-clase",
+  "superadas": 44,
+  "incumplidas": [
+   {
+    "id": "landmark-unique",
+    "impacto": "moderate",
+    "nodos": 1,
+    "ejemplo": "section[aria-labelledby=\"cuadricula-titulo\"] :: The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+   }
+  ]
+ },
+ {
+  "pantalla": "1280/07-detalle-alumno",
+  "superadas": 34,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/08-ajustes",
+  "superadas": 42,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/09-pin-escribir",
+  "superadas": 32,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/10-pregunta-opciones",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/11-pregunta-numero",
+  "superadas": 38,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/12-pregunta-lectura",
+  "superadas": 26,
+  "incumplidas": [
+   {
+    "id": "heading-order",
+    "impacto": "moderate",
+    "nodos": 1,
+    "ejemplo": "h3 :: Heading order invalid"
+   }
+  ]
+ },
+ {
+  "pantalla": "1280/13-feedback-acierto",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/14-feedback-fallo",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/15-perfil-dislexia",
+  "superadas": 40,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/16-perfil-baja-vision",
+  "superadas": 40,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/17-baja-vision-mis-tests",
+  "superadas": 35,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/18-perfil-tdah",
+  "superadas": 38,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/19-fin-test",
+  "superadas": 21,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/20-practica-pista",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "1280/21-tus-ejercicios",
+  "superadas": 35,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/01-inicio",
+  "superadas": 29,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/02-acerca",
+  "superadas": 21,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/03-quien-eres",
+  "superadas": 23,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/04-mis-tests",
+  "superadas": 35,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/05-pin-crear",
+  "superadas": 32,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/06-mi-clase",
+  "superadas": 45,
+  "incumplidas": [
+   {
+    "id": "landmark-unique",
+    "impacto": "moderate",
+    "nodos": 1,
+    "ejemplo": "section[aria-labelledby=\"cuadricula-titulo\"] :: The landmark must have a unique aria-label, aria-labelledby, or title to make landmarks distinguishable"
+   }
+  ]
+ },
+ {
+  "pantalla": "768/07-detalle-alumno",
+  "superadas": 34,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/08-ajustes",
+  "superadas": 42,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/09-pin-escribir",
+  "superadas": 32,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/10-pregunta-opciones",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/11-pregunta-numero",
+  "superadas": 38,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/12-pregunta-lectura",
+  "superadas": 26,
+  "incumplidas": [
+   {
+    "id": "heading-order",
+    "impacto": "moderate",
+    "nodos": 1,
+    "ejemplo": "h3 :: Heading order invalid"
+   }
+  ]
+ },
+ {
+  "pantalla": "768/13-feedback-acierto",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/14-feedback-fallo",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/15-perfil-dislexia",
+  "superadas": 40,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/16-perfil-baja-vision",
+  "superadas": 40,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/17-baja-vision-mis-tests",
+  "superadas": 35,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/18-perfil-tdah",
+  "superadas": 38,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/19-fin-test",
+  "superadas": 21,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/20-practica-pista",
+  "superadas": 37,
+  "incumplidas": []
+ },
+ {
+  "pantalla": "768/21-tus-ejercicios",
+  "superadas": 35,
+  "incumplidas": []
+ }
+]

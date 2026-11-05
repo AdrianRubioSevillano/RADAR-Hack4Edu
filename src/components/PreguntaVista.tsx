@@ -84,7 +84,7 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
       <div className="pregunta-datos">
         {conLectura && (
           <article className="lectura">
-            {pregunta.titulo !== undefined && <h3>{pregunta.titulo}</h3>}
+            {pregunta.titulo !== undefined && <h2>{pregunta.titulo}</h2>}
             <p>{pregunta.texto}</p>
           </article>
         )}

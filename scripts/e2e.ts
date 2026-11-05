@@ -15,6 +15,9 @@ function comprobar(nombre: string, ok: boolean, detalle?: unknown) {
   console.log(`${ok ? "ok   " : "FALLA"} ${nombre}${ok ? "" : ` -> ${info}`}`);
 }
 
+// Columnas de la cuadrícula: Sumas y restas (0–2) y después Dinero (3–5).
+const CAMBIO = 5;
+
 const idDe = (c: Clase, nombre: string) => c.alumnos.find((a) => a.nombre === nombre)?.id as string;
 
 await withChrome(async (page: Page) => {
@@ -110,8 +113,8 @@ await withChrome(async (page: Page) => {
   const tras = recomendacionDe(await clase(page));
   comprobar("el profesor vuelve a entrar con su PIN", (await texto()).includes("Mañana explica primero"));
   comprobar("la recomendación sigue a la subhabilidad con más rojos", tras.subhabilidad === "NUM2-T3-c" && tras.rojos > inicial.rojos && (await texto()).includes(`${tras.rojos} de los ${tras.evaluados}`), JSON.stringify(tras).slice(0, 200));
-  comprobar("Amina aparece en rojo en Cambio sencillo", (await celda("Amina", 2)).includes("Necesita refuerzo"), await celda("Amina", 2));
-  comprobar("Amina en verde en Contar monedas", (await celda("Amina", 0)).includes("Lo domina"), await celda("Amina", 0));
+  comprobar("Amina aparece en rojo en Cambio sencillo", (await celda("Amina", CAMBIO)).includes("Necesita refuerzo"), await celda("Amina", CAMBIO));
+  comprobar("Amina en verde en Contar monedas", (await celda("Amina", CAMBIO - 2)).includes("Lo domina"), await celda("Amina", CAMBIO - 2));
   await pulsar(page, ".cuadricula tbody a", "Amina");
   await page.wait(300);
   comprobar("el detalle del alumno muestra sus ayudas", (await texto()).includes("Dislexia") && (await texto()).includes("Necesita refuerzo"));
@@ -145,7 +148,8 @@ await withChrome(async (page: Page) => {
 
   // --- El semáforo se ha actualizado ---
   await entrarProfesor(page);
-  comprobar("el semáforo de Amina ya no está en rojo", !(await celda("Amina", 2)).includes("Necesita refuerzo"), await celda("Amina", 2));
+  const semaforoFinal = await celda("Amina", CAMBIO);
+  comprobar("el semáforo de Amina ha salido del rojo", semaforoFinal.includes("Lo domina") || semaforoFinal.includes("Aún no está claro"), semaforoFinal);
   const final = recomendacionDe(await clase(page));
   comprobar("la recomendación descuenta a Amina", final.rojos === tras.rojos - 1 || final.subhabilidad !== tras.subhabilidad, JSON.stringify(final).slice(0, 200));
 
@@ -215,7 +219,8 @@ await withChrome(async (page: Page) => {
   await ir(page, "#/alumno");
   await pulsar(page, "a.nombre", "Bruno");
   await page.wait(500);
-  comprobar("en ejecución no se hace ninguna petición de red", peticiones.filter((u) => !u.startsWith("data:")).length === 0, peticiones.join(" "));
+  // Los archivos propios del build (imágenes, fuentes) los sirve el service worker.
+  comprobar("en ejecución no se hace ninguna petición de datos", peticiones.filter((u) => !u.startsWith("data:") && !u.includes("/assets/")).length === 0, peticiones.join(" "));
 
   // --- Sin conexión ---
   await page.wait(800);

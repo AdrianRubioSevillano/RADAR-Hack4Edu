@@ -24,7 +24,7 @@ async function foto(page: Page, nombre: string): Promise<void> {
 }
 
 async function axe(page: Page, nombre: string, informe: Informe[]): Promise<void> {
-  await page.evaluate(`window.axe || eval(${JSON.stringify(AXE)})`);
+  await page.evaluate(`(window.axe || eval(${JSON.stringify(AXE)}), 0)`);
   const r = (await page.evaluate(`axe.run(document, { runOnly: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice'] }).then((x) => ({
     superadas: x.passes.length,
     incumplidas: x.violations.map((v) => ({ id: v.id, impacto: v.impact, nodos: v.nodes.length, ejemplo: v.nodes[0].target.join(' ') + ' :: ' + (v.nodes[0].failureSummary || '').split('\\n').slice(1, 2).join('').trim().slice(0, 120) })),

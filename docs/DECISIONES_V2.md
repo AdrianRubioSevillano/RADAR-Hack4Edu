@@ -27,3 +27,4 @@ Decisiones tomadas durante la construcción de v2 que CLAUDE.md no fija del todo
 - **Asignación por clase**, no por alumno: menos pasos para el docente.
 - **Semáforo con forma y símbolo** (✓ ? !), no solo color, por WCAG 1.4.1.
 - **`services/preferences.ts` se sustituye por `services/perfiles.ts`:** las ayudas las activa el profesor por alumno, ya no hay preferencias libres.
+- **PIN:** el flujo es una función pura (`services/pinFlujo.ts`) y el teclado físico se escucha en toda la pantalla, no en un campo oculto.

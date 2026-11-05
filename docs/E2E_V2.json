@@ -1,0 +1,166 @@
+[
+ {
+  "nombre": "inicio: Soy alumno y Soy profesor",
+  "ok": true
+ },
+ {
+  "nombre": "sin PIN no se abren los ajustes",
+  "ok": true
+ },
+ {
+  "nombre": "el profesor crea el PIN y entra",
+  "ok": true
+ },
+ {
+  "nombre": "el PIN se guarda con hash",
+  "ok": true
+ },
+ {
+  "nombre": "demo: recomienda Cambio sencillo",
+  "ok": true
+ },
+ {
+  "nombre": "el profesor asigna un test",
+  "ok": true
+ },
+ {
+  "nombre": "Lucía ve sus tests asignados",
+  "ok": true
+ },
+ {
+  "nombre": "el test tiene 10 preguntas",
+  "ok": true
+ },
+ {
+  "nombre": "mensaje final sin nota",
+  "ok": true
+ },
+ {
+  "nombre": "ofrece practicar",
+  "ok": true
+ },
+ {
+  "nombre": "dislexia: letra grande",
+  "ok": true
+ },
+ {
+  "nombre": "dislexia: todas las preguntas con enunciadoFacil",
+  "ok": true
+ },
+ {
+  "nombre": "baja visión: alto contraste y letra al 150 %",
+  "ok": true
+ },
+ {
+  "nombre": "baja visión: la letra base es 1,5 veces la normal",
+  "ok": true
+ },
+ {
+  "nombre": "al salir del alumno se retiran sus ayudas",
+  "ok": true
+ },
+ {
+  "nombre": "el profesor vuelve a entrar con su PIN",
+  "ok": true
+ },
+ {
+  "nombre": "la recomendación sigue a la subhabilidad con más rojos",
+  "ok": true
+ },
+ {
+  "nombre": "Amina aparece en rojo en Cambio sencillo",
+  "ok": true
+ },
+ {
+  "nombre": "Amina en verde en Contar monedas",
+  "ok": true
+ },
+ {
+  "nombre": "el detalle del alumno muestra sus ayudas",
+  "ok": true
+ },
+ {
+  "nombre": "Amina ve sus ejercicios",
+  "ok": true
+ },
+ {
+  "nombre": "6 ejercicios de fácil a difícil",
+  "ok": true
+ },
+ {
+  "nombre": "la pista aparece",
+  "ok": true
+ },
+ {
+  "nombre": "tras los ejercicios viene el reto",
+  "ok": true
+ },
+ {
+  "nombre": "mensaje de logro al superar el reto",
+  "ok": true
+ },
+ {
+  "nombre": "ya no tiene esa práctica pendiente",
+  "ok": true
+ },
+ {
+  "nombre": "el semáforo de Amina ha salido del rojo",
+  "ok": true
+ },
+ {
+  "nombre": "la recomendación descuenta a Amina",
+  "ok": true
+ },
+ {
+  "nombre": "Restablecer demo conserva el PIN y limpia lo demás",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: se llega a Soy alumno",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: el foco va al título",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: se elige un nombre",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: se abre un test",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: se llega a una opción",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: la respuesta recibe el foco",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: se llega a Siguiente",
+  "ok": true
+ },
+ {
+  "nombre": "teclado: foco visible",
+  "ok": true
+ },
+ {
+  "nombre": "ninguna petición fuera de la propia app",
+  "ok": true
+ },
+ {
+  "nombre": "en ejecución no se hace ninguna petición de datos",
+  "ok": true
+ },
+ {
+  "nombre": "sin conexión la app sigue funcionando",
+  "ok": true
+ },
+ {
+  "nombre": "sin errores en la consola",
+  "ok": true
+ }
+]
