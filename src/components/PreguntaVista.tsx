@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { esCorrecta, textoParaEscuchar, textoRespuesta } from "../content/respuestas.ts";
 import type { Pregunta } from "../content/tipos.ts";
 import type { Presentacion } from "../services/perfiles.ts";
+import { LARGO_RESPUESTA, enterEsDelControl, teclaRespuesta } from "../services/tecladoRespuesta.ts";
 import { Icon, Mascot } from "./art.tsx";
 import { Ilustracion } from "./Ilustracion.tsx";
 import { ReadAloud } from "./ReadAloud.tsx";
@@ -47,6 +48,23 @@ function Respuesta({ acierto, pregunta, presentacion, textoSiguiente, onSiguient
 function RespuestaNumerica({ pregunta, onResponder }: { pregunta: Pregunta; onResponder: (valor: string) => void }) {
   const [valor, setValor] = useState("");
   const extras = [...(pregunta.respuestaCorrecta.includes(",") ? [","] : []), ...(pregunta.respuestaCorrecta.includes("/") ? ["/"] : [])];
+  const extrasClave = extras.join("");
+
+  // El teclado físico funciona esté donde esté el foco, como en el PIN.
+  useEffect(() => {
+    const alPulsar = (e: KeyboardEvent) => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Enter" && enterEsDelControl(e.target instanceof Element ? e.target : null)) return;
+      const accion = teclaRespuesta(valor, e.key, [...extrasClave]);
+      if (accion === null) return;
+      e.preventDefault();
+      if (accion.tipo === "enviar") onResponder(valor);
+      else setValor(accion.valor);
+    };
+    window.addEventListener("keydown", alPulsar);
+    return () => window.removeEventListener("keydown", alPulsar);
+  }, [valor, extrasClave, onResponder]);
+
   return (
     <form
       className="numero"
@@ -62,11 +80,11 @@ function RespuestaNumerica({ pregunta, onResponder }: { pregunta: Pregunta; onRe
         value={valor}
         inputMode="none"
         autoComplete="off"
-        maxLength={12}
+        maxLength={LARGO_RESPUESTA}
         placeholder="?"
         onChange={(evento) => setValor(evento.target.value.replace(/[^\d,./]/g, ""))}
       />
-      <TecladoNumerico etiqueta="Teclado de números" extras={extras} onTecla={(t) => setValor((v) => (v.length < 12 ? v + t : v))} onBorrar={() => setValor((v) => v.slice(0, -1))} />
+      <TecladoNumerico etiqueta="Teclado de números" extras={extras} onTecla={(t) => setValor((v) => (v.length < LARGO_RESPUESTA ? v + t : v))} onBorrar={() => setValor((v) => v.slice(0, -1))} />
       <button type="submit" className="boton boton-principal boton-grande" disabled={valor.trim() === ""}>Comprobar</button>
     </form>
   );

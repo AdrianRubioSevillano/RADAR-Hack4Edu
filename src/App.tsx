@@ -15,7 +15,8 @@ import { Practica } from "./screens/Practica.tsx";
 import { TestPantalla } from "./screens/TestPantalla.tsx";
 import { alumnoPorId, type Alumno } from "./services/clase.ts";
 import { PRESENTACION_BASE, atributosDe, presentacionDe, type Presentacion } from "./services/perfiles.ts";
-import { enlace, esRutaProfesor, leerRuta, rutaPermitida, type Ruta } from "./services/rutas.ts";
+import { cierraSesionProfesor, enlace, esRutaProfesor, leerRuta, rutaPermitida, type Ruta } from "./services/rutas.ts";
+import { tituloPestana } from "./services/titulos.ts";
 
 function useHash(): string {
   const [hash, setHash] = useState(() => (typeof window === "undefined" ? "" : window.location.hash));
@@ -92,7 +93,7 @@ function alumnoDeRuta(ruta: Ruta): string | null {
 
 // Separada del hash para que los tests puedan pintar cualquier ruta.
 export function Vista({ hash }: { hash: string }) {
-  const { clase, profesorDesbloqueado } = useClase();
+  const { clase, profesorDesbloqueado, bloquear } = useClase();
   const ruta = rutaPermitida(leerRuta(hash), profesorDesbloqueado, hash);
   const alumnoId = alumnoDeRuta(ruta);
   const alumno = alumnoId === null ? undefined : alumnoPorId(clase, alumnoId);
@@ -100,6 +101,16 @@ export function Vista({ hash }: { hash: string }) {
   const enTarea = ruta.nombre === "test" || ruta.nombre === "practica";
   const mundo = esRutaProfesor(ruta) ? "profesor" : ruta.nombre === "inicio" ? "inicio" : "alumno";
   const principal = useRef<HTMLElement>(null);
+  const modoAlumno = cierraSesionProfesor(ruta);
+  const pestana = tituloPestana(ruta, clase);
+
+  useEffect(() => {
+    if (modoAlumno) bloquear();
+  }, [modoAlumno, bloquear]);
+
+  useEffect(() => {
+    document.title = pestana;
+  }, [pestana]);
 
   // Las ayudas del alumno se aplican a toda la página, y se retiran al salir.
   const atributos = JSON.stringify(atributosDe(presentacion));
@@ -113,7 +124,6 @@ export function Vista({ hash }: { hash: string }) {
     const titulo = document.getElementById("titulo");
     titulo?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
-    document.title = titulo?.textContent !== undefined && titulo.textContent !== null && titulo.textContent !== "" ? `${titulo.textContent} · RADAR` : "RADAR";
   }, [hash]);
 
   return (

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { almacenDisponible, cargarClase, guardarClase } from "../services/almacen.ts";
+import { almacenDisponible, cargarClase, claseTrasCambio, guardarClase } from "../services/almacen.ts";
 import type { Clase } from "../services/clase.ts";
 import { crearDemo } from "../services/demo.ts";
 
@@ -20,6 +20,16 @@ export function ClaseProvider({ children, desbloqueado = false }: { children: Re
   const [profesorDesbloqueado, setDesbloqueado] = useState(desbloqueado);
 
   useEffect(() => guardarClase(almacenDisponible(), clase), [clase]);
+
+  // Guardar lo mismo que ya hay no lanza `storage`, así que dos pestañas no se responden sin fin.
+  useEffect(() => {
+    const alCambiar = (evento: StorageEvent) => {
+      const nueva = claseTrasCambio(evento.key, almacenDisponible());
+      if (nueva !== null) setClase(nueva);
+    };
+    window.addEventListener("storage", alCambiar);
+    return () => window.removeEventListener("storage", alCambiar);
+  }, []);
 
   const actualizar = useCallback((cambio: (c: Clase) => Clase) => setClase(cambio), []);
   const restablecer = useCallback(() => setClase((actual) => ({ ...crearDemo(), pinHash: actual.pinHash })), []);

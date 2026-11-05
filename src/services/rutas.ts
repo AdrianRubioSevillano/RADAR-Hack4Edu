@@ -38,6 +38,11 @@ export function esRutaProfesor(ruta: Ruta): boolean {
   return ruta.nombre === "profesor" || ruta.nombre === "ajustes" || ruta.nombre === "detalle";
 }
 
+// Entrar como alumno cierra la sesión del profesor: la tablet pasa a manos del alumno.
+export function cierraSesionProfesor(ruta: Ruta): boolean {
+  return ruta.nombre === "alumnos" || ruta.nombre === "alumno" || ruta.nombre === "test" || ruta.nombre === "practica";
+}
+
 // Sin PIN, una ruta de profesor siempre se convierte en la pantalla del PIN.
 export function rutaPermitida(ruta: Ruta, profesorDesbloqueado: boolean, hash: string): Ruta {
   return esRutaProfesor(ruta) && !profesorDesbloqueado ? { nombre: "pin", destino: hash } : ruta;

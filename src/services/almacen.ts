@@ -30,6 +30,11 @@ export function cargarClase(almacen: KeyValueStorage | null): Clase | null {
   }
 }
 
+// Otra pestaña ha guardado: devuelve la clase nueva, o null si el cambio no es de la clase.
+export function claseTrasCambio(clave: string | null, almacen: KeyValueStorage | null): Clase | null {
+  return clave === CLAVE_CLASE ? cargarClase(almacen) : null;
+}
+
 export function guardarClase(almacen: KeyValueStorage | null, clase: Clase): void {
   try {
     almacen?.setItem(CLAVE_CLASE, JSON.stringify(clase));

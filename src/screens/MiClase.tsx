@@ -67,6 +67,7 @@ export function MiClase() {
       {r.evaluados > 0 && (
         <section aria-labelledby="grupos-titulo">
           <h2 id="grupos-titulo">Grupos para trabajar</h2>
+          <p className="grupos-nota">Cada alumno aparece en el grupo de lo que más necesita.</p>
           <div className="grupos">
             {r.grupos.map((g) => (
               <article className="grupo" key={g.subhabilidad}>

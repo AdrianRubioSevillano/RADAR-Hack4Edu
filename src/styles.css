@@ -111,6 +111,7 @@ section > h2 { margin-bottom: 0.7rem; }
 .boton-suave:hover { background: var(--cielo); }
 .boton-voz { background: var(--sol-suave); color: var(--tinta); border-color: var(--sol); }
 .boton-voz:hover { background: var(--sol); }
+:root[data-contraste="alto"] .boton-voz { color: #000; border-color: #000; border-width: 3px; }
 .boton-grande { min-height: 68px; padding: 0.7rem 2.2rem; font-size: 1.3rem; }
 .boton-pequeno { min-height: 48px; font-size: 0.95rem; padding: 0.3rem 0.9rem; }
 .enlace-suave { color: var(--tinta-2); min-height: 48px; display: inline-flex; align-items: center; }
@@ -232,6 +233,7 @@ section > h2 { margin-bottom: 0.7rem; }
 .manana p { font-size: 1.15rem; margin-top: 0.5rem; margin-bottom: 0; color: #fff; }
 .manana-calma { justify-content: flex-start; }
 :root[data-contraste="alto"] .manana { background: #000; }
+.grupos-nota { margin: -0.3rem 0 0.7rem; color: var(--tinta-2); }
 .grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.9rem; }
 .grupo { background: var(--papel); border: 2px solid var(--linea); border-radius: var(--r-m); padding: 0.9rem 1rem; box-shadow: var(--sombra); }
 .grupo h3 { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.5rem; }
