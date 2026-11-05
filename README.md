@@ -64,3 +64,8 @@ La versión de ESO, con el simulador y el benchmark, sigue intacta:
 ```bash
 git checkout v1-eso
 ```
+## Licencia
+
+- **Código:** [MIT](LICENSE) © 2026 Adrián Rubio Sevillano, Luis Herrero Insúa y Pablo Hernández Martín.
+- **Contenido educativo** (preguntas, textos y temario de `src/content` y `docs/`): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.es). Puedes compartirlo y adaptarlo citando a los autores.
+- **Tipografías:** Fredoka y Atkinson Hyperlegible, bajo SIL Open Font License.
