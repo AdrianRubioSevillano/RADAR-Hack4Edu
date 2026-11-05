@@ -2267,7 +2267,7 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 **Ejemplo 2** · dificultad 3 · formato opcion
 
 - Enunciado: Uma quiere saber si llega al autobús de las 10. Sale de casa a las 9 y media y la parada está lejos. ¿Qué tiene que averiguar primero?
-- Fácil: El autobús sale a las 10. Uma sale de casa a las 9 y media. La parada está lejos. ¿Qué debe averiguar primero?
+- Fácil: Uma quiere saber si llega al autobús de las 10. Sale de casa a las 9 y media. La parada está lejos. ¿Qué debe averiguar primero?
 - Opciones: Cuántas personas van en el autobús · De qué color es el autobús · A qué hora vuelve a casa · **Cuánto tarda en llegar a la parada** ✓
 - Pista: ¿Qué número necesita para comparar con el tiempo que tiene?
 - Explicación: Tiene media hora. Debe saber si el camino hasta la parada dura menos que eso.
