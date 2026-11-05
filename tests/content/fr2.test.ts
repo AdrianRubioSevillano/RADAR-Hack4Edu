@@ -47,7 +47,7 @@ describe("Ciclo II en francés", () => {
     expect(subs.length).toBeGreaterThanOrEqual(30);
     for (const s of subs) expect(lenguaDe(s, "fr")).toBe("fr");
     expect(lenguaDe("NUM3-T1-a", "fr")).toBe("es");
-    expect(lenguaDe("NUM2-T1-a", "gn")).toBe("es");
+    expect(lenguaDe("LEE2-T1-a", "gn")).toBe("es");
   });
 
   it("todas se generan y van marcadas en francés", () => {
@@ -125,7 +125,7 @@ describe("Ciclo II en francés", () => {
     const base = alternarAsignacion(anadirAlumno(claseVacia(1, 2), "Ana"), "NUM2-T3");
     const alumno = base.alumnos[0]?.id ?? "";
     expect(preguntaActual(empezarTest(base, alumno, "NUM2-T3", "fr"), alumno, "NUM2-T3")?.idioma).toBe("fr");
-    expect(preguntaActual(empezarTest(base, alumno, "NUM2-T3", "gn"), alumno, "NUM2-T3")?.idioma).toBeUndefined();
+    expect(preguntaActual(empezarTest(base, alumno, "NUM2-T3", "gn"), alumno, "NUM2-T3")?.idioma).toBe("gn");
     expect(preguntaActual(empezarTest(base, alumno, "NUM2-T3"), alumno, "NUM2-T3")?.idioma).toBeUndefined();
   });
 

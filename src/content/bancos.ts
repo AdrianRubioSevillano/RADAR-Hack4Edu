@@ -18,9 +18,10 @@ export function generadoresDe(subId: string, lengua: Lengua = "es"): readonly Ge
   return (lengua === "fr" ? GENERADORES_FR[subId] : undefined) ?? GENERADORES[subId] ?? [];
 }
 
-// Por ahora, en francés solo está el Ciclo II. Lo demás sigue en español.
+// Por ahora: en francés, el Ciclo II; en guaraní, NUM2. Lo demás sigue en español.
 export function lenguaDe(subId: string, idioma: string): Lengua {
-  return idioma === "fr" && /^(NUM|LEE|PEN)2-/.test(subId) ? "fr" : "es";
+  if (idioma === "fr" && /^(NUM|LEE|PEN)2-/.test(subId)) return "fr";
+  return idioma === "gn" && subId.startsWith("NUM2-") ? "gn" : "es";
 }
 
 // «de Amina» -> «d'Amina»: los nombres entran en la frase al generarla.
@@ -49,6 +50,7 @@ function enFrances(p: Pregunta): Pregunta {
 export function generarPregunta(subId: string, rng: Rng, dificultad: Dificultad, idioma: string = "es"): Pregunta {
   const lengua = lenguaDe(subId, idioma);
   const p = conLengua(lengua, () => elegir(rng, generadoresDe(subId, lengua))(rng, dificultad));
+  if (lengua === "gn") return { ...p, idioma: "gn" };
   return lengua === "fr" ? enFrances(p) : p;
 }
 

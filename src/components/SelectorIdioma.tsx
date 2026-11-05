@@ -39,8 +39,10 @@ export function AvisoRevision() {
   );
 }
 
-// La pregunta que se ve sigue en español: se avisa sin robarle sitio.
+// Se avisa sin robarle sitio a la pregunta: si está en guaraní, que falta revisarla; si
+// sigue en español con la interfaz en otro idioma, que aún no está traducida.
 export function AvisoContenido({ pregunta }: { pregunta: Pick<Pregunta, "idioma"> }) {
   const { idioma, t } = useIdioma();
+  if (pregunta.idioma === "gn") return <p className="aviso-contenido">{traducir("gn", "aviso.revision")} · <span lang="es">{traducir("es", "aviso.revision")}</span></p>;
   return idioma === "es" || pregunta.idioma === "fr" ? null : <p className="aviso-contenido">{t("aviso.contenido")}</p>;
 }

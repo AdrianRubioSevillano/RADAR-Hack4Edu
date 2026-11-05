@@ -108,7 +108,7 @@ export function empezarTest(clase: Clase, alumnoId: string, testId: string, idio
     terminado: false,
     secuencia: clase.secuencia + 1,
     refuerzos: {},
-    ...(idioma === "fr" ? { idioma: "fr" as const } : {}),
+    ...(idioma === "fr" || idioma === "gn" ? { idioma } : {}),
   };
   return conIntento(clase, alumnoId, intento);
 }

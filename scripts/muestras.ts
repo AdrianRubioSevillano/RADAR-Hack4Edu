@@ -12,9 +12,11 @@ import { nombreSub, nombreTema } from "../src/i18n/nombres.ts";
 
 const SEMILLA = 2026;
 
-// `--idioma=fr --ciclo=2` da la muestra en francés de ese ciclo.
+// `--idioma=fr --ciclo=2` da la muestra en francés de ese ciclo; con `gn`, solo NUM,
+// que es lo traducido.
 const argumento = (nombre: string): string | undefined => process.argv.find((a) => a.startsWith(`--${nombre}=`))?.split("=")[1];
-const idioma = argumento("idioma") === "fr" ? "fr" : "es";
+const pedido = argumento("idioma");
+const idioma = pedido === "fr" || pedido === "gn" ? pedido : "es";
 const ciclo = argumento("ciclo");
 const cursos = ciclo === undefined ? CURSOS : CURSOS.filter((c) => String(c) === ciclo);
 const t = crearT(idioma);
@@ -40,11 +42,13 @@ function bloqueDe(p: Pregunta, n: number): string {
 
 const salida: string[] = FR
   ? ["# Échantillon de questions RADAR (français)", "", `Généré avec \`npm run muestras -- --idioma=fr --ciclo=${ciclo ?? ""}\`, avec une graine fixe. 2 exemples par sous-compétence (un facile et un difficile), pour une relecture humaine.`, ""]
-  : ["# Muestra de preguntas de RADAR", "", "Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilidad (uno fácil y uno difícil), para que una persona los revise.", ""];
+  : idioma === "gn"
+    ? ["# Muestra de NUM2 en guaraní", "", `Generado con \`npm run muestras -- --idioma=gn --ciclo=${ciclo ?? ""}\`, con semilla fija. **Traducción sin revisar por hablantes nativos.** Las dudas de vocabulario están en docs/GLOSARIO_GN.md.`, ""]
+    : ["# Muestra de preguntas de RADAR", "", "Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilidad (uno fácil y uno difícil), para que una persona los revise.", ""];
 
 for (const curso of cursos) {
   salida.push(`## ${t(`nivel.${curso}`)}`, "");
-  for (const bloque of BLOQUES) {
+  for (const bloque of idioma === "gn" ? (["NUM"] as const) : BLOQUES) {
     salida.push(`### ${t(`bloque.${bloque}`)}`, "");
     for (const tema of temasDe(curso, bloque)) {
       salida.push(`#### ${tema.id} · ${nombreTema(t, tema.id)}`, "");
@@ -58,6 +62,6 @@ for (const curso of cursos) {
   }
 }
 
-const archivo = FR ? `docs/MUESTRA_FR_CICLO${ciclo ?? ""}.md` : "docs/MUESTRA_PREGUNTAS.md";
+const archivo = idioma === "es" ? "docs/MUESTRA_PREGUNTAS.md" : `docs/MUESTRA_${idioma.toUpperCase()}_CICLO${ciclo ?? ""}.md`;
 writeFileSync(archivo, salida.join("\n"));
 console.log(`${archivo} escrito: ${salida.filter((l) => l.startsWith("#####")).length} subhabilidades`);
