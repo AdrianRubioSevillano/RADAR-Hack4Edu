@@ -99,8 +99,14 @@ await withChrome(async (page: Page) => {
   await page.wait(150);
   comprobar("al salir del alumno se retiran sus ayudas", (await atributo("data-contraste")) === "normal");
 
-  // --- El profesor ve el rojo y la recomendación ---
-  await entrarProfesor(page);
+  // --- El profesor ve el rojo y la recomendación, entrando con el teclado físico ---
+  await ir(page, "#/profesor");
+  for (const d of PIN) {
+    await page.send("Input.dispatchKeyEvent", { type: "keyDown", key: d, text: d, code: `Digit${d}`, windowsVirtualKeyCode: 48 + Number(d) });
+    await page.send("Input.dispatchKeyEvent", { type: "keyUp", key: d, code: `Digit${d}`, windowsVirtualKeyCode: 48 + Number(d) });
+    await page.wait(80);
+  }
+  await page.wait(500);
   const tras = recomendacionDe(await clase(page));
   comprobar("el profesor vuelve a entrar con su PIN", (await texto()).includes("Mañana explica primero"));
   comprobar("la recomendación sigue a la subhabilidad con más rojos", tras.subhabilidad === "NUM2-T3-c" && tras.rojos > inicial.rojos && (await texto()).includes(`${tras.rojos} de los ${tras.evaluados}`), JSON.stringify(tras).slice(0, 200));

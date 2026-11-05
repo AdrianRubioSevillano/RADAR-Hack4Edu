@@ -220,8 +220,6 @@ section > h2 { margin-bottom: 0.7rem; }
 .pin-puntos { display: flex; gap: 0.9rem; padding: 0.5rem; }
 .pin-puntos span { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--tinta); background: transparent; transition: background 0.1s; }
 .pin-puntos .lleno { background: var(--tinta); }
-.pin-oculto { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.pin-oculto:focus + .pin-error, .pin-oculto:focus ~ .teclado { outline: 3px solid var(--sol); outline-offset: 6px; border-radius: 8px; }
 .pin-error { color: var(--rojo); font-weight: 700; }
 
 /* ---------- Mi clase ---------- */
