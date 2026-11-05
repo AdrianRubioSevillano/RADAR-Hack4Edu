@@ -5,7 +5,7 @@ import { flujo } from "../../src/core/rng.ts";
 import { bancoDeTest, generadoresDe, itemDe, miniTest, paqueteDePractica } from "../../src/content/bancos.ts";
 import { GENERADORES } from "../../src/content/generadores/index.ts";
 import { esCorrecta, leerNumero, textoRespuesta } from "../../src/content/respuestas.ts";
-import { SUBHABILIDADES, TEMAS } from "../../src/content/temario.ts";
+import { CURSOS, NOMBRE_NIVEL, SUBHABILIDADES, TEMAS } from "../../src/content/temario.ts";
 import { TESTS, testPorId, testsDe } from "../../src/content/tests.ts";
 import type { Pregunta } from "../../src/content/tipos.ts";
 
@@ -18,6 +18,10 @@ describe("temario", () => {
     const texto = readFileSync("docs/TEMARIO.md", "utf8");
     for (const t of TEMAS) expect(texto).toContain(t.nombre);
     for (const s of SUBHABILIDADES) expect(texto.toLowerCase()).toContain(s.nombre.toLowerCase());
+  });
+
+  it("los niveles visibles son Ciclo I a Ciclo VI", () => {
+    expect(CURSOS.map((c) => NOMBRE_NIVEL[c])).toEqual(["Ciclo I", "Ciclo II", "Ciclo III", "Ciclo IV", "Ciclo V", "Ciclo VI"]);
   });
 
   it("cada subhabilidad del temario tiene al menos un generador, y no sobra ninguno", () => {

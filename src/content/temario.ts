@@ -6,6 +6,7 @@ const LETRAS = ["a", "b", "c"] as const;
 
 export const BLOQUES: readonly Bloque[] = ["NUM", "LEE", "PEN"];
 export const CURSOS: readonly Curso[] = [1, 2, 3, 4, 5, 6];
+export const NOMBRE_NIVEL: Readonly<Record<Curso, string>> = { 1: "Ciclo I", 2: "Ciclo II", 3: "Ciclo III", 4: "Ciclo IV", 5: "Ciclo V", 6: "Ciclo VI" };
 export const NOMBRE_BLOQUE: Readonly<Record<Bloque, string>> = {
   NUM: "Números para la vida",
   LEE: "Leer y entender",

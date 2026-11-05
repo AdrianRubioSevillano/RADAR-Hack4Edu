@@ -21,7 +21,7 @@ Decisiones tomadas durante la construcción de v2 que CLAUDE.md no fija del todo
 - **Opciones de imagen sin rótulo visible.** En "leer y elegir la imagen", un rótulo convertiría la pregunta en emparejar texto con texto. El nombre sigue disponible para lectores de pantalla.
 - **Temas con una sola subhabilidad** (LEE2-T3, LEE3-T3, LEE6-T2): CLAUDE.md habla de 2–3, pero TEMARIO.md da una. Manda el temario: K = 1, con al menos 20 preguntas distintas.
 - **Escalera de dificultad.** La EIG elige qué habilidad explorar y la dificultad sube al acertar y baja al fallar, empezando en fácil. Sin esto, la EIG preferiría siempre las fáciles, que tienen menos slip.
-- **Voz en 1.º y 2.º para todos**, además de los perfiles de dislexia y baja visión: un niño de 6 años debe poder hacer un test sin leer. Con perfil auditivo como único motivo, no aparece.
+- **Voz en Ciclo I y Ciclo II para todos**, además de los perfiles de dislexia y baja visión: un niño de 6 años debe poder hacer un test sin leer. Con perfil auditivo como único motivo, no aparece.
 - **Sin pistas en el test**, solo en la práctica: una pista en el test cambiaría lo que se mide.
 - **Refuerzo en tests mezclados:** el semáforo es por tema; de un tema en 🔴 se refuerza su subhabilidad con menos aciertos.
 - **Asignación por clase**, no por alumno: menos pasos para el docente.

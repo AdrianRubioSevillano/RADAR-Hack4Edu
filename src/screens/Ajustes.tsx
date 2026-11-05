@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Avatar } from "../components/art.tsx";
 import { useClase } from "../components/ClaseProvider.tsx";
 import { ConfirmButton, Titulo } from "../components/ui.tsx";
-import { BLOQUES, CURSOS, NOMBRE_BLOQUE } from "../content/temario.ts";
+import { BLOQUES, CURSOS, NOMBRE_BLOQUE, NOMBRE_NIVEL } from "../content/temario.ts";
 import { testsDe } from "../content/tests.ts";
 import type { Curso } from "../content/tipos.ts";
 import { AYUDAS, alternarAsignacion, alternarAyuda, anadirAlumno, cambiarCurso, quitarAlumno } from "../services/clase.ts";
@@ -48,11 +48,11 @@ export function Ajustes() {
       <Titulo>Ajustes</Titulo>
 
       <section className="ajuste" aria-labelledby="ajuste-curso">
-        <h2 id="ajuste-curso">Curso de la clase</h2>
+        <h2 id="ajuste-curso">Nivel de la clase</h2>
         <label className="campo">
-          <span className="sr-only">Curso</span>
+          <span className="sr-only">Nivel</span>
           <select value={clase.curso} onChange={(e) => actualizar((c) => cambiarCurso(c, Number(e.target.value) as Curso))}>
-            {CURSOS.map((c) => <option key={c} value={c}>{c}.º de primaria</option>)}
+            {CURSOS.map((c) => <option key={c} value={c}>{NOMBRE_NIVEL[c]}</option>)}
           </select>
         </label>
       </section>

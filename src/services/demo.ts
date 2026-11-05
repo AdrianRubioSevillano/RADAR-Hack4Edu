@@ -1,4 +1,4 @@
-// Datos de demo: 2.º de primaria, 20 alumnos simulados con resultados en 3 temas y 3
+// Datos de demo: Ciclo II, 20 alumnos simulados con resultados en 3 temas y 3
 // alumnos sin hacer nada, para probar en directo. Todo sale de una semilla fija.
 import { flujo } from "../core/rng.ts";
 import { claseVacia, empezarTest, preguntaActual, registrarRespuesta, type Alumno, type Ayuda, type Clase } from "./clase.ts";

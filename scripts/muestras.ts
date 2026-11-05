@@ -5,7 +5,7 @@ import { flujo } from "../src/core/rng.ts";
 import { generarPregunta } from "../src/content/bancos.ts";
 import { describirImagen } from "../src/content/imagenes.ts";
 import { textoRespuesta } from "../src/content/respuestas.ts";
-import { BLOQUES, CURSOS, NOMBRE_BLOQUE, temasDe } from "../src/content/temario.ts";
+import { BLOQUES, CURSOS, NOMBRE_BLOQUE, NOMBRE_NIVEL, temasDe } from "../src/content/temario.ts";
 import type { Dificultad, Pregunta } from "../src/content/tipos.ts";
 
 const SEMILLA = 2026;
@@ -33,7 +33,7 @@ const salida: string[] = [
 ];
 
 for (const curso of CURSOS) {
-  salida.push(`## ${curso}.º de primaria`, "");
+  salida.push(`## ${NOMBRE_NIVEL[curso]}`, "");
   for (const bloque of BLOQUES) {
     salida.push(`### ${NOMBRE_BLOQUE[bloque]}`, "");
     for (const tema of temasDe(curso, bloque)) {
