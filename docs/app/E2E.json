@@ -1,0 +1,346 @@
+{
+  "total": 85,
+  "failed": 0,
+  "results": [
+    {
+      "name": "arranque: 30 pupitres sintéticos",
+      "ok": true
+    },
+    {
+      "name": "arranque: marca de datos sintéticos visible",
+      "ok": true
+    },
+    {
+      "name": "sin respuestas: el radar no muestra el prior",
+      "ok": true
+    },
+    {
+      "name": "sin respuestas: ranking hipotético y planes vacíos",
+      "ok": true
+    },
+    {
+      "name": "sin respuestas: no hay actividades",
+      "ok": true
+    },
+    {
+      "name": "sin respuestas: la práctica pide diagnóstico",
+      "ok": true
+    },
+    {
+      "name": "el informe del benchmark no se ha descargado todavía",
+      "ok": true
+    },
+    {
+      "name": "simulación: la interfaz sigue respondiendo",
+      "ok": true
+    },
+    {
+      "name": "simulación: 30 alumnos con 9 respuestas",
+      "ok": true
+    },
+    {
+      "name": "radar: 30 alumnos dibujados",
+      "ok": true
+    },
+    {
+      "name": "radar: seis sectores manejables",
+      "ok": true
+    },
+    {
+      "name": "radar: los puntos no atrapan el tabulador",
+      "ok": true
+    },
+    {
+      "name": "radar: un sector se selecciona con teclado",
+      "ok": true
+    },
+    {
+      "name": "planes: ambos planes y la matriz por alumno",
+      "ok": true
+    },
+    {
+      "name": "planes: hay presupuestos con planes distintos e iguales",
+      "ok": true
+    },
+    {
+      "name": "planes: cambiar el plan activo cambia lo pendiente",
+      "ok": true
+    },
+    {
+      "name": "planes: el plan B queda guardado",
+      "ok": true
+    },
+    {
+      "name": "planes: un presupuesto que no es un número se explica",
+      "ok": true
+    },
+    {
+      "name": "planes: un presupuesto no representable se explica sin romper",
+      "ok": true
+    },
+    {
+      "name": "planes: se recupera al corregir el presupuesto",
+      "ok": true
+    },
+    {
+      "name": "actividades: dos bloques con 30 minutos",
+      "ok": true
+    },
+    {
+      "name": "actividades: avisa de la falta de revisión docente",
+      "ok": true
+    },
+    {
+      "name": "diagnóstico: reiniciar deja al alumno sin respuestas",
+      "ok": true
+    },
+    {
+      "name": "diagnóstico: entrada no válida con mensaje y sin perder estado",
+      "ok": true
+    },
+    {
+      "name": "corrección 0: el botón siguiente recibe el foco",
+      "ok": true
+    },
+    {
+      "name": "diagnóstico: no hay explicación visible antes de responder",
+      "ok": true
+    },
+    {
+      "name": "diagnóstico: 8 respuestas manuales sin repetición",
+      "ok": true
+    },
+    {
+      "name": "práctica: sin necesidad medida no se inventan ejercicios",
+      "ok": true
+    },
+    {
+      "name": "práctica: propone un ejercicio a quien lo necesita",
+      "ok": true
+    },
+    {
+      "name": "práctica: la pista aparece",
+      "ok": true
+    },
+    {
+      "name": "práctica: la solución solo sale a petición",
+      "ok": true
+    },
+    {
+      "name": "práctica: pistas y soluciones no tocan el diagnóstico",
+      "ok": true
+    },
+    {
+      "name": "práctica: queda registro separado",
+      "ok": true
+    },
+    {
+      "name": "banco agotado: fin sin error ni pregunta",
+      "ok": true
+    },
+    {
+      "name": "benchmark: se descarga solo al entrar",
+      "ok": true
+    },
+    {
+      "name": "benchmark: tres escenarios en el mosaico",
+      "ok": true
+    },
+    {
+      "name": "benchmark: pérdidas y empates visibles",
+      "ok": true
+    },
+    {
+      "name": "benchmark: procedencia y límites",
+      "ok": true
+    },
+    {
+      "name": "persistencia: recargar conserva las respuestas",
+      "ok": true
+    },
+    {
+      "name": "datos corruptos: aviso y demo limpia",
+      "ok": true
+    },
+    {
+      "name": "clase vacía: docente lo explica",
+      "ok": true
+    },
+    {
+      "name": "clase vacía: planes lo explica",
+      "ok": true
+    },
+    {
+      "name": "clase vacía: actividades lo explica",
+      "ok": true
+    },
+    {
+      "name": "clase vacía: diagnostico lo explica",
+      "ok": true
+    },
+    {
+      "name": "clase vacía: practica lo explica",
+      "ok": true
+    },
+    {
+      "name": "clase vacía: se restaura",
+      "ok": true
+    },
+    {
+      "name": "preferencias: se abren con teclado como diálogo modal",
+      "ok": true
+    },
+    {
+      "name": "preferencias: tamaño y contraste se aplican",
+      "ok": true
+    },
+    {
+      "name": "preferencias: Escape cierra y el foco vuelve al botón",
+      "ok": true
+    },
+    {
+      "name": "una pregunta por pantalla: sin paneles alrededor",
+      "ok": true
+    },
+    {
+      "name": "reducir distracciones: sin mascota",
+      "ok": true
+    },
+    {
+      "name": "voz: sin síntesis hay alternativa y el texto sigue",
+      "ok": true
+    },
+    {
+      "name": "reinicio: la demo vuelve al inicio",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: clase sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: docente sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: planes sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: actividades sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: benchmark sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: diagnostico sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: practica sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: barra inferior visible",
+      "ok": true
+    },
+    {
+      "name": "móvil 390: controles de al menos 44 px",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: clase sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: docente sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: planes sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: actividades sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: benchmark sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: diagnostico sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: practica sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: barra inferior visible",
+      "ok": true
+    },
+    {
+      "name": "móvil 320: controles de al menos 44 px",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: clase sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: docente sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: planes sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: actividades sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: benchmark sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: diagnostico sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: practica sin desbordamiento horizontal",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: barra inferior visible",
+      "ok": true
+    },
+    {
+      "name": "tableta 768: controles de al menos 44 px",
+      "ok": true
+    },
+    {
+      "name": "texto muy grande y espaciado: clase sin desbordar",
+      "ok": true
+    },
+    {
+      "name": "texto muy grande y espaciado: docente sin desbordar",
+      "ok": true
+    },
+    {
+      "name": "texto muy grande y espaciado: planes sin desbordar",
+      "ok": true
+    },
+    {
+      "name": "texto muy grande y espaciado: diagnostico sin desbordar",
+      "ok": true
+    },
+    {
+      "name": "sin errores en la consola durante toda la prueba",
+      "ok": true
+    }
+  ]
+}

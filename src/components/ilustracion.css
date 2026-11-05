@@ -1,0 +1,223 @@
+/* Ilustraciones del contenido. Los colores de línea y papel son variables para que el
+   modo de alto contraste los redefina; el tamaño va en rem/em para seguir la letra de la app. */
+:root {
+  --ilu-trazo: #002048;
+  --ilu-papel: #fff;
+  --ilu-suave: #c6dcef;
+  --ilu-cruz: #d4351c;
+  --ilu-aviso: #fff3cc;
+  --ilu-nota: #fff8d6;
+  --ilu-etiqueta: #e7f6e9;
+  --ilu-folleto: #d9f1fe;
+  --ilu-infografia: #f0f8fe;
+  --ilu-cabecera: #d9f1fe;
+}
+
+:root[data-contraste="alto"] {
+  --ilu-trazo: #000;
+  --ilu-papel: #fff;
+  --ilu-suave: #000;
+  --ilu-cruz: #000;
+  --ilu-aviso: #fff;
+  --ilu-nota: #fff;
+  --ilu-etiqueta: #fff;
+  --ilu-folleto: #fff;
+  --ilu-infografia: #fff;
+  --ilu-cabecera: #fff;
+}
+
+.ilu { box-sizing: border-box; color: var(--ilu-trazo, #002048); }
+.ilu *, .ilu *::before, .ilu *::after { box-sizing: inherit; }
+
+.ilu-svg {
+  display: block;
+  width: 100%;
+  max-width: min(100%, var(--ilu-ancho, 30rem));
+  height: auto;
+  margin-inline: auto;
+}
+.ilu-txt { font-family: var(--font-display, "Fredoka Variable", Verdana, sans-serif); }
+
+.ilu-solo-lector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Tabla ---------- */
+.ilu-tabla-marco { width: 100%; max-width: 44em; margin-inline: auto; }
+.ilu-tabla {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 1em;
+  line-height: 1.35;
+  background: var(--ilu-papel, #fff);
+  border: 3px solid var(--ilu-trazo, #002048);
+  border-radius: 0.75em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ilu-tabla-titulo {
+  caption-side: top;
+  padding-bottom: 0.45em;
+  font-family: var(--font-display, inherit);
+  font-size: 1.15em;
+  font-weight: 700;
+  text-align: center;
+}
+.ilu-tabla th, .ilu-tabla td {
+  padding: 0.55em 0.7em;
+  text-align: left;
+  border-bottom: 2px solid var(--ilu-suave, #c6dcef);
+}
+.ilu-tabla tbody tr:last-child > * { border-bottom: 0; }
+.ilu-tabla thead th {
+  background: var(--ilu-cabecera, #d9f1fe);
+  border-bottom: 3px solid var(--ilu-trazo, #002048);
+  font-weight: 700;
+}
+.ilu-tabla tbody th { font-weight: 700; }
+
+/* ---------- Carteles ---------- */
+.ilu-cartel {
+  width: 100%;
+  max-width: 32em;
+  margin: 0 auto;
+  padding: 1em 1.2em;
+  font-size: 1em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  background: var(--ilu-papel, #fff);
+  border: 3px solid var(--ilu-trazo, #002048);
+  border-radius: 0.75em;
+}
+.ilu-cartel-titulo {
+  font-family: var(--font-display, inherit);
+  font-size: 1.25em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.ilu-cartel-lineas { margin: 0.5em 0 0; padding: 0; list-style: none; }
+.ilu-cartel-lineas p { margin: 0.3em 0 0; }
+.ilu-cartel-lineas, .ilu-cartel-lineas > * { min-width: 0; overflow-wrap: anywhere; }
+.ilu-cartel-icono { display: inline-block; width: 1.3em; height: 1.3em; margin-right: 0.35em; vertical-align: -0.25em; }
+
+.ilu-cartel-aviso {
+  background: var(--ilu-aviso, #fff3cc);
+  border-width: 5px;
+  border-radius: 1em;
+  text-align: center;
+}
+
+.ilu-cartel-horario { padding: 0; overflow: hidden; }
+.ilu-cartel-horario .ilu-cartel-titulo {
+  padding: 0.55em 1em;
+  background: var(--ilu-trazo, #002048);
+  color: var(--ilu-papel, #fff);
+  text-align: center;
+}
+.ilu-cartel-horario .ilu-cartel-lineas { margin: 0; padding: 0.3em 1em 0.5em; }
+.ilu-cartel-horario li, .ilu-cartel-recibo li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  padding: 0.35em 0;
+  border-bottom: 2px dotted var(--ilu-suave, #c6dcef);
+}
+.ilu-cartel li > span { min-width: 0; }
+.ilu-cartel-horario li:last-child, .ilu-cartel-recibo li:last-child { border-bottom: 0; }
+.ilu-cartel-dato { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+.ilu-cartel-etiqueta {
+  position: relative;
+  max-width: 24em;
+  padding: 1em 1.2em 1em 3em;
+  background: var(--ilu-etiqueta, #e7f6e9);
+  border-radius: 2.2em 0.75em 0.75em 2.2em;
+}
+.ilu-cartel-etiqueta::before {
+  content: "";
+  position: absolute;
+  left: 1em;
+  top: 1.2em; /* arriba: con mucho texto, el agujero sigue en la cabeza de la etiqueta */
+  width: 1em;
+  height: 1em;
+  background: var(--ilu-papel, #fff);
+  border: 3px solid var(--ilu-trazo, #002048);
+  border-radius: 50%;
+}
+
+.ilu-cartel-nota {
+  position: relative;
+  max-width: 26em;
+  margin-top: 0.7em;
+  padding-top: 1.4em;
+  background: var(--ilu-nota, #fff8d6);
+  border-radius: 0.3em;
+}
+.ilu-cartel-nota::before {
+  content: "";
+  position: absolute;
+  top: -0.7em;
+  left: 50%;
+  width: 1.3em;
+  height: 1.3em;
+  margin-left: -0.65em;
+  background: #e8483a;
+  border: 3px solid var(--ilu-trazo, #002048);
+  border-radius: 50%;
+}
+
+.ilu-cartel-recibo {
+  max-width: 22em;
+  border-radius: 0;
+  border-block-style: dashed;
+}
+.ilu-cartel-recibo .ilu-cartel-titulo {
+  padding-bottom: 0.4em;
+  border-bottom: 2px solid var(--ilu-trazo, #002048);
+  text-align: center;
+}
+.ilu-cartel-total { font-weight: 700; border-top: 3px solid var(--ilu-trazo, #002048); }
+
+.ilu-cartel-folleto { padding: 0; overflow: hidden; }
+.ilu-cartel-folleto .ilu-cartel-titulo {
+  padding: 0.7em 1em;
+  background: var(--ilu-folleto, #d9f1fe);
+  border-bottom: 3px solid var(--ilu-trazo, #002048);
+  text-align: center;
+}
+.ilu-cartel-folleto .ilu-cartel-lineas { margin: 0; padding: 0.6em 1.2em 0.8em; columns: 12em 2; column-gap: 1.5em; }
+.ilu-cartel-folleto li { position: relative; padding: 0.2em 0 0.2em 1.1em; break-inside: avoid; }
+.ilu-cartel-folleto li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.6em;
+  width: 0.55em;
+  height: 0.55em;
+  background: #ffc629;
+  border: 2px solid var(--ilu-trazo, #002048);
+  border-radius: 50%;
+}
+
+.ilu-cartel-infografia { max-width: 40em; background: var(--ilu-infografia, #f0f8fe); }
+.ilu-cartel-infografia .ilu-cartel-titulo { text-align: center; }
+.ilu-cartel-infografia .ilu-cartel-lineas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr));
+  gap: 0.6em;
+  margin-top: 0.7em;
+}
+.ilu-cartel-infografia li {
+  padding: 0.6em 0.7em;
+  background: var(--ilu-papel, #fff);
+  border: 2px solid var(--ilu-trazo, #002048);
+  border-radius: 0.6em;
+  font-weight: 600;
+  text-align: center;
+}

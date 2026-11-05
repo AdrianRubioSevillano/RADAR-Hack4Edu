@@ -1,0 +1,82 @@
+# Estado del motor RADAR
+
+Traspaso al cerrar el motor: Fases 1–7 terminadas. Rama `motor`, trabajo local sin push. `CLAUDE.md` es la especificación que manda.
+
+## Implementado
+
+- **Fase 1:** grafo, banco de 30 preguntas, racionales exactos y validación.
+- **Fase 2:** DINA, prior, posterior exacto y entropías.
+- **Fase 3:** EIG, selección explicable, `submitAnswer` y `fixedQuestionOrder`.
+- **Fase 4A:** `getClassDiagnostic`.
+- **Fase 4B:** `rankInterventions`: ranking y plan exacto con presupuesto.
+- **Fase 4C:** `compareInterventionPlans`: plan colectivo frente a plan por necesidad pendiente, con detalle por alumno y competencia.
+- **Fase 5A:** `src/simulation`: PRNG mulberry32 con flujos etiquetados, `createSyntheticClass` y `observableStudents`.
+- **Fase 5B:** `createResponseUniforms` y `simulateResponse`: respuestas sintéticas con números aleatorios comunes.
+- **Fase 6A:** `applySyntheticIntervention`: cambios en el conocimiento simulado, con control opcional.
+- **Fase 6B:** `simulatePostIntervention`: postest con diagnóstico nuevo e informe en tres capas: observada, estimada y real simulada.
+- **Fase 7A:** `src/benchmarks`: `computeDiagnosticMetrics`, métricas de una réplica frente a la verdad simulada.
+- **Fase 7B:** `summarizeSeedValues` y `comparePairedSeeds`: resúmenes por semilla, bootstrap percentil reproducible y diferencias B − A emparejadas.
+- **Fase 7C:** `runDiagnosticMethod`: ejecución de A, B y C en una réplica, con presupuestos como prefijos.
+- **Fase 7D:** `runBenchmark`, `renderBenchmarkMarkdown` y `npm run bench`: experimento completo con tres escenarios y 30 semillas.
+- **Documentación:** `INTEGRACION_REACT.md` y `LIMITACIONES.md`.
+
+**Verificación:** typecheck limpio y 1555 tests pasando con Node 26. Prueban que el código cumple `CLAUDE.md`, no calibración ni eficacia educativa.
+
+**Experimento:** `npm run bench` completo ejecutado, con `kind: "full"`, y `npm run bench -- --check` superado: el bloque determinista se regeneró y coincidió byte a byte. Las cifras solo están en `RESULTADOS_BENCHMARK.md` y `.json`, generados por script. Tiempos y metadatos, en `RESULTADOS_BENCHMARK_TIEMPOS.json`.
+
+## Terminado y pendiente
+
+**Terminado en el motor:** diagnóstico adaptativo, diagnóstico colectivo, priorización y comparación de planes, simulación, evaluación postintervención simulada, benchmark y su documentación.
+
+**Corresponde a la integración, y no está hecho:** pantallas, práctica individual, actividades colectivas, persistencia, tratamiento de datos de alumnos reales y accesibilidad. Que exista el motor no los completa.
+
+**Sin demostrar:** validez y eficacia educativas. El benchmark mide la recuperación de estados sintéticos en el diagnóstico; no valida planes ni intervenciones. Ver `LIMITACIONES.md`.
+
+## Decisiones y limitaciones vigentes
+
+- `slip`, `guess`, `R_q`, pesos, duraciones e importancias son SUPUESTOS no calibrados. El banco no tiene revisión docente.
+- `R_q` es una hipótesis de modelado no validada.
+- Tolerancia de clasificación de `1e-12` en los umbrales: `src/engine/thresholds.ts`.
+- Tiempos en minutos con resolución de un segundo, convertidos a segundos enteros.
+- `priorConfig` es procedencia: no se compara el posterior con el prior.
+- `priorsOnly`: ranking hipotético y plan vacío.
+- `allWithResponses` no significa que todas las competencias estén medidas.
+- `rankInterventions` solo comprueba que `students` sea una lista de longitud `studentCount`. Ranking y plan salen de `skills`. `compareInterventionPlans` sí valida el detalle y lo reconcilia con el agregado.
+- `baseline`, `scheduled` y `pending` son necesidad estimada según el modelo, no probabilidades de mejora. Programar no significa aprender, y no se atribuye nada a los descendientes.
+- El plan por necesidad pendiente es otra heurística: no se afirma superioridad ni equidad educativa demostrada. Su coste solo interviene como tercer criterio.
+- La validación del detalle detecta incoherencias, no prueba que el diagnóstico proceda de respuestas reales. Sin conjuntas, la preparación solo se contrasta con las cotas de Fréchet.
+- `coverage` mide descendientes del grafo ponderados por importancia y necesidad, **no alumnos atendidos**.
+- `validateQuestionBank` no detecta opciones algebraicas equivalentes con textos distintos.
+- Los grupos sintéticos y el factor por prerrequisitos son SUPUESTOS de demo, no grupos educativos validados.
+- La verdad simulada solo vive en `src/simulation`. La regla `i mod G` es pública: el id permite deducir el grupo generador.
+- mulberry32 no es criptográfico, y sus flujos comparten un ciclo de `2^32` estados: no hay independencia estadística garantizada.
+- Las respuestas sintéticas siguen DINA por construcción: no dicen nada sobre cómo responden alumnos reales.
+- El error numérico sintético (`0/1` o `1/1`) es un SUPUESTO simplificado, sin relación con errores reales.
+- La intervención sintética es un modelo de transición inventado: `improvementProbability` y `prerequisiteImprovementFactor` son SUPUESTOS. Sus cambios no son aprendizaje observado ni demuestran eficacia educativa.
+- El recuento de controles usa una tolerancia numérica de `1e-12` sobre `n · controlFraction`: 100 alumnos con `0.29` dan 29 controles.
+- `postClass` no se regenera desde la semilla de población: requiere plan, estado anterior y semilla y configuración de intervención.
+- El cambio observado es descriptivo no equiparado, el estimado no es aprendizaje confirmado y el real simulado solo es conocible en simulación. La diferencia en diferencias no demuestra causalidad en alumnos reales.
+- Un informe es una sola réplica, sin intervalos de confianza: no sirve para concluir sobre planes. La replicación corresponde a la Fase 7.
+- `postIntervention.ts` es el único módulo de `src/simulation` que llama a `createInitialDiagnosticState` y `submitAnswer`. Los tests comprueban que solo reciben id, prior y respuestas observables.
+- Las métricas de diagnóstico miden la recuperación de un estado simulado, no la calidad con alumnos reales. Aún no hay ningún resultado de benchmark.
+- `computeDiagnosticMetrics` no contrasta los historiales con un banco, porque no lo recibe. El ejecutor debe pasarle estados ya validados.
+- El intervalo bootstrap solo refleja variabilidad entre semillas bajo SUPUESTOS fijos, suele quedarse corto con pocas semillas y no corrige por multiplicidad. No es prueba de eficacia educativa ni garantía de superioridad.
+- Dos series con el mismo `seriesId` y `bootstrapSeed` comparten remuestreo: el ejecutor debe usar ids únicos por métrica, método y escenario.
+- `runDiagnosticMethod` es una réplica: no permite comparar métodos. Sus tiempos dependen de la máquina y no son una comparación definitiva.
+- `methods.ts` es el único módulo de `src/benchmarks` que coordina diagnóstico y respuestas. Los tests comprueban que el diagnóstico solo recibe datos observables.
+- La validación de `realParametersByQuestion` está repetida en `methods.ts` y `postIntervention.ts`, porque la Fase 7C no podía modificar `src/simulation`. Conviene compartirla.
+- Los resultados del benchmark miden la recuperación de estados sintéticos bajo SUPUESTOS: no demuestran mejoras educativas ni eficacia con alumnos reales. La mala especificación es una única alternativa, no un análisis de sensibilidad.
+- `results` guarda métricas por réplica, no estados ni trayectorias: se regeneran con la configuración. Si cambia el banco, cambian los resultados, y hay que volver a ejecutar `npm run bench`.
+- El informe no compara B con C: solo B − A. C figura como control de cordura.
+- `scripts/bench.ts` queda cubierto por el typecheck porque un test lo importa: `tsconfig.engine.json` no incluye `scripts/`.
+- `simulateResponse` valida clase y tabla enteras en cada llamada. El tiempo medido del experimento está dominado por la selección EIG, según `RESULTADOS_BENCHMARK_TIEMPOS.json`, y no hizo falta cambiar `src/engine` ni `src/simulation`.
+
+## Próximo trabajo
+
+- Integración hecha en `integracion/mvp`. Propuesta visual de Claude en `frontend/claude-alternativa`: ver `docs/app/`.
+
+## Reglas para continuar
+
+- Hay dos propuestas de frontend, la de Codex y la de Claude: no fusionarlas hasta que el equipo elija.
+- No presentar las heurísticas como mejoras educativas demostradas ni afirmar exclusividad mundial.
+- Una fase por sesión; anunciar los comandos de git; sin push salvo petición.
