@@ -5,7 +5,7 @@ import { recomendar, type EstadoAlumno, type EstadoSubhabilidad, type Recomendac
 import { derivarSemilla } from "../core/rng.ts";
 import type { Color } from "../core/tipos.ts";
 import { bancoDeTest, indiceHabilidad, itemDe, miniTest, paqueteDePractica, subhabilidadDe } from "../content/bancos.ts";
-import { SUBHABILIDADES, subhabilidadPorId, temaPorId } from "../content/temario.ts";
+import { SUBHABILIDADES, subhabilidadPorId } from "../content/temario.ts";
 import { testPorId, testsDe, type DefinicionTest } from "../content/tests.ts";
 import type { Curso, Pregunta } from "../content/tipos.ts";
 
@@ -321,11 +321,6 @@ export function detalleDeAlumno(clase: Clase, alumnoId: string): DetalleAlumno |
     pendientes: testsDeAlumno(clase, alumnoId).filter((t) => t.estado !== "hecho"),
     practicas: practicasPendientes(clase, alumnoId),
   };
-}
-
-export function nombreSubhabilidad(id: string): { nombre: string; tema: string } {
-  const sub = subhabilidadPorId(id);
-  return { nombre: sub?.nombre ?? id, tema: temaPorId(sub?.tema ?? "")?.nombre ?? "" };
 }
 
 // ---------- Ajustes ----------

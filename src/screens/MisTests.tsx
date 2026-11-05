@@ -1,19 +1,21 @@
 import { Icon, Mascot } from "../components/art.tsx";
 import { useClase } from "../components/ClaseProvider.tsx";
+import { useIdioma } from "../components/IdiomaProvider.tsx";
 import { Titulo } from "../components/ui.tsx";
-import { NOMBRE_BLOQUE } from "../content/temario.ts";
+import { nombreSub, nombreTest } from "../i18n/nombres.ts";
 import { alumnoPorId, practicasPendientes, testsDeAlumno } from "../services/clase.ts";
 import type { Presentacion } from "../services/perfiles.ts";
 import { enlace } from "../services/rutas.ts";
 
 export function MisTests({ alumnoId, presentacion }: { alumnoId: string; presentacion: Presentacion }) {
   const { clase } = useClase();
+  const { t } = useIdioma();
   const alumno = alumnoPorId(clase, alumnoId);
   if (alumno === undefined) {
     return (
       <div className="hoja">
-        <Titulo>No encuentro a ese alumno.</Titulo>
-        <a className="boton boton-principal" href="#/alumno">Elegir mi nombre</a>
+        <Titulo>{t("detalle.noEncontrado")}</Titulo>
+        <a className="boton boton-principal" href="#/alumno">{t("alumno.elegirNombre")}</a>
       </div>
     );
   }
@@ -27,18 +29,18 @@ export function MisTests({ alumnoId, presentacion }: { alumnoId: string; present
     <div className="hoja">
       <div className="saludo">
         {!presentacion.sinExtras && <Mascot mood={nada ? "cheer" : "hello"} size={96} />}
-        <Titulo>{nada ? `¡Todo hecho, ${alumno.nombre}!` : `Hola, ${alumno.nombre}`}</Titulo>
+        <Titulo>{t(nada ? "alumno.todoHecho" : "alumno.hola", { nombre: alumno.nombre })}</Titulo>
       </div>
 
       {practicas.length > 0 && (
         <section aria-labelledby="practica-titulo">
-          <h2 id="practica-titulo">Tus ejercicios para practicar</h2>
+          <h2 id="practica-titulo">{t("alumno.practicas")}</h2>
           <ul className="tarjetas">
             {practicas.map((p) => (
               <li key={p.subhabilidad}>
                 <a className="tarjeta tarjeta-practica" href={enlace("alumno", alumnoId, "practica", p.testId, p.subhabilidad)}>
                   <span className="tarjeta-icono"><Icon name="practice" size={32} /></span>
-                  <span className="tarjeta-texto"><strong>{p.nombre}</strong><span>{p.hechos > 0 ? `Llevas ${p.hechos} de 6` : "6 ejercicios y un reto"}</span></span>
+                  <span className="tarjeta-texto"><strong>{nombreSub(t, p.subhabilidad)}</strong><span>{p.hechos > 0 ? t("alumno.llevas", { n: p.hechos }) : t("alumno.seisEjercicios")}</span></span>
                   <Icon name="arrow" size={30} />
                 </a>
               </li>
@@ -49,15 +51,15 @@ export function MisTests({ alumnoId, presentacion }: { alumnoId: string; present
 
       {porHacer.length > 0 && (
         <section aria-labelledby="tests-titulo">
-          <h2 id="tests-titulo">Tests para hacer</h2>
+          <h2 id="tests-titulo">{t("alumno.tests")}</h2>
           <ul className="tarjetas">
             {porHacer.map(({ test, estado, respondidas }) => (
               <li key={test.id}>
                 <a className="tarjeta" href={enlace("alumno", alumnoId, "test", test.id)}>
                   <span className="tarjeta-icono"><Icon name="star" size={32} /></span>
                   <span className="tarjeta-texto">
-                    <strong>{test.nombre}</strong>
-                    <span>{estado === "enCurso" ? `Sigue por la pregunta ${respondidas + 1}` : NOMBRE_BLOQUE[test.bloque]}</span>
+                    <strong>{nombreTest(t, test)}</strong>
+                    <span>{estado === "enCurso" ? t("alumno.sigue", { n: respondidas + 1 }) : t(`bloque.${test.bloque}`)}</span>
                   </span>
                   <Icon name="arrow" size={30} />
                 </a>
@@ -67,14 +69,14 @@ export function MisTests({ alumnoId, presentacion }: { alumnoId: string; present
         </section>
       )}
 
-      {nada && <p className="texto-grande">Hoy no tienes nada pendiente.</p>}
+      {nada && <p className="texto-grande">{t("alumno.nada")}</p>}
 
       {hechos.length > 0 && (
         <section aria-labelledby="hechos-titulo">
-          <h2 id="hechos-titulo">Ya hechos</h2>
+          <h2 id="hechos-titulo">{t("alumno.hechos")}</h2>
           <ul className="hechos">
             {hechos.map(({ test }) => (
-              <li key={test.id}><Icon name="check" /> {test.nombre}</li>
+              <li key={test.id}><Icon name="check" /> {nombreTest(t, test)}</li>
             ))}
           </ul>
         </section>

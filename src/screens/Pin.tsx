@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "../components/art.tsx";
 import { useClase } from "../components/ClaseProvider.tsx";
+import { useIdioma } from "../components/IdiomaProvider.tsx";
 import { TecladoNumerico } from "../components/TecladoNumerico.tsx";
 import { Titulo, Volver } from "../components/ui.tsx";
 import { comprobarPin, hashPin } from "../services/pin.ts";
@@ -8,6 +9,7 @@ import { estadoInicialPin, eventoDeTecla, pasoPin, type EventoPin } from "../ser
 
 export function Pin({ destino }: { destino: string }) {
   const { clase, actualizar, desbloquear } = useClase();
+  const { t } = useIdioma();
   const [estado, setEstado] = useState(() => estadoInicialPin(clase.pinHash !== null));
   // La referencia evita leer un estado antiguo si se teclea muy deprisa.
   const actual = useRef(estado);
@@ -53,19 +55,19 @@ export function Pin({ destino }: { destino: string }) {
   }, [enviar]);
 
   const crear = estado.modo === "crear";
-  const titulo = !crear ? "Escribe tu PIN" : estado.primero === null ? "Crea tu PIN de profesor" : "Repite tu PIN";
+  const titulo = t(!crear ? "pin.escribe" : estado.primero === null ? "pin.crea" : "pin.repite");
 
   return (
     <div className="hoja hoja-centrada hoja-pin">
-      <Volver href="#/">Inicio</Volver>
+      <Volver href="#/">{t("nav.inicio")}</Volver>
       <span className="pausa-icono" aria-hidden="true"><Icon name="lock" size={44} /></span>
       <Titulo>{titulo}</Titulo>
-      {crear && estado.primero === null && <p>Son 4 números. Sirve para que solo tú veas la clase.</p>}
-      <div className="pin-puntos" role="status" aria-label={`${estado.digitos.length} de 4 números escritos`}>
+      {crear && estado.primero === null && <p>{t("pin.explicacion")}</p>}
+      <div className="pin-puntos" role="status" aria-label={t("pin.estado", { n: estado.digitos.length })}>
         {[0, 1, 2, 3].map((i) => <span key={i} className={i < estado.digitos.length ? "lleno" : ""} />)}
       </div>
-      {estado.mensaje !== null && <p className="pin-error" role="alert">{estado.mensaje}</p>}
-      <TecladoNumerico etiqueta="Teclado del PIN" onTecla={(digito) => enviar({ tipo: "digito", digito })} onBorrar={() => enviar({ tipo: "borrar" })} />
+      {estado.mensaje !== null && <p className="pin-error" role="alert">{t(estado.mensaje)}</p>}
+      <TecladoNumerico etiqueta={t("pin.teclado")} onTecla={(digito) => enviar({ tipo: "digito", digito })} onBorrar={() => enviar({ tipo: "borrar" })} />
     </div>
   );
 }

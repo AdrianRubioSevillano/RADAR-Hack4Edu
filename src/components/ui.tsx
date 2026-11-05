@@ -1,21 +1,18 @@
 import { Component, useState, type ErrorInfo, type ReactNode } from "react";
 import type { Color } from "../core/tipos.ts";
 import { Icon, Mascot } from "./art.tsx";
-
-export const ETIQUETA_COLOR: Readonly<Record<Color, string>> = {
-  verde: "Lo domina",
-  amarillo: "Aún no está claro",
-  rojo: "Necesita refuerzo",
-};
+import { useIdioma } from "./IdiomaProvider.tsx";
 
 const SIMBOLO: Readonly<Record<Color, string>> = { verde: "✓", amarillo: "?", rojo: "!" };
 
 // El color nunca va solo: cada estado lleva símbolo propio y texto accesible.
 export function Semaforo({ color, conTexto = false }: { color: Color; conTexto?: boolean }) {
+  const { t } = useIdioma();
+  const etiqueta = t(`semaforo.${color}`);
   return (
     <span className={`semaforo semaforo-${color}`}>
       <span className="semaforo-punto" aria-hidden="true">{SIMBOLO[color]}</span>
-      {conTexto ? <span>{ETIQUETA_COLOR[color]}</span> : <span className="sr-only">{ETIQUETA_COLOR[color]}</span>}
+      {conTexto ? <span>{etiqueta}</span> : <span className="sr-only">{etiqueta}</span>}
     </span>
   );
 }
@@ -52,6 +49,18 @@ export function Volver({ href, children }: { href: string; children: ReactNode }
   );
 }
 
+function Fallo({ onVolver }: { onVolver: () => void }) {
+  const { t } = useIdioma();
+  return (
+    <section className="aviso-vacio" role="alert">
+      <Mascot mood="try" size={110} />
+      <h1>{t("error.titulo")}</h1>
+      <p>{t("error.texto")}</p>
+      <button type="button" className="boton boton-principal" onClick={onVolver}>{t("error.boton")}</button>
+    </section>
+  );
+}
+
 export class ErrorBoundary extends Component<{ children: ReactNode; onReset: () => void }, { fallo: boolean }> {
   override state = { fallo: false };
 
@@ -66,21 +75,12 @@ export class ErrorBoundary extends Component<{ children: ReactNode; onReset: () 
   override render() {
     if (!this.state.fallo) return this.props.children;
     return (
-      <section className="aviso-vacio" role="alert">
-        <Mascot mood="try" size={110} />
-        <h1>Algo no ha ido bien.</h1>
-        <p>Tus datos siguen guardados. Vuelve al inicio para seguir.</p>
-        <button
-          type="button"
-          className="boton boton-principal"
-          onClick={() => {
-            this.setState({ fallo: false });
-            this.props.onReset();
-          }}
-        >
-          Volver al inicio
-        </button>
-      </section>
+      <Fallo
+        onVolver={() => {
+          this.setState({ fallo: false });
+          this.props.onReset();
+        }}
+      />
     );
   }
 }

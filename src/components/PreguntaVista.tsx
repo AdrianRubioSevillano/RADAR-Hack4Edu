@@ -1,22 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { esCorrecta, textoParaEscuchar, textoRespuesta } from "../content/respuestas.ts";
 import type { Pregunta } from "../content/tipos.ts";
+import type { Clave } from "../i18n/index.ts";
 import type { Presentacion } from "../services/perfiles.ts";
 import { LARGO_RESPUESTA, enterEsDelControl, teclaRespuesta } from "../services/tecladoRespuesta.ts";
 import { Icon, Mascot } from "./art.tsx";
+import { useIdioma } from "./IdiomaProvider.tsx";
 import { Ilustracion } from "./Ilustracion.tsx";
 import { ReadAloud } from "./ReadAloud.tsx";
 import { TecladoNumerico } from "./TecladoNumerico.tsx";
 
-const ALEGRES = ["¡Muy bien!", "¡Genial!", "¡Lo has conseguido!", "¡Eso es!", "¡Qué bien lo has hecho!"];
-const AMABLES = ["Casi. Vamos a verlo.", "No pasa nada. Mira.", "Buen intento. Fíjate.", "Se aprende probando. Mira."];
+const ALEGRES: readonly Clave[] = ["bien.1", "bien.2", "bien.3", "bien.4", "bien.5"];
+const AMABLES: readonly Clave[] = ["casi.1", "casi.2", "casi.3", "casi.4"];
 
-function frase(lista: readonly string[], semilla: string): string {
+function frase(lista: readonly Clave[], semilla: string): Clave {
   const suma = [...semilla].reduce((n, c) => n + c.charCodeAt(0), 0);
-  return lista[suma % lista.length] as string;
+  return lista[suma % lista.length] as Clave;
 }
 
-function Respuesta({ acierto, pregunta, presentacion, textoSiguiente, onSiguiente }: { acierto: boolean; pregunta: Pregunta; presentacion: Presentacion; textoSiguiente: string; onSiguiente: () => void }) {
+function Respuesta({ acierto, pregunta, presentacion, onSiguiente }: { acierto: boolean; pregunta: Pregunta; presentacion: Presentacion; onSiguiente: () => void }) {
+  const { t } = useIdioma();
   const titulo = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     titulo.current?.focus();
@@ -33,12 +36,12 @@ function Respuesta({ acierto, pregunta, presentacion, textoSiguiente, onSiguient
       <div className="respuesta-texto">
         <h2 ref={titulo} tabIndex={-1}>
           <span className="respuesta-icono"><Icon name={acierto ? "check" : "hint"} size={28} /></span>
-          {frase(acierto ? ALEGRES : AMABLES, pregunta.id)}
+          {t(frase(acierto ? ALEGRES : AMABLES, pregunta.id))}
         </h2>
-        {!acierto && <p className="respuesta-correcta">La respuesta es: <strong>{textoRespuesta(pregunta)}</strong></p>}
-        <p>{pregunta.explicacion}</p>
+        {!acierto && <p className="respuesta-correcta">{t("pregunta.laRespuesta")} <strong lang="es">{textoRespuesta(pregunta)}</strong></p>}
+        <p lang="es">{pregunta.explicacion}</p>
         <button type="button" className="boton boton-principal boton-grande" onClick={onSiguiente}>
-          {textoSiguiente} <Icon name="arrow" size={26} />
+          {t("pregunta.siguiente")} <Icon name="arrow" size={26} />
         </button>
       </div>
     </section>
@@ -46,6 +49,7 @@ function Respuesta({ acierto, pregunta, presentacion, textoSiguiente, onSiguient
 }
 
 function RespuestaNumerica({ pregunta, onResponder }: { pregunta: Pregunta; onResponder: (valor: string) => void }) {
+  const { t } = useIdioma();
   const [valor, setValor] = useState("");
   const extras = [...(pregunta.respuestaCorrecta.includes(",") ? [","] : []), ...(pregunta.respuestaCorrecta.includes("/") ? ["/"] : [])];
   const extrasClave = extras.join("");
@@ -73,7 +77,7 @@ function RespuestaNumerica({ pregunta, onResponder }: { pregunta: Pregunta; onRe
         if (valor.trim() !== "") onResponder(valor);
       }}
     >
-      <label className="sr-only" htmlFor="respuesta-numero">Tu respuesta</label>
+      <label className="sr-only" htmlFor="respuesta-numero">{t("pregunta.tuRespuesta")}</label>
       <input
         id="respuesta-numero"
         className="numero-caja"
@@ -84,13 +88,14 @@ function RespuestaNumerica({ pregunta, onResponder }: { pregunta: Pregunta; onRe
         placeholder="?"
         onChange={(evento) => setValor(evento.target.value.replace(/[^\d,./]/g, ""))}
       />
-      <TecladoNumerico etiqueta="Teclado de números" extras={extras} onTecla={(t) => setValor((v) => (v.length < LARGO_RESPUESTA ? v + t : v))} onBorrar={() => setValor((v) => v.slice(0, -1))} />
-      <button type="submit" className="boton boton-principal boton-grande" disabled={valor.trim() === ""}>Comprobar</button>
+      <TecladoNumerico etiqueta={t("pregunta.teclado")} extras={extras} onTecla={(t) => setValor((v) => (v.length < LARGO_RESPUESTA ? v + t : v))} onBorrar={() => setValor((v) => v.slice(0, -1))} />
+      <button type="submit" className="boton boton-principal boton-grande" disabled={valor.trim() === ""}>{t("pregunta.comprobar")}</button>
     </form>
   );
 }
 
-export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false, textoSiguiente = "Siguiente", onContinuar }: { pregunta: Pregunta; presentacion: Presentacion; pistaDisponible?: boolean; textoSiguiente?: string; onContinuar: (acierto: boolean) => void }) {
+export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false, onContinuar }: { pregunta: Pregunta; presentacion: Presentacion; pistaDisponible?: boolean; onContinuar: (acierto: boolean) => void }) {
+  const { t } = useIdioma();
   const [respuesta, setRespuesta] = useState<string | null>(null);
   const [pista, setPista] = useState(false);
   const acierto = respuesta === null ? null : esCorrecta(pregunta, respuesta);
@@ -99,7 +104,7 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
 
   return (
     <div className={`pregunta ${conLectura ? "pregunta-lectura" : ""}`}>
-      <div className="pregunta-datos">
+      <div className="pregunta-datos" lang="es">
         {conLectura && (
           <article className="lectura">
             {pregunta.titulo !== undefined && <h2>{pregunta.titulo}</h2>}
@@ -109,20 +114,20 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
         {pregunta.imagen !== undefined && <Ilustracion imagen={pregunta.imagen} />}
       </div>
       <div className="pregunta-accion">
-        <h2 className="enunciado">{enunciado}</h2>
+        <h2 className="enunciado" lang="es">{enunciado}</h2>
         {presentacion.escuchar && <ReadAloud text={textoParaEscuchar(pregunta, presentacion.enunciadoFacil)} />}
         {pistaDisponible && acierto === null && (
           pista ? (
-            <p className="pista" role="status"><Icon name="hint" /> {pregunta.pista}</p>
+            <p className="pista" role="status" lang="es"><Icon name="hint" /> {pregunta.pista}</p>
           ) : (
-            <button type="button" className="boton boton-suave" onClick={() => setPista(true)}><Icon name="hint" /> Necesito una pista</button>
+            <button type="button" className="boton boton-suave" onClick={() => setPista(true)}><Icon name="hint" /> {t("pregunta.pista")}</button>
           )
         )}
         {pregunta.formato === "numero" ? (
           acierto === null ? (
             <RespuestaNumerica pregunta={pregunta} onResponder={setRespuesta} />
           ) : (
-            <p className="numero-eco">Tu respuesta: <strong>{respuesta}</strong></p>
+            <p className="numero-eco">{t("pregunta.tuRespuestaEco")} <strong>{respuesta}</strong></p>
           )
         ) : (
           <ul className={`opciones opciones-${pregunta.formato}`}>
@@ -134,16 +139,16 @@ export function PreguntaVista({ pregunta, presentacion, pistaDisponible = false,
                 <li key={o.id}>
                   <button type="button" className={`opcion ${marca}`} disabled={acierto !== null} onClick={() => setRespuesta(o.id)}>
                     {o.imagen !== undefined && <Ilustracion imagen={o.imagen} decorativa tamano="opcion" />}
-                    <span className={pregunta.formato === "imagen" ? "sr-only" : "opcion-texto"}>{o.texto}</span>
-                    {acierto !== null && correcta && <span className="opcion-marca"><Icon name="check" /><span className="sr-only">Respuesta correcta</span></span>}
-                    {acierto !== null && elegida && !correcta && <span className="opcion-marca"><Icon name="close" /><span className="sr-only">Tu respuesta</span></span>}
+                    <span lang="es" className={pregunta.formato === "imagen" ? "sr-only" : "opcion-texto"}>{o.texto}</span>
+                    {acierto !== null && correcta && <span className="opcion-marca"><Icon name="check" /><span className="sr-only">{t("pregunta.correcta")}</span></span>}
+                    {acierto !== null && elegida && !correcta && <span className="opcion-marca"><Icon name="close" /><span className="sr-only">{t("pregunta.tuRespuesta")}</span></span>}
                   </button>
                 </li>
               );
             })}
           </ul>
         )}
-        {acierto !== null && <Respuesta acierto={acierto} pregunta={pregunta} presentacion={presentacion} textoSiguiente={textoSiguiente} onSiguiente={() => onContinuar(acierto)} />}
+        {acierto !== null && <Respuesta acierto={acierto} pregunta={pregunta} presentacion={presentacion} onSiguiente={() => onContinuar(acierto)} />}
       </div>
     </div>
   );
