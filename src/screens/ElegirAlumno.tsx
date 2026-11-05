@@ -1,19 +1,25 @@
 import { Avatar, Mascot } from "../components/art.tsx";
 import { useClase } from "../components/ClaseProvider.tsx";
+import { useIdioma } from "../components/IdiomaProvider.tsx";
+import { SelectorIdiomaCompacto } from "../components/SelectorIdioma.tsx";
 import { Titulo, Volver } from "../components/ui.tsx";
 import { enlace } from "../services/rutas.ts";
 
 export function ElegirAlumno() {
   const { clase } = useClase();
+  const { t } = useIdioma();
   return (
     <div className="hoja">
-      <Volver href="#/">Inicio</Volver>
+      <div className="fila-volver">
+        <Volver href="#/">{t("nav.inicio")}</Volver>
+        <SelectorIdiomaCompacto />
+      </div>
       <div className="saludo">
         <Mascot mood="hello" size={96} />
-        <Titulo>¿Quién eres?</Titulo>
+        <Titulo>{t("alumno.quien")}</Titulo>
       </div>
       {clase.alumnos.length === 0 ? (
-        <p>Tu profe aún no ha añadido alumnos.</p>
+        <p>{t("alumno.sinAlumnos")}</p>
       ) : (
         <ul className="nombres">
           {clase.alumnos.map((a) => (

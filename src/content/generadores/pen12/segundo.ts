@@ -3,7 +3,13 @@
 import { elegir, entero, monedas, muestra, pregunta } from "../../ayuda.ts";
 import type { Dificultad, Generador, Imagen, ObjetoId, Pregunta } from "../../tipos.ts";
 import type { Rng } from "../../../core/rng.ts";
+import { tx } from "../../lengua.ts";
 import { conArticulo, lista, nombreObjeto, objeto, opcionDibujo, porDificultad, situaciones, type Fila } from "./comun.ts";
+
+// El dinero en el texto: monedas genéricas en las dos lenguas.
+function dinero(n: number): string {
+  return tx(monedas(n), `${n} ${n === 1 ? "pièce" : "pièces"}`);
+}
 
 // ---------- PEN2-T2-a: qué pasa si… ----------
 const QUE_PASA: readonly Fila[] = [
@@ -61,43 +67,46 @@ interface Cosa {
   readonly motivo: string;
 }
 
-const NECESIDADES: readonly Cosa[] = [
-  { texto: "Agua limpia para beber", motivo: "sin agua no podemos vivir" },
-  { texto: "Comida para hoy", motivo: "sin comida no podemos estar sanos" },
-  { texto: "Un lugar seguro para dormir", motivo: "todos necesitamos descansar protegidos" },
-  { texto: "Ropa para no pasar frío", motivo: "la ropa protege el cuerpo" },
-  { texto: "Medicina para una enfermedad", motivo: "la medicina ayuda a curarse" },
-  { texto: "Jabón para lavarse", motivo: "el jabón nos ayuda a no enfermar" },
+// Son funciones porque el texto depende de la lengua activa al generar.
+const necesidades = (): readonly Cosa[] => [
+  { texto: tx("Agua limpia para beber", "De l'eau propre à boire"), motivo: tx("sin agua no podemos vivir", "sans eau, on ne peut pas vivre") },
+  { texto: tx("Comida para hoy", "De la nourriture pour aujourd'hui"), motivo: tx("sin comida no podemos estar sanos", "sans nourriture, on ne peut pas rester en bonne santé") },
+  { texto: tx("Un lugar seguro para dormir", "Un endroit sûr pour dormir"), motivo: tx("todos necesitamos descansar protegidos", "tout le monde a besoin de se reposer à l'abri") },
+  { texto: tx("Ropa para no pasar frío", "Des vêtements pour ne pas avoir froid"), motivo: tx("la ropa protege el cuerpo", "les vêtements protègent le corps") },
+  { texto: tx("Medicina para una enfermedad", "Un médicament contre une maladie"), motivo: tx("la medicina ayuda a curarse", "le médicament aide à guérir") },
+  { texto: tx("Jabón para lavarse", "Du savon pour se laver"), motivo: tx("el jabón nos ayuda a no enfermar", "le savon nous aide à ne pas tomber malades") },
 ];
 
-const CAPRICHOS: readonly Cosa[] = [
-  { texto: "Un juguete más", motivo: "es divertido, pero se puede vivir bien sin él" },
-  { texto: "Un globo de colores", motivo: "es bonito, pero se puede vivir bien sin él" },
-  { texto: "Una pulsera brillante", motivo: "es bonita, pero se puede vivir bien sin ella" },
-  { texto: "Muchos caramelos", motivo: "son ricos, pero se puede vivir bien sin ellos" },
-  { texto: "Una gorra de otro color", motivo: "es bonita, pero se puede vivir bien sin ella" },
-  { texto: "Un segundo balón", motivo: "es divertido, pero se puede vivir bien sin él" },
+const caprichos = (): readonly Cosa[] => [
+  { texto: tx("Un juguete más", "Un jouet de plus"), motivo: tx("es divertido, pero se puede vivir bien sin él", "c'est amusant, mais on peut bien vivre sans ça") },
+  { texto: tx("Un globo de colores", "Un ballon gonflable coloré"), motivo: tx("es bonito, pero se puede vivir bien sin él", "c'est joli, mais on peut bien vivre sans ça") },
+  { texto: tx("Una pulsera brillante", "Un bracelet brillant"), motivo: tx("es bonita, pero se puede vivir bien sin ella", "c'est joli, mais on peut bien vivre sans ça") },
+  { texto: tx("Muchos caramelos", "Beaucoup de bonbons"), motivo: tx("son ricos, pero se puede vivir bien sin ellos", "c'est bon, mais on peut bien vivre sans ça") },
+  { texto: tx("Una gorra de otro color", "Une casquette d'une autre couleur"), motivo: tx("es bonita, pero se puede vivir bien sin ella", "c'est joli, mais on peut bien vivre sans ça") },
+  { texto: tx("Un segundo balón", "Un deuxième ballon"), motivo: tx("es divertido, pero se puede vivir bien sin él", "c'est amusant, mais on peut bien vivre sans ça") },
 ];
 
 function primeraMinuscula(texto: string): string {
   return texto.charAt(0).toLowerCase() + texto.slice(1);
 }
 
-const elegirNecesidad: Generador = (rng, dificultad) => {
+export const elegirNecesidad: Generador = (rng, dificultad) => {
   const pideNecesidad = rng() < 0.6;
   const [buena, malas] = pideNecesidad
-    ? [elegir(rng, NECESIDADES), muestra(rng, CAPRICHOS, 2)]
-    : [elegir(rng, CAPRICHOS), muestra(rng, NECESIDADES, 2)];
-  const palabra = pideNecesidad ? "una necesidad" : "un capricho";
-  const definicion = pideNecesidad ? "Una necesidad es algo sin lo que no puedes vivir bien." : "Un capricho es algo que te gusta, pero que no te hace falta.";
+    ? [elegir(rng, necesidades()), muestra(rng, caprichos(), 2)]
+    : [elegir(rng, caprichos()), muestra(rng, necesidades(), 2)];
+  const palabra = pideNecesidad ? tx("una necesidad", "un besoin") : tx("un capricho", "une envie");
+  const definicion = pideNecesidad
+    ? tx("Una necesidad es algo sin lo que no puedes vivir bien.", "Un besoin, c'est quelque chose sans quoi tu ne peux pas bien vivre.")
+    : tx("Un capricho es algo que te gusta, pero que no te hace falta.", "Une envie, c'est quelque chose qui te plaît, mais dont tu n'as pas besoin.");
   return pregunta(rng, {
     subhabilidad: SUB_NECESIDAD,
     dificultad,
-    enunciado: `¿Cuál de estas cosas es ${palabra}?`,
-    enunciadoFacil: `¿Cuál es ${palabra}?`,
+    enunciado: tx(`¿Cuál de estas cosas es ${palabra}?`, `Laquelle de ces choses est ${palabra} ?`),
+    enunciadoFacil: tx(`¿Cuál es ${palabra}?`, `Laquelle est ${palabra} ?`),
     respuesta: { tipo: "opcion", correcta: buena.texto, distractores: malas.map((c) => c.texto) },
     pista: definicion,
-    explicacion: `${buena.texto}: ${buena.motivo}. Por eso es ${palabra}.`,
+    explicacion: tx(`${buena.texto}: ${buena.motivo}. Por eso es ${palabra}.`, `${buena.texto} : ${buena.motivo}. C'est donc ${palabra}.`),
     plantilla: `${SUB_NECESIDAD}#${pideNecesidad ? "n" : "c"}#${primeraMinuscula(buena.texto)}`,
   });
 };
@@ -143,19 +152,26 @@ interface Compra {
   readonly para: string; // "para la escuela"
 }
 
-const COMPRAS_NECESARIAS: readonly (readonly [Compra, Compra])[] = [
-  [{ nombre: "un cuaderno", para: "para la escuela" }, { nombre: "un lápiz", para: "para escribir" }],
-  [{ nombre: "jabón", para: "para lavarte" }, { nombre: "comida", para: "para la cena" }],
-  [{ nombre: "comida", para: "para la cena" }, { nombre: "una medicina", para: "para tu abuela enferma" }],
-  [{ nombre: "un cuaderno", para: "para la escuela" }, { nombre: "comida", para: "para la cena" }],
-];
+const comprasNecesarias = (): readonly (readonly [Compra, Compra])[] => {
+  const cuaderno: Compra = { nombre: tx("un cuaderno", "un cahier"), para: tx("para la escuela", "pour l'école") };
+  const comida: Compra = { nombre: tx("comida", "de la nourriture"), para: tx("para la cena", "pour le dîner") };
+  return [
+    [cuaderno, { nombre: tx("un lápiz", "un crayon"), para: tx("para escribir", "pour écrire") }],
+    [{ nombre: tx("jabón", "du savon"), para: tx("para lavarte", "pour te laver") }, comida],
+    [comida, { nombre: tx("una medicina", "un médicament"), para: tx("para tu abuela enferma", "pour ta grand-mère malade") }],
+    [cuaderno, comida],
+  ];
+};
 
-const CAPRICHOS_COMPRA: readonly string[] = ["un globo", "una pulsera", "una bolsa de caramelos", "un juguete"];
+const caprichosCompra = (): readonly string[] => tx(
+  ["un globo", "una pulsera", "una bolsa de caramelos", "un juguete"],
+  ["un ballon gonflable", "un bracelet", "un sachet de bonbons", "un jouet"],
+);
 
 // Hay monedas justas para lo necesario. El capricho no cabe con ambas cosas.
-const presupuestoImportante: Generador = (rng, dificultad): Pregunta => {
-  const [a, b] = elegir(rng, COMPRAS_NECESARIAS);
-  const capricho = elegir(rng, CAPRICHOS_COMPRA);
+export const presupuestoImportante: Generador = (rng, dificultad): Pregunta => {
+  const [a, b] = elegir(rng, comprasNecesarias());
+  const capricho = elegir(rng, caprichosCompra());
   const precioA = entero(rng, 3, 8);
   const precioB = entero(rng, 3, 8);
   const precioC = entero(rng, 3, 8);
@@ -163,15 +179,24 @@ const presupuestoImportante: Generador = (rng, dificultad): Pregunta => {
   return pregunta(rng, {
     subhabilidad: SUB_IMPORTANTE,
     dificultad,
-    enunciado: `Tienes ${monedas(total)}. Necesitas ${a.nombre} ${a.para}, que cuesta ${monedas(precioA)}, y ${b.nombre} ${b.para}, que cuesta ${monedas(precioB)}. También te gusta ${capricho}, que cuesta ${monedas(precioC)}. ¿Qué compras?`,
-    enunciadoFacil: `Tienes ${monedas(total)}. Necesitas ${a.nombre}: ${monedas(precioA)}. Necesitas ${b.nombre}: ${monedas(precioB)}. Te gusta ${capricho}: ${monedas(precioC)}. ¿Qué compras?`,
+    enunciado: tx(
+      `Tienes ${dinero(total)}. Necesitas ${a.nombre} ${a.para}, que cuesta ${dinero(precioA)}, y ${b.nombre} ${b.para}, que cuesta ${dinero(precioB)}. También te gusta ${capricho}, que cuesta ${dinero(precioC)}. ¿Qué compras?`,
+      `Tu as ${dinero(total)}. Il te faut ${a.nombre} ${a.para}, qui coûte ${dinero(precioA)}, et ${b.nombre} ${b.para}, qui coûte ${dinero(precioB)}. Tu voudrais aussi ${capricho}, qui coûte ${dinero(precioC)}. Qu'est-ce que tu achètes ?`,
+    ),
+    enunciadoFacil: tx(
+      `Tienes ${dinero(total)}. Necesitas ${a.nombre}: ${dinero(precioA)}. Necesitas ${b.nombre}: ${dinero(precioB)}. Te gusta ${capricho}: ${dinero(precioC)}. ¿Qué compras?`,
+      `Tu as ${dinero(total)}. Il te faut ${a.nombre} : ${dinero(precioA)}. Il te faut ${b.nombre} : ${dinero(precioB)}. Tu voudrais ${capricho} : ${dinero(precioC)}. Qu'est-ce que tu achètes ?`,
+    ),
     respuesta: {
       tipo: "opcion",
-      correcta: `${primeraMayuscula(a.nombre)} y ${b.nombre}`,
-      distractores: [`${primeraMayuscula(a.nombre)} y ${capricho}`, `${primeraMayuscula(b.nombre)} y ${capricho}`, `Solo ${capricho}`],
+      correcta: `${primeraMayuscula(a.nombre)} ${tx("y", "et")} ${b.nombre}`,
+      distractores: [`${primeraMayuscula(a.nombre)} ${tx("y", "et")} ${capricho}`, `${primeraMayuscula(b.nombre)} ${tx("y", "et")} ${capricho}`, `${tx("Solo", "Seulement")} ${capricho}`],
     },
-    pista: "Primero compra lo que necesitas. Después mira si te quedan monedas.",
-    explicacion: `Lo necesario cuesta ${precioA} + ${precioB} = ${total}, justo lo que tienes. Te quedas sin monedas para ${capricho}.`,
+    pista: tx("Primero compra lo que necesitas. Después mira si te quedan monedas.", "Achète d'abord ce qu'il te faut. Ensuite, regarde s'il te reste des pièces."),
+    explicacion: tx(
+      `Lo necesario cuesta ${precioA} + ${precioB} = ${total}, justo lo que tienes. Te quedas sin monedas para ${capricho}.`,
+      `Ce qu'il te faut coûte ${precioA} + ${precioB} = ${total}, juste ce que tu as. Il ne te reste plus de pièces pour ${capricho}.`,
+    ),
     plantilla: `${SUB_IMPORTANTE}#monedas#${a.nombre}#${b.nombre}`,
   });
 };
@@ -219,33 +244,33 @@ interface Tarea {
   readonly motivo: string;
 }
 
-const TAREAS: readonly Tarea[] = [
-  { frase: "Vas a lavarte las manos.", util: "jabon", motivo: "El jabón quita la suciedad de las manos." },
-  { frase: "Quieres abrir una puerta cerrada con llave.", util: "llave", motivo: "Una puerta cerrada se abre con su llave." },
-  { frase: "Vas a escribir tu nombre.", util: "lapiz", motivo: "Con el lápiz puedes escribir." },
-  { frase: "Vas a salir y está lloviendo.", util: "paraguas", motivo: "El paraguas te protege de la lluvia." },
-  { frase: "Vas a cortar un papel.", util: "tijeras", motivo: "Las tijeras sirven para cortar." },
-  { frase: "Quieres ver de cerca una hormiga muy pequeña.", util: "lupa", motivo: "La lupa hace que las cosas se vean más grandes." },
-  { frase: "Quieres saber qué hora es.", util: "reloj", motivo: "El reloj marca la hora." },
-  { frase: "Vas a llevar los libros a la escuela.", util: "mochila", motivo: "En la mochila puedes llevar los libros." },
-  { frase: "Vas a cepillarte los dientes.", util: "cepillo", motivo: "Los dientes se limpian con un cepillo." },
-  { frase: "Vas a cruzar un lago.", util: "barco", motivo: "Para ir por el agua hace falta un barco." },
+const tareas = (): readonly Tarea[] => [
+  { frase: tx("Vas a lavarte las manos.", "Tu vas te laver les mains."), util: "jabon", motivo: tx("El jabón quita la suciedad de las manos.", "Le savon enlève la saleté des mains.") },
+  { frase: tx("Quieres abrir una puerta cerrada con llave.", "Tu veux ouvrir une porte fermée à clé."), util: "llave", motivo: tx("Una puerta cerrada se abre con su llave.", "Une porte fermée à clé s'ouvre avec sa clé.") },
+  { frase: tx("Vas a escribir tu nombre.", "Tu vas écrire ton prénom."), util: "lapiz", motivo: tx("Con el lápiz puedes escribir.", "Avec le crayon, tu peux écrire.") },
+  { frase: tx("Vas a salir y está lloviendo.", "Tu vas sortir et il pleut."), util: "paraguas", motivo: tx("El paraguas te protege de la lluvia.", "Le parapluie te protège de la pluie.") },
+  { frase: tx("Vas a cortar un papel.", "Tu vas couper un papier."), util: "tijeras", motivo: tx("Las tijeras sirven para cortar.", "Les ciseaux servent à couper.") },
+  { frase: tx("Quieres ver de cerca una hormiga muy pequeña.", "Tu veux voir de près une toute petite fourmi."), util: "lupa", motivo: tx("La lupa hace que las cosas se vean más grandes.", "Avec la loupe, on voit les choses plus grandes.") },
+  { frase: tx("Quieres saber qué hora es.", "Tu veux savoir quelle heure il est."), util: "reloj", motivo: tx("El reloj marca la hora.", "Le réveil montre l'heure.") },
+  { frase: tx("Vas a llevar los libros a la escuela.", "Tu vas porter tes livres à l'école."), util: "mochila", motivo: tx("En la mochila puedes llevar los libros.", "Dans le sac à dos, tu peux porter les livres.") },
+  { frase: tx("Vas a cepillarte los dientes.", "Tu vas te laver les dents."), util: "cepillo", motivo: tx("Los dientes se limpian con un cepillo.", "On se lave les dents avec une brosse à dents.") },
+  { frase: tx("Vas a cruzar un lago.", "Tu vas traverser un lac."), util: "barco", motivo: tx("Para ir por el agua hace falta un barco.", "Pour aller sur l'eau, il faut un bateau.") },
 ];
 
 // Nada de esto sirve para ninguna de las tareas.
 const OBJETOS_INUTILES: readonly ObjetoId[] = ["pelota", "flor", "gato", "dado", "pera", "hoja", "pato", "luna", "uva", "sol"];
 
-const queObjeto: Generador = (rng, dificultad) => {
-  const t = elegir(rng, TAREAS);
+export const queObjeto: Generador = (rng, dificultad) => {
+  const t = elegir(rng, tareas());
   const otros = muestra(rng, OBJETOS_INUTILES, 3);
   const opcion = (o: ObjetoId) => opcionDibujo({ objeto: o });
   return pregunta(rng, {
     subhabilidad: SUB_NECESITO,
     dificultad,
-    enunciado: `${t.frase} ¿Qué necesitas?`,
-    enunciadoFacil: `${t.frase} ¿Qué necesitas?`,
+    enunciado: `${t.frase} ${tx("¿Qué necesitas?", "De quoi as-tu besoin ?")}`,
+    enunciadoFacil: `${t.frase} ${tx("¿Qué necesitas?", "De quoi as-tu besoin ?")}`,
     respuesta: { tipo: "imagen", correcta: opcion(t.util), distractores: otros.map(opcion) },
-    pista: "Imagina que lo haces. ¿Qué tienes en la mano?",
+    pista: tx("Imagina que lo haces. ¿Qué tienes en la mano?", "Imagine que tu le fais. Qu'est-ce que tu as dans la main ?"),
     explicacion: t.motivo,
     plantilla: `${SUB_NECESITO}#${t.util}`,
   });
@@ -271,31 +296,34 @@ interface Reparto {
   readonly femenino: boolean;
 }
 
-const REPARTOS: readonly Reparto[] = [
-  { objeto: "silla", plural: "sillas", quienes: "niños van a sentarse, uno en cada silla", femenino: true },
-  { objeto: "vaso", plural: "vasos", quienes: "niños van a beber, cada uno en su vaso", femenino: false },
-  { objeto: "lapiz", plural: "lápices", quienes: "niños van a escribir, cada uno con su lápiz", femenino: false },
-  { objeto: "libro", plural: "libros", quienes: "niños van a leer, cada uno con su libro", femenino: false },
-  { objeto: "cuaderno", plural: "cuadernos", quienes: "niños van a dibujar, cada uno en su cuaderno", femenino: false },
+const repartos = (): readonly Reparto[] => [
+  { objeto: "silla", plural: tx("sillas", "chaises"), quienes: tx("niños van a sentarse, uno en cada silla", "enfants vont s'asseoir, chacun sur une chaise"), femenino: true },
+  { objeto: "vaso", plural: tx("vasos", "verres"), quienes: tx("niños van a beber, cada uno en su vaso", "enfants vont boire, chacun dans son verre"), femenino: false },
+  { objeto: "lapiz", plural: tx("lápices", "crayons"), quienes: tx("niños van a escribir, cada uno con su lápiz", "enfants vont écrire, chacun avec son crayon"), femenino: false },
+  { objeto: "libro", plural: tx("libros", "livres"), quienes: tx("niños van a leer, cada uno con su libro", "enfants vont lire, chacun avec son livre"), femenino: false },
+  { objeto: "cuaderno", plural: tx("cuadernos", "cahiers"), quienes: tx("niños van a dibujar, cada uno en su cuaderno", "enfants vont dessiner, chacun dans son cahier"), femenino: false },
 ];
 
 // Cuántos faltan: necesarios menos los que ya hay.
-const cuantosFaltan: Generador = (rng, dificultad) => {
-  const r = elegir(rng, REPARTOS);
+export const cuantosFaltan: Generador = (rng, dificultad) => {
+  const r = elegir(rng, repartos());
   const hay = entero(rng, 2, 6);
   const faltan = entero(rng, 1, 4);
   const ninos = hay + faltan;
   const cuantos = r.femenino ? "Cuántas" : "Cuántos";
-  const mas = `¿${cuantos} ${r.plural} más hacen falta?`;
+  const mas = tx(`¿${cuantos} ${r.plural} más hacen falta?`, `Combien de ${r.plural} faut-il en plus ?`);
   return pregunta(rng, {
     subhabilidad: SUB_NECESITO,
     dificultad,
-    enunciado: `${ninos} ${r.quienes}. Hay ${hay} ${r.plural}. ${mas}`,
-    enunciadoFacil: `Hay ${ninos} niños. Hay ${hay} ${r.plural}. Cada niño necesita uno. ${mas}`.replace("necesita uno", r.femenino ? "necesita una" : "necesita uno"),
+    enunciado: tx(`${ninos} ${r.quienes}. Hay ${hay} ${r.plural}. ${mas}`, `${ninos} ${r.quienes}. Il y a ${hay} ${r.plural}. ${mas}`),
+    enunciadoFacil: tx(
+      `Hay ${ninos} niños. Hay ${hay} ${r.plural}. Cada niño necesita uno. ${mas}`.replace("necesita uno", r.femenino ? "necesita una" : "necesita uno"),
+      `Il y a ${ninos} enfants. Il y a ${hay} ${r.plural}. Chaque enfant en a besoin. ${mas}`,
+    ),
     imagen: { tipo: "objetos", grupos: [{ objeto: r.objeto, cantidad: hay }] },
     respuesta: { tipo: "numero", valor: faltan },
-    pista: `Piensa ${cuantos.toLowerCase()} hacen falta en total y ${cuantos.toLowerCase()} hay ya.`,
-    explicacion: `Hacen falta ${ninos} y hay ${hay}. Faltan ${ninos} − ${hay} = ${faltan}.`,
+    pista: tx(`Piensa ${cuantos.toLowerCase()} hacen falta en total y ${cuantos.toLowerCase()} hay ya.`, "Pense au nombre qu'il en faut en tout et au nombre qu'il y en a déjà."),
+    explicacion: tx(`Hacen falta ${ninos} y hay ${hay}. Faltan ${ninos} − ${hay} = ${faltan}.`, `Il en faut ${ninos} et il y en a ${hay}. Il en manque ${ninos} − ${hay} = ${faltan}.`),
   });
 };
 
@@ -363,22 +391,28 @@ function platoIgual(o: ObjetoId, plural: string): { readonly texto: string; read
   return { texto: `3 ${plural}`, imagen: { tipo: "objetos", grupos: [{ objeto: o, cantidad: 3 }] } };
 }
 
-const PLURAL_FRUTA: Readonly<Partial<Record<ObjetoId, string>>> = { manzana: "manzanas", pera: "peras", naranja: "naranjas", uva: "uvas" };
+const pluralFruta = (): Readonly<Partial<Record<ObjetoId, string>>> => tx(
+  { manzana: "manzanas", pera: "peras", naranja: "naranjas", uva: "uvas" },
+  { manzana: "pommes", pera: "poires", naranja: "oranges", uva: "raisins" },
+);
 
-const platoMasVariado: Generador = (rng, dificultad) => {
+export const platoMasVariado: Generador = (rng, dificultad) => {
   const fruta = elegir(rng, FRUTAS);
   return pregunta(rng, {
     subhabilidad: SUB_COMIDA,
     dificultad,
-    enunciado: "¿Qué plato tiene comida más variada?",
-    enunciadoFacil: "¿Qué plato tiene comidas distintas?",
+    enunciado: tx("¿Qué plato tiene comida más variada?", "Quelle assiette a les aliments les plus variés ?"),
+    enunciadoFacil: tx("¿Qué plato tiene comidas distintas?", "Quelle assiette a des aliments différents ?"),
     respuesta: {
       tipo: "imagen",
       correcta: platoVariado(fruta),
-      distractores: [platoIgual("pan", "panes"), platoIgual("huevo", "huevos"), platoIgual(fruta, PLURAL_FRUTA[fruta] ?? "")],
+      distractores: [platoIgual("pan", tx("panes", "pains")), platoIgual("huevo", tx("huevos", "œufs")), platoIgual(fruta, pluralFruta()[fruta] ?? "")],
     },
-    pista: "Busca el plato donde hay cosas diferentes.",
-    explicacion: `En ese plato hay tres comidas distintas: ${conArticulo(fruta)}, el pan y el huevo. Los demás platos repiten una sola comida.`,
+    pista: tx("Busca el plato donde hay cosas diferentes.", "Cherche l'assiette où il y a des choses différentes."),
+    explicacion: tx(
+      `En ese plato hay tres comidas distintas: ${conArticulo(fruta)}, el pan y el huevo. Los demás platos repiten una sola comida.`,
+      `Dans cette assiette, il y a trois aliments différents : ${conArticulo(fruta)}, le pain et l'œuf. Les autres assiettes répètent un seul aliment.`,
+    ),
     plantilla: `${SUB_COMIDA}#plato#${fruta}`,
   });
 };
@@ -402,7 +436,7 @@ const COMIDA: readonly Fila[] = [
   [3, "{F1} tiene monedas para una merienda. ¿Qué elige si quiere comer sano?", "{F1} quiere una merienda sana. ¿Qué elige?", "Una fruta", ["Una bolsa de caramelos", "Un refresco con azúcar"], "Busca lo que tiene menos azúcar añadido.", "La fruta es sana y no lleva azúcar añadido. Los caramelos y el refresco, sí.", objeto("moneda")],
 ];
 
-function comoGeneradorMezcla(g1: Generador, g2: Generador): Generador {
+export function comoGeneradorMezcla(g1: Generador, g2: Generador): Generador {
   return (rng: Rng, dificultad: Dificultad) => (rng() < 0.5 ? g1 : g2)(rng, dificultad);
 }
 

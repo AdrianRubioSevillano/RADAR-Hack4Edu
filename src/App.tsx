@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import mark from "./assets/radar-mark.png";
 import { Avatar, Icon } from "./components/art.tsx";
 import { useClase } from "./components/ClaseProvider.tsx";
+import { useIdioma } from "./components/IdiomaProvider.tsx";
+import { SelectorIdiomaCompacto } from "./components/SelectorIdioma.tsx";
 import { ErrorBoundary } from "./components/ui.tsx";
 import { Acerca } from "./screens/Acerca.tsx";
 import { Ajustes } from "./screens/Ajustes.tsx";
@@ -29,8 +31,9 @@ function useHash(): string {
 }
 
 function Marca() {
+  const { t } = useIdioma();
   return (
-    <a className="marca" href="#/" aria-label="RADAR, volver al inicio">
+    <a className="marca" href="#/" aria-label={t("app.inicioAria")}>
       <img src={mark} alt="" width="44" height="44" />
       <span aria-hidden="true">RADAR</span>
     </a>
@@ -39,25 +42,29 @@ function Marca() {
 
 function BarraProfesor({ ruta }: { ruta: Ruta }) {
   const { bloquear } = useClase();
+  const { t } = useIdioma();
   const actual = ruta.nombre === "ajustes" ? "ajustes" : "clase";
   return (
     <header className="barra barra-profesor">
       <Marca />
-      <nav aria-label="Profesor">
-        <a href={enlace("profesor")} aria-current={actual === "clase" ? "page" : undefined}>Mi clase</a>
-        <a href={enlace("profesor", "ajustes")} aria-current={actual === "ajustes" ? "page" : undefined}>Ajustes</a>
+      <nav aria-label={t("nav.profesor")}>
+        <a href={enlace("profesor")} aria-current={actual === "clase" ? "page" : undefined}>{t("nav.miClase")}</a>
+        <a href={enlace("profesor", "ajustes")} aria-current={actual === "ajustes" ? "page" : undefined}>{t("nav.ajustes")}</a>
       </nav>
-      <a className="barra-salir" href="#/" onClick={bloquear}><Icon name="exit" /> Salir</a>
+      <SelectorIdiomaCompacto />
+      <a className="barra-salir" href="#/" onClick={bloquear}><Icon name="exit" /> {t("nav.salir")}</a>
     </header>
   );
 }
 
 function BarraAlumno({ alumno }: { alumno: Alumno }) {
+  const { t } = useIdioma();
   return (
     <header className="barra barra-alumno">
       <Marca />
       <span className="barra-nombre"><Avatar index={alumno.avatar} size={40} /> {alumno.nombre}</span>
-      <a className="barra-salir" href={enlace("alumno")}><Icon name="exit" /> No soy yo</a>
+      <SelectorIdiomaCompacto />
+      <a className="barra-salir" href={enlace("alumno")}><Icon name="exit" /> {t("nav.noSoyYo")}</a>
     </header>
   );
 }
@@ -94,6 +101,7 @@ function alumnoDeRuta(ruta: Ruta): string | null {
 // Separada del hash para que los tests puedan pintar cualquier ruta.
 export function Vista({ hash }: { hash: string }) {
   const { clase, profesorDesbloqueado, bloquear } = useClase();
+  const { t } = useIdioma();
   const ruta = rutaPermitida(leerRuta(hash), profesorDesbloqueado, hash);
   const alumnoId = alumnoDeRuta(ruta);
   const alumno = alumnoId === null ? undefined : alumnoPorId(clase, alumnoId);
@@ -102,7 +110,7 @@ export function Vista({ hash }: { hash: string }) {
   const mundo = esRutaProfesor(ruta) ? "profesor" : ruta.nombre === "inicio" ? "inicio" : "alumno";
   const principal = useRef<HTMLElement>(null);
   const modoAlumno = cierraSesionProfesor(ruta);
-  const pestana = tituloPestana(ruta, clase);
+  const pestana = tituloPestana(ruta, clase, t);
 
   useEffect(() => {
     if (modoAlumno) bloquear();
@@ -128,7 +136,7 @@ export function Vista({ hash }: { hash: string }) {
 
   return (
     <div className="marco" data-mundo={mundo}>
-      <a className="saltar" href="#principal" onClick={(e) => { e.preventDefault(); principal.current?.focus(); }}>Saltar al contenido</a>
+      <a className="saltar" href="#principal" onClick={(e) => { e.preventDefault(); principal.current?.focus(); }}>{t("app.saltar")}</a>
       {esRutaProfesor(ruta) && <BarraProfesor ruta={ruta} />}
       {alumno !== undefined && !enTarea && <BarraAlumno alumno={alumno} />}
       <main id="principal" ref={principal} tabIndex={-1}>

@@ -1,38 +1,40 @@
 import { useState, type FormEvent } from "react";
 import { Avatar } from "../components/art.tsx";
 import { useClase } from "../components/ClaseProvider.tsx";
+import { useIdioma } from "../components/IdiomaProvider.tsx";
 import { ConfirmButton, Titulo } from "../components/ui.tsx";
-import { BLOQUES, CURSOS, NOMBRE_BLOQUE } from "../content/temario.ts";
+import { BLOQUES, CURSOS } from "../content/temario.ts";
 import { testsDe } from "../content/tests.ts";
 import type { Curso } from "../content/tipos.ts";
 import { AYUDAS, alternarAsignacion, alternarAyuda, anadirAlumno, cambiarCurso, quitarAlumno } from "../services/clase.ts";
-import { ETIQUETA_AYUDA, NOMBRE_AYUDA } from "../services/perfiles.ts";
+import { nombreTest } from "../i18n/nombres.ts";
 import { comprobarPin, hashPin, pinValido } from "../services/pin.ts";
 
 function CambiarPin() {
   const { clase, actualizar } = useClase();
+  const { t } = useIdioma();
   const [actual, setActual] = useState("");
   const [nuevo, setNuevo] = useState("");
   const [mensaje, setMensaje] = useState<string | null>(null);
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     if (!pinValido(nuevo)) {
-      setMensaje("El PIN nuevo debe tener 4 números.");
+      setMensaje(t("ajustes.pinInvalido"));
     } else if (!(await comprobarPin(actual, clase.pinHash))) {
-      setMensaje("El PIN actual no es correcto.");
+      setMensaje(t("ajustes.pinMal"));
     } else {
       const hash = await hashPin(nuevo);
       actualizar((c) => ({ ...c, pinHash: hash }));
       setActual("");
       setNuevo("");
-      setMensaje("PIN cambiado.");
+      setMensaje(t("ajustes.pinCambiado"));
     }
   };
   return (
     <form className="fila-pin" onSubmit={(e) => void enviar(e)}>
-      <label>PIN actual<input type="password" inputMode="numeric" maxLength={4} autoComplete="off" value={actual} onChange={(e) => setActual(e.target.value)} /></label>
-      <label>PIN nuevo<input type="password" inputMode="numeric" maxLength={4} autoComplete="off" value={nuevo} onChange={(e) => setNuevo(e.target.value)} /></label>
-      <button type="submit" className="boton boton-suave">Cambiar PIN</button>
+      <label>{t("ajustes.pinActual")}<input type="password" inputMode="numeric" maxLength={4} autoComplete="off" value={actual} onChange={(e) => setActual(e.target.value)} /></label>
+      <label>{t("ajustes.pinNuevo")}<input type="password" inputMode="numeric" maxLength={4} autoComplete="off" value={nuevo} onChange={(e) => setNuevo(e.target.value)} /></label>
+      <button type="submit" className="boton boton-suave">{t("ajustes.pinCambiar")}</button>
       {mensaje !== null && <p role="status">{mensaje}</p>}
     </form>
   );
@@ -40,34 +42,35 @@ function CambiarPin() {
 
 export function Ajustes() {
   const { clase, actualizar, restablecer } = useClase();
+  const { t } = useIdioma();
   const [nombre, setNombre] = useState("");
   const tests = testsDe(clase.curso);
 
   return (
     <div className="hoja">
-      <Titulo>Ajustes</Titulo>
+      <Titulo>{t("nav.ajustes")}</Titulo>
 
       <section className="ajuste" aria-labelledby="ajuste-curso">
-        <h2 id="ajuste-curso">Curso de la clase</h2>
+        <h2 id="ajuste-curso">{t("ajustes.nivel")}</h2>
         <label className="campo">
-          <span className="sr-only">Curso</span>
+          <span className="sr-only">{t("ajustes.nivelCorto")}</span>
           <select value={clase.curso} onChange={(e) => actualizar((c) => cambiarCurso(c, Number(e.target.value) as Curso))}>
-            {CURSOS.map((c) => <option key={c} value={c}>{c}.º de primaria</option>)}
+            {CURSOS.map((c) => <option key={c} value={c}>{t(`nivel.${c}`)}</option>)}
           </select>
         </label>
       </section>
 
       <section className="ajuste" aria-labelledby="ajuste-tests">
-        <h2 id="ajuste-tests">Tests para la clase</h2>
-        <p>Marca los temas que ya habéis trabajado. Toda la clase los verá.</p>
+        <h2 id="ajuste-tests">{t("ajustes.tests")}</h2>
+        <p>{t("ajustes.testsTexto")}</p>
         <div className="bloques">
           {BLOQUES.map((bloque) => (
             <fieldset key={bloque} className="bloque">
-              <legend>{NOMBRE_BLOQUE[bloque]}</legend>
-              {tests.filter((t) => t.bloque === bloque).map((t) => (
-                <label key={t.id} className="casilla">
-                  <input type="checkbox" checked={clase.asignados.includes(t.id)} onChange={() => actualizar((c) => alternarAsignacion(c, t.id))} />
-                  <span>{t.nombre}</span>
+              <legend>{t(`bloque.${bloque}`)}</legend>
+              {tests.filter((test) => test.bloque === bloque).map((test) => (
+                <label key={test.id} className="casilla">
+                  <input type="checkbox" checked={clase.asignados.includes(test.id)} onChange={() => actualizar((c) => alternarAsignacion(c, test.id))} />
+                  <span>{nombreTest(t, test)}</span>
                 </label>
               ))}
             </fieldset>
@@ -76,10 +79,10 @@ export function Ajustes() {
       </section>
 
       <section className="ajuste" aria-labelledby="ajuste-alumnos">
-        <h2 id="ajuste-alumnos">Alumnos y ayudas</h2>
-        <p>Activa las ayudas que necesita cada alumno. Solo se guardan las ayudas, nunca un diagnóstico.</p>
+        <h2 id="ajuste-alumnos">{t("ajustes.alumnos")}</h2>
+        <p>{t("ajustes.alumnosTexto")}</p>
         <ul className="ayudas-leyenda">
-          {AYUDAS.map((a) => <li key={a}><strong>{NOMBRE_AYUDA[a]}:</strong> {ETIQUETA_AYUDA[a]}</li>)}
+          {AYUDAS.map((a) => <li key={a}><strong>{t(`ayuda.${a}`)}:</strong> {t(`ayudaTexto.${a}`)}</li>)}
         </ul>
         <ul className="alumnos-lista">
           {clase.alumnos.map((a) => (
@@ -90,10 +93,10 @@ export function Ajustes() {
                   {AYUDAS.map((ayuda) => (
                     <label key={ayuda} className="casilla casilla-compacta">
                       <input type="checkbox" checked={a.ayudas.includes(ayuda)} onChange={() => actualizar((c) => alternarAyuda(c, a.id, ayuda))} />
-                      <span>{NOMBRE_AYUDA[ayuda]}</span>
+                      <span>{t(`ayuda.${ayuda}`)}</span>
                     </label>
                   ))}
-                  <ConfirmButton className="boton boton-suave boton-pequeno" label="Quitar" confirmLabel={`¿Quitar a ${a.nombre}?`} onConfirm={() => actualizar((c) => quitarAlumno(c, a.id))} />
+                  <ConfirmButton className="boton boton-suave boton-pequeno" label={t("ajustes.quitar")} confirmLabel={t("ajustes.quitarConfirma", { nombre: a.nombre })} onConfirm={() => actualizar((c) => quitarAlumno(c, a.id))} />
                 </div>
               </fieldset>
             </li>
@@ -107,20 +110,20 @@ export function Ajustes() {
             setNombre("");
           }}
         >
-          <label className="campo">Nombre del alumno<input value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="off" /></label>
-          <button type="submit" className="boton boton-principal" disabled={nombre.trim() === ""}>Añadir alumno</button>
+          <label className="campo">{t("ajustes.nombreAlumno")}<input value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="off" /></label>
+          <button type="submit" className="boton boton-principal" disabled={nombre.trim() === ""}>{t("ajustes.anadir")}</button>
         </form>
       </section>
 
       <section className="ajuste" aria-labelledby="ajuste-pin">
-        <h2 id="ajuste-pin">PIN</h2>
+        <h2 id="ajuste-pin">{t("ajustes.pin")}</h2>
         <CambiarPin />
       </section>
 
       <section className="ajuste" aria-labelledby="ajuste-demo">
-        <h2 id="ajuste-demo">Demo</h2>
-        <p>Vuelve a la clase de ejemplo. Se borran los cambios, pero se conserva tu PIN.</p>
-        <ConfirmButton label="Restablecer demo" confirmLabel="Sí, restablecer" onConfirm={restablecer} />
+        <h2 id="ajuste-demo">{t("ajustes.demo")}</h2>
+        <p>{t("ajustes.demoTexto")}</p>
+        <ConfirmButton label={t("ajustes.demoBoton")} confirmLabel={t("ajustes.demoConfirma")} onConfirm={restablecer} />
       </section>
     </div>
   );

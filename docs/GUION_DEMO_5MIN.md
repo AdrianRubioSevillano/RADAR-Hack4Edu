@@ -2,7 +2,7 @@
 
 **Antes de empezar.** `npm run build && npm run preview`, y abre la app en una tablet o a pantalla completa. Crea el PIN 1234 y, en Ajustes, pulsa **Restablecer demo**: las preguntas de abajo salen iguales cada vez si Amina responde exactamente así. Sal de la cuenta de profesor. Comprueba que suena **Escuchar**: necesita una voz en español instalada en el dispositivo.
 
-La demo es 2.º de primaria: 20 alumnos simulados con 3 temas hechos y 3 alumnos sin empezar. Datos ficticios.
+La demo es Ciclo II: 20 alumnos simulados con 3 temas hechos y 3 alumnos sin empezar. Datos ficticios.
 
 ## Minuto 0:00 · El problema (inicio)
 

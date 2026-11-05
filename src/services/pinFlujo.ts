@@ -1,9 +1,11 @@
 // Flujo de la pantalla del PIN como función pura: crear, repetir o escribir.
+import type { Clave } from "../i18n/index.ts";
+
 export interface EstadoPin {
   readonly modo: "crear" | "escribir";
   readonly digitos: string;
   readonly primero: string | null; // PIN ya escrito una vez, al crearlo
-  readonly mensaje: string | null;
+  readonly mensaje: Clave | null;
 }
 
 export type EventoPin =
@@ -19,7 +21,7 @@ export function estadoInicialPin(hayPin: boolean): EstadoPin {
 
 export function pasoPin(estado: EstadoPin, evento: EventoPin): { readonly estado: EstadoPin; readonly accion: AccionPin } {
   if (evento.tipo === "incorrecto") {
-    return { estado: { ...estado, digitos: "", mensaje: "Ese PIN no es correcto. Prueba otra vez." }, accion: null };
+    return { estado: { ...estado, digitos: "", mensaje: "pin.incorrecto" }, accion: null };
   }
   if (evento.tipo === "borrar") {
     return { estado: { ...estado, digitos: estado.digitos.slice(0, -1) }, accion: null };
@@ -31,7 +33,7 @@ export function pasoPin(estado: EstadoPin, evento: EventoPin): { readonly estado
   if (estado.modo === "escribir") return { estado: { ...estado, digitos, mensaje: null }, accion: { tipo: "comprobar", pin: digitos } };
   if (estado.primero === null) return { estado: { ...estado, digitos: "", primero: digitos, mensaje: null }, accion: null };
   if (estado.primero === digitos) return { estado: { ...estado, digitos, mensaje: null }, accion: { tipo: "guardar", pin: digitos } };
-  return { estado: { ...estado, digitos: "", primero: null, mensaje: "Los dos PIN no coinciden. Empieza otra vez." }, accion: null };
+  return { estado: { ...estado, digitos: "", primero: null, mensaje: "pin.noCoinciden" }, accion: null };
 }
 
 // Traduce una tecla física. Vale también el teclado numérico, que da el mismo `key`.

@@ -1,5 +1,6 @@
 // Contrato del contenido: lo que producen los generadores y consume la app.
 import type { Rng } from "../core/rng.ts";
+import type { Lengua } from "./lengua.ts";
 
 export type Bloque = "NUM" | "LEE" | "PEN";
 export type Curso = 1 | 2 | 3 | 4 | 5 | 6;
@@ -96,6 +97,7 @@ export interface Pregunta {
   readonly slip: number; // SUPUESTO
   readonly guess: number; // SUPUESTO
   readonly plantilla?: string; // clave de la plantilla: evita preguntas casi iguales en un test
+  readonly idioma?: Lengua; // en qué está escrita; sin este campo, en español
 }
 
 export type Generador = (rng: Rng, dificultad: Dificultad) => Pregunta;

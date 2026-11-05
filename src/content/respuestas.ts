@@ -39,6 +39,6 @@ export function textoRespuesta(p: Pregunta): string {
 // Lo que se lee en voz alta: la lectura, el enunciado y las opciones de texto. Las
 // etiquetas de las opciones de imagen no se leen: dirían lo que hay que descubrir mirando.
 export function textoParaEscuchar(p: Pregunta, facil: boolean): string {
-  const opciones = p.formato !== "opcion" ? "" : (p.opciones?.map((o, i) => `Opción ${i + 1}: ${o.texto}.`).join(" ") ?? "");
+  const opciones = p.formato !== "opcion" ? "" : (p.opciones?.map((o, i) => (p.idioma === "fr" ? `Option ${i + 1} : ${o.texto}.` : p.idioma === "gn" ? `Jeporavo ${i + 1}: ${o.texto}.` : `Opción ${i + 1}: ${o.texto}.`)).join(" ") ?? "");
   return [p.titulo, p.texto, facil ? p.enunciadoFacil : p.enunciado, opciones].filter((t) => t !== undefined && t !== "").join(". ");
 }

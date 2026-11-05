@@ -5,8 +5,9 @@ import { recomendar, type EstadoAlumno, type EstadoSubhabilidad, type Recomendac
 import { derivarSemilla } from "../core/rng.ts";
 import type { Color } from "../core/tipos.ts";
 import { bancoDeTest, indiceHabilidad, itemDe, miniTest, paqueteDePractica, subhabilidadDe } from "../content/bancos.ts";
-import { SUBHABILIDADES, subhabilidadPorId, temaPorId } from "../content/temario.ts";
+import { SUBHABILIDADES, subhabilidadPorId } from "../content/temario.ts";
 import { testPorId, testsDe, type DefinicionTest } from "../content/tests.ts";
+import type { Lengua } from "../content/lengua.ts";
 import type { Curso, Pregunta } from "../content/tipos.ts";
 
 export const VERSION_CLASE = 2;
@@ -36,6 +37,9 @@ export interface Intento {
   readonly terminado: boolean;
   readonly secuencia: number; // orden entre intentos: el más reciente manda
   readonly refuerzos: Readonly<Record<string, Refuerzo>>;
+  // Lengua en que se empezó: un test no cambia a medias, porque las respuestas guardadas
+  // apuntan a sus preguntas. Sin este campo, en español.
+  readonly idioma?: Lengua;
 }
 
 export interface Clase {
@@ -94,7 +98,7 @@ export function testsDeAlumno(clase: Clase, alumnoId: string): readonly TestAsig
   });
 }
 
-export function empezarTest(clase: Clase, alumnoId: string, testId: string): Clase {
+export function empezarTest(clase: Clase, alumnoId: string, testId: string, idioma: string = "es"): Clase {
   if (intentoDe(clase, alumnoId, testId) !== undefined) return clase;
   const test = definicion(testId);
   const intento: Intento = {
@@ -104,6 +108,7 @@ export function empezarTest(clase: Clase, alumnoId: string, testId: string): Cla
     terminado: false,
     secuencia: clase.secuencia + 1,
     refuerzos: {},
+    ...(idioma === "fr" || idioma === "gn" ? { idioma } : {}),
   };
   return conIntento(clase, alumnoId, intento);
 }
@@ -111,11 +116,11 @@ export function empezarTest(clase: Clase, alumnoId: string, testId: string): Cla
 // El banco se reconstruye desde la semilla; se guarda en memoria para no repetir trabajo.
 const CACHE_BANCOS = new Map<string, readonly Pregunta[]>();
 
-function bancoDe(test: DefinicionTest, semilla: number): readonly Pregunta[] {
-  const clave = `${test.id}/${semilla}`;
+function bancoDe(test: DefinicionTest, semilla: number, idioma: Lengua = "es"): readonly Pregunta[] {
+  const clave = `${test.id}/${semilla}/${idioma}`;
   const guardado = CACHE_BANCOS.get(clave);
   if (guardado !== undefined) return guardado;
-  const banco = bancoDeTest(test, semilla);
+  const banco = bancoDeTest(test, semilla, idioma);
   if (CACHE_BANCOS.size > 40) CACHE_BANCOS.clear();
   CACHE_BANCOS.set(clave, banco);
   return banco;
@@ -125,7 +130,7 @@ export function preguntaActual(clase: Clase, alumnoId: string, testId: string): 
   const intento = intentoDe(clase, alumnoId, testId);
   if (intento === undefined || intento.terminado) return null;
   const test = definicion(testId);
-  const items = bancoDe(test, intento.semilla).map((p) => itemDe(test, p));
+  const items = bancoDe(test, intento.semilla, intento.idioma).map((p) => itemDe(test, p));
   return siguienteItem(intento.estado, items)?.pregunta ?? null;
 }
 
@@ -189,18 +194,19 @@ function refuerzoDe(clase: Clase, alumnoId: string, testId: string, subId: strin
 function vistasDe(intento: Intento, subId: string): readonly Pregunta[] {
   const respondidas = new Set(intento.estado.respuestas.map((r) => r.itemId));
   const test = definicion(intento.testId);
-  return bancoDe(test, intento.semilla).filter((p) => respondidas.has(p.id) && p.subhabilidad === subId);
+  return bancoDe(test, intento.semilla, intento.idioma).filter((p) => respondidas.has(p.id) && p.subhabilidad === subId);
 }
 
-export function ejerciciosDe(clase: Clase, alumnoId: string, testId: string, subId: string): readonly Pregunta[] {
+// La práctica sí sigue el idioma actual: no hay respuestas guardadas que dependan de él.
+export function ejerciciosDe(clase: Clase, alumnoId: string, testId: string, subId: string, idioma: string = "es"): readonly Pregunta[] {
   const { intento, refuerzo } = refuerzoDe(clase, alumnoId, testId, subId);
-  return paqueteDePractica(subId, derivarSemilla(intento.semilla, `practica/${subId}/${refuerzo.ronda}`), vistasDe(intento, subId));
+  return paqueteDePractica(subId, derivarSemilla(intento.semilla, `practica/${subId}/${refuerzo.ronda}`), vistasDe(intento, subId), idioma);
 }
 
-export function miniTestDe(clase: Clase, alumnoId: string, testId: string, subId: string): readonly Pregunta[] {
+export function miniTestDe(clase: Clase, alumnoId: string, testId: string, subId: string, idioma: string = "es"): readonly Pregunta[] {
   const { intento, refuerzo } = refuerzoDe(clase, alumnoId, testId, subId);
-  const vistas = [...vistasDe(intento, subId), ...ejerciciosDe(clase, alumnoId, testId, subId)];
-  return miniTest(subId, derivarSemilla(intento.semilla, `minitest/${subId}/${refuerzo.ronda}`), vistas);
+  const vistas = [...vistasDe(intento, subId), ...ejerciciosDe(clase, alumnoId, testId, subId, idioma)];
+  return miniTest(subId, derivarSemilla(intento.semilla, `minitest/${subId}/${refuerzo.ronda}`), vistas, idioma);
 }
 
 function conRefuerzo(clase: Clase, alumnoId: string, intento: Intento, refuerzo: Refuerzo, extra: Partial<Intento> = {}): Clase {
@@ -321,11 +327,6 @@ export function detalleDeAlumno(clase: Clase, alumnoId: string): DetalleAlumno |
     pendientes: testsDeAlumno(clase, alumnoId).filter((t) => t.estado !== "hecho"),
     practicas: practicasPendientes(clase, alumnoId),
   };
-}
-
-export function nombreSubhabilidad(id: string): { nombre: string; tema: string } {
-  const sub = subhabilidadPorId(id);
-  return { nombre: sub?.nombre ?? id, tema: temaPorId(sub?.tema ?? "")?.nombre ?? "" };
 }
 
 // ---------- Ajustes ----------

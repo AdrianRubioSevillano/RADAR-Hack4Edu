@@ -56,16 +56,3 @@ export function pausaTras(respondidas: number, total: number, p: Presentacion): 
   return respondidas % 5 === 0 ? "descanso" : null;
 }
 
-export const ETIQUETA_AYUDA: Readonly<Record<Ayuda, string>> = {
-  dislexia: "Lectura fácil y voz",
-  tdah: "Menos distracciones y pausas",
-  bajaVision: "Letra muy grande y alto contraste",
-  auditiva: "Todo con iconos y texto",
-};
-
-export const NOMBRE_AYUDA: Readonly<Record<Ayuda, string>> = {
-  dislexia: "Dislexia",
-  tdah: "TDAH",
-  bajaVision: "Baja visión",
-  auditiva: "Auditiva",
-};

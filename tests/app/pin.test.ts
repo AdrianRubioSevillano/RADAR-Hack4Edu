@@ -24,14 +24,14 @@ describe("flujo del PIN", () => {
   it("crear: si no coincide, avisa y vuelve a empezar", () => {
     const { estado, accion } = teclear(teclear(estadoInicialPin(false), "1234").estado, "9999");
     expect(accion).toBeNull();
-    expect(estado).toMatchObject({ primero: null, digitos: "", mensaje: "Los dos PIN no coinciden. Empieza otra vez." });
+    expect(estado).toMatchObject({ primero: null, digitos: "", mensaje: "pin.noCoinciden" });
     expect(teclear(estado, "1").estado.mensaje).toBeNull();
   });
 
   it("escribir: comprueba el PIN y, si es incorrecto, avisa y limpia", () => {
     const { estado, accion } = teclear(estadoInicialPin(true), "4321");
     expect(accion).toEqual({ tipo: "comprobar", pin: "4321" });
-    expect(pasoPin(estado, { tipo: "incorrecto" }).estado).toMatchObject({ digitos: "", mensaje: "Ese PIN no es correcto. Prueba otra vez." });
+    expect(pasoPin(estado, { tipo: "incorrecto" }).estado).toMatchObject({ digitos: "", mensaje: "pin.incorrecto" });
   });
 
   it("borrar quita el último dígito y no pasa de 4", () => {

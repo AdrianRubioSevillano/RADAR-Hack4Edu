@@ -2,7 +2,7 @@
 
 Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilidad (uno fácil y uno difícil), para que una persona los revise.
 
-## 1.º de primaria
+## Ciclo I
 
 ### Números para la vida
 
@@ -872,7 +872,7 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 - Pista: Un secreto que hace daño no hay que guardarlo.
 - Explicación: Los secretos que te hacen sentir mal se cuentan a un adulto de confianza.
 
-## 2.º de primaria
+## Ciclo II
 
 ### Números para la vida
 
@@ -1652,7 +1652,7 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 - Pista: Cuenta las comidas distintas de cada uno.
 - Explicación: Lucía tiene tres comidas distintas y Hugo solo una.
 
-## 3.º de primaria
+## Ciclo III
 
 ### Números para la vida
 
@@ -2406,7 +2406,7 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 - Pista: Fíjate en lo que dice, sin añadir nada.
 - Explicación: Elena no dice que no sepa leer. Dice que le da miedo equivocarse en voz alta.
 
-## 4.º de primaria
+## Ciclo IV
 
 ### Números para la vida
 
@@ -3219,7 +3219,7 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 - Pista: Suma esos votos a la opción que los recibe y compara.
 - Explicación: Mercado se queda con 4 más 2, que son 6. Río sigue con 8.
 
-## 5.º de primaria
+## Ciclo V
 
 ### Números para la vida
 
@@ -3967,7 +3967,7 @@ Generado con `npm run muestras`, con semilla fija. Son 2 ejemplos por subhabilid
 - Pista: Fíjate en las palabras toda, ningún y nunca.
 - Explicación: Una promesa tan grande no tiene pruebas. Mientras tanto, conviene seguir con los cuidados seguros.
 
-## 6.º de primaria
+## Ciclo VI
 
 ### Números para la vida
 

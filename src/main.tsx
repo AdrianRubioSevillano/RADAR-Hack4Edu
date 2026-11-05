@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { ClaseProvider } from "./components/ClaseProvider.tsx";
+import { IdiomaProvider } from "./components/IdiomaProvider.tsx";
 import "@fontsource-variable/fredoka";
 import "@fontsource-variable/atkinson-hyperlegible-next";
 import "./styles.css";
@@ -10,9 +11,11 @@ const root = document.getElementById("root");
 if (root === null) throw new Error("Falta el elemento raíz");
 createRoot(root).render(
   <StrictMode>
-    <ClaseProvider>
-      <App />
-    </ClaseProvider>
+    <IdiomaProvider>
+      <ClaseProvider>
+        <App />
+      </ClaseProvider>
+    </IdiomaProvider>
   </StrictMode>,
 );
 

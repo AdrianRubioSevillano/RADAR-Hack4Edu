@@ -4,6 +4,8 @@ RADAR detecta qué parte de cada tema le cuesta a cada alumno de primaria y le d
 
 Hecho para Hack4Edu 2026 (ProFuturo), pensando en escuelas con tablets sencillas, sin conexión y con aulas grandes.
 
+Los niveles Ciclo I a VI corresponden a los seis años de educación primaria; se usan ciclos porque así se organiza la enseñanza en muchos países donde trabaja ProFuturo.
+
 ## Cómo ejecutarlo
 
 Comprobado con Node 26.
@@ -24,13 +26,13 @@ npm run build && npm run preview
 
 Otros comandos: `npm test`, `npm run muestras` (genera `docs/MUESTRA_PREGUNTAS.md`), `npm run e2e` y `npm run capturas` (estos dos usan Chrome y `npm run preview`).
 
-La demo trae una clase de 2.º de primaria con 20 alumnos simulados y 3 sin empezar. El recorrido para el jurado está en [docs/GUION_DEMO_5MIN.md](docs/GUION_DEMO_5MIN.md).
+La demo trae una clase de Ciclo II con 20 alumnos simulados y 3 sin empezar. El recorrido para el jurado está en [docs/GUION_DEMO_5MIN.md](docs/GUION_DEMO_5MIN.md).
 
 ## Cómo funciona
 
 - **Alumno:** elige su nombre, hace los tests asignados y recibe ejercicios de lo que necesita, sin notas.
 - **Profesor:** con un PIN ve una sola pantalla: "Mañana explica primero…", grupos y semáforo por alumno.
-- **Temario:** 6 cursos, 3 bloques (números, lectura, pensar y decidir), 90 temas, 221 subhabilidades y 126 tests, en [docs/TEMARIO.md](docs/TEMARIO.md). Las preguntas se generan con semilla.
+- **Temario:** 6 niveles (Ciclo I a VI), 3 bloques (números, lectura, pensar y decidir), 90 temas, 221 subhabilidades y 126 tests, en [docs/TEMARIO.md](docs/TEMARIO.md). Las preguntas se generan con semilla.
 - **Motor:** modelo DINA con inferencia bayesiana exacta y selección de la pregunta que más información aporta. En `src/core`, sin mostrarse nunca en la interfaz.
 
 ## Accesibilidad

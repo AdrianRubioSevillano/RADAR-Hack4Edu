@@ -1,6 +1,7 @@
 // Herramientas compartidas por los generadores de NUM de 1.º y 2.º de primaria.
 import type { Rng } from "../../../core/rng.ts";
 import { ContenidoError, barajar, distractoresNumericos, elegir, type RespuestaBorrador } from "../../ayuda.ts";
+import { lengua, tx } from "../../lengua.ts";
 import type { Dificultad, ElementoSerie, FormaId, Imagen, ObjetoId } from "../../tipos.ts";
 
 export function porD<T>(d: Dificultad, facil: T, media: T, dificil: T): T {
@@ -35,7 +36,7 @@ export function suma(valores: readonly number[]): number {
 export function listaY(valores: readonly (string | number)[]): string {
   const textos = valores.map(String);
   if (textos.length <= 1) return textos.join("");
-  return `${textos.slice(0, -1).join(", ")} y ${textos[textos.length - 1] ?? ""}`;
+  return `${textos.slice(0, -1).join(", ")} ${tx("y", "et", "ha")} ${textos[textos.length - 1] ?? ""}`;
 }
 
 // ---------- Unidades con concordancia ----------
@@ -46,8 +47,49 @@ export interface Unidad {
   readonly genero: "m" | "f";
 }
 
+// Francés de cada unidad, por su nombre en español: [singular, plural, género].
+const UNIDADES_FR: Readonly<Record<string, readonly [string, string, "m" | "f"]>> = {
+  manzana: ["pomme", "pommes", "f"], pera: ["poire", "poires", "f"], naranja: ["orange", "oranges", "f"], lápiz: ["crayon", "crayons", "m"],
+  libro: ["livre", "livres", "m"], cuaderno: ["cahier", "cahiers", "m"], mochila: ["sac à dos", "sacs à dos", "m"], pelota: ["ballon", "ballons", "m"],
+  flor: ["fleur", "fleurs", "f"], pájaro: ["oiseau", "oiseaux", "m"], pato: ["canard", "canards", "m"], rana: ["grenouille", "grenouilles", "f"],
+  gato: ["chat", "chats", "m"], perro: ["chien", "chiens", "m"], pez: ["poisson", "poissons", "m"], vaso: ["verre", "verres", "m"],
+  taza: ["tasse", "tasses", "f"], botella: ["bouteille", "bouteilles", "f"], huevo: ["œuf", "œufs", "m"], silla: ["chaise", "chaises", "f"],
+  gorro: ["bonnet", "bonnets", "m"], paraguas: ["parapluie", "parapluies", "m"], persona: ["personne", "personnes", "f"], "cubo de agua": ["seau d'eau", "seaux d'eau", "m"],
+  semilla: ["graine", "graines", "f"], página: ["page", "pages", "f"], piedra: ["pierre", "pierres", "f"], rueda: ["roue", "roues", "f"],
+};
+
+function fr(u: Unidad): readonly [string, string, "m" | "f"] {
+  const datos = UNIDADES_FR[u.singular];
+  if (datos === undefined) throw new ContenidoError(`Unidad sin francés: ${u.singular}`);
+  return datos;
+}
+
+const empiezaPorVocal = (texto: string): boolean => /^[aeiouéœ]/i.test(texto);
+
+// En guaraní el nombre no cambia tras un número: 5 narã.
+const UNIDADES_GN: Readonly<Record<string, string>> = {
+  manzana: "manzana", pera: "pera", naranja: "narã", lápiz: "lápiz", libro: "aranduka", cuaderno: "kuaderno", mochila: "mochila", pelota: "pelota", flor: "yvoty", pájaro: "guyra",
+  taza: "kópa", botella: "mbotella", huevo: "rupi'a", silla: "apyka", gorro: "akãngao", paraguas: "paraguas", persona: "tapicha", "cubo de agua": "balde y",
+  semilla: "ra'ỹi", página: "rogue", piedra: "ita", rueda: "rueda",
+};
+
+function gn(u: Unidad): string {
+  const nombre = UNIDADES_GN[u.singular];
+  if (nombre === undefined) throw new ContenidoError(`Unidad sin guaraní: ${u.singular}`);
+  return nombre;
+}
+
+export const sg = (u: Unidad): string => (lengua() === "fr" ? fr(u)[0] : lengua() === "gn" ? gn(u) : u.singular);
+export const pl = (u: Unidad): string => (lengua() === "fr" ? fr(u)[1] : lengua() === "gn" ? gn(u) : u.plural);
+// "de graines", "d'œufs".
+export const dePl = (u: Unidad): string => (empiezaPorVocal(pl(u)) ? `d'${pl(u)}` : `de ${pl(u)}`);
+// "un crayon", "une pomme".
+export const unU = (u: Unidad): string => (lengua() === "fr" ? `${fr(u)[2] === "f" ? "une" : "un"} ${fr(u)[0]}` : "");
+// "le crayon", "la pomme", "l'orange".
+export const leU = (u: Unidad): string => (lengua() !== "fr" ? "" : empiezaPorVocal(fr(u)[0]) ? `l'${fr(u)[0]}` : `${fr(u)[2] === "f" ? "la" : "le"} ${fr(u)[0]}`);
+
 export function cant(n: number, u: Unidad): string {
-  return `${n} ${n === 1 ? u.singular : u.plural}`;
+  return `${n} ${n === 1 ? sg(u) : pl(u)}`;
 }
 export const cuantos = (u: Unidad): string => (u.genero === "f" ? "Cuántas" : "Cuántos");
 export const los = (u: Unidad): string => (u.genero === "f" ? "las" : "los");
@@ -144,8 +186,41 @@ const HASTA_29 = [
 ] as const;
 const DECENAS = ["", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"] as const;
 
+const JUSQUA_16 = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize"] as const;
+const DIZAINES = ["", "", "vingt", "trente", "quarante", "cinquante", "soixante"] as const;
+
+function enLettres(n: number): string {
+  if (n === 100) return "cent";
+  if (n <= 16) return en(JUSQUA_16, n);
+  if (n < 20) return `dix-${en(JUSQUA_16, n - 10)}`;
+  if (n >= 80) {
+    const reste = n - 80;
+    return reste === 0 ? "quatre-vingts" : `quatre-vingt-${enLettres(reste)}`;
+  }
+  const base = n >= 60 ? 60 : Math.floor(n / 10) * 10;
+  const reste = n - base;
+  const dizaine = en(DIZAINES, base / 10);
+  if (reste === 0) return dizaine;
+  if (reste === 1 || reste === 11) return `${dizaine} et ${enLettres(reste)}`;
+  return `${dizaine}-${enLettres(reste)}`;
+}
+
+const PAPAPY = ["", "peteĩ", "mokõi", "mbohapy", "irundy", "po", "poteĩ", "pokõi", "poapy", "porundy"] as const;
+const PA_Y = ["pa", "papeteĩ", "pakõi", "pambohapy", "parundy", "papo", "papoteĩ", "papokõi", "papoapy", "paporundy"] as const;
+
+function enGuarani(n: number): string {
+  if (n === 100) return "sa";
+  if (n === 0) return "mba'eve";
+  if (n < 10) return en(PAPAPY, n);
+  if (n < 20) return en(PA_Y, n - 10);
+  const decena = `${en(PAPAPY, Math.floor(n / 10))}pa`;
+  return n % 10 === 0 ? decena : `${decena} ${en(PAPAPY, n % 10)}`;
+}
+
 export function enLetras(n: number): string {
   if (!Number.isInteger(n) || n < 0 || n > 100) throw new ContenidoError(`Fuera de rango: ${n}`);
+  if (lengua() === "fr") return enLettres(n);
+  if (lengua() === "gn") return enGuarani(n);
   if (n === 100) return "cien";
   if (n < 30) return en(HASTA_29, n);
   const decena = en(DECENAS, Math.floor(n / 10));
@@ -153,11 +228,11 @@ export function enLetras(n: number): string {
 }
 
 // ---------- Decenas y unidades ----------
-export const decenasTexto = (d: number): string => `${d} ${d === 1 ? "decena" : "decenas"}`;
-export const unidadesTexto = (u: number): string => `${u} ${u === 1 ? "unidad" : "unidades"}`;
-export const decUni = (d: number, u: number): string => `${decenasTexto(d)} y ${unidadesTexto(u)}`;
+export const decenasTexto = (d: number): string => tx(`${d} ${d === 1 ? "decena" : "decenas"}`, `${d} ${d <= 1 ? "dizaine" : "dizaines"}`, `${d} decena`);
+export const unidadesTexto = (u: number): string => tx(`${u} ${u === 1 ? "unidad" : "unidades"}`, `${u} ${u <= 1 ? "unité" : "unités"}`, `${u} unidad`);
+export const decUni = (d: number, u: number): string => `${decenasTexto(d)} ${tx("y", "et", "ha")} ${unidadesTexto(u)}`;
 export const bloques = (d: number, u: number): Imagen => ({ tipo: "decenas", decenas: d, unidades: u });
-export const ayudaBloques = "Cada bloque largo vale 10 y cada bloque suelto vale 1.";
+export const ayudaBloques = (): string => tx("Cada bloque largo vale 10 y cada bloque suelto vale 1.", "Chaque bloc long vaut 10 et chaque bloc seul vaut 1.", "Bloque puku ha'e 10 ha bloque michĩ ha'e 1.");
 
 // ---------- Dinero ----------
 export const DENOMINACIONES = [50, 20, 10, 5, 2, 1] as const;
@@ -173,7 +248,7 @@ export function imagenMonedas(valores: readonly number[]): Imagen {
 // Nombre de lo dibujado en una opción: "Moneda de 10", "Monedas de 10, 5 y 2".
 export function etiquetaMonedas(valores: readonly number[]): string {
   const orden = ordenarMonedas(valores);
-  return orden.length === 1 ? `Moneda de ${en(orden, 0)}` : `Monedas de ${listaY(orden)}`;
+  return orden.length === 1 ? tx(`Moneda de ${en(orden, 0)}`, `Pièce de ${en(orden, 0)}`, `Moneda ${en(orden, 0)}`) : tx(`Monedas de ${listaY(orden)}`, `Pièces de ${listaY(orden)}`, `Moneda ${listaY(orden)}`);
 }
 
 // Grupos parecidos a `valores` cuyo total no está en `prohibidos`: cambia, quita o añade una moneda.
@@ -237,13 +312,20 @@ export function monedasDeDificultad(rng: Rng, d: Dificultad): number[] {
 export const DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"] as const;
 export const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"] as const;
 
-export const dia = (i: number): string => en(DIAS, ((i % 7) + 7) % 7);
-export const mes = (i: number): string => en(MESES, ((i % 12) + 12) % 12);
+const JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"] as const;
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"] as const;
+
+const ARA = ["arateĩ", "arakõi", "araapy", "ararundy", "arapo", "arapoteĩ", "arapokõi"] as const;
+const JASY = ["jasyteĩ", "jasykõi", "jasyapy", "jasyrundy", "jasypo", "jasypoteĩ", "jasypokõi", "jasypoapy", "jasyporundy", "jasypa", "jasypateĩ", "jasypakõi"] as const;
+
+export const dia = (i: number): string => en(tx<readonly string[]>(DIAS, JOURS, ARA), ((i % 7) + 7) % 7);
+export const mes = (i: number): string => en(tx<readonly string[]>(MESES, MOIS, JASY), ((i % 12) + 12) % 12);
 export const horaCiclo = (h: number): number => ((((h - 1) % 12) + 12) % 12) + 1;
 
 // "las 3 en punto", "la 1 y media".
 export function hora(h: number, minuto: 0 | 30): string {
-  return `${h === 1 ? "la" : "las"} ${h} ${minuto === 0 ? "en punto" : "y media"}`;
+  const heures = `${h} ${h === 1 ? "heure" : "heures"}`;
+  return tx(`${h === 1 ? "la" : "las"} ${h} ${minuto === 0 ? "en punto" : "y media"}`, minuto === 0 ? heures : `${heures} et demie`, minuto === 0 ? `aravo ${h}` : `aravo ${h} ha mbyte`);
 }
 export const horaDigital = (h: number, minuto: number): string => `${h}:${minuto === 0 ? "00" : String(minuto)}`;
 export const reloj = (h: number, minuto: 0 | 30): Imagen => ({ tipo: "reloj", hora: h, minuto });
