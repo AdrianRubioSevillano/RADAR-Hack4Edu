@@ -1,155 +1,135 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import logo from "./assets/radar-logo.png";
+import { useEffect, useRef, useState } from "react";
 import mark from "./assets/radar-mark.png";
-import { Icon } from "./components/art.tsx";
-import { PreferencesPanel } from "./components/PreferencesPanel.tsx";
-import { useRadar } from "./components/RadarProvider.tsx";
-import { ErrorBoundary, Notice } from "./components/ui.tsx";
-import { ClassScreen } from "./screens/ClassScreen.tsx";
+import { Avatar, Icon } from "./components/art.tsx";
+import { useClase } from "./components/ClaseProvider.tsx";
+import { ErrorBoundary } from "./components/ui.tsx";
+import { Acerca } from "./screens/Acerca.tsx";
+import { Ajustes } from "./screens/Ajustes.tsx";
+import { DetalleAlumnoPantalla } from "./screens/DetalleAlumno.tsx";
+import { ElegirAlumno } from "./screens/ElegirAlumno.tsx";
+import { Inicio } from "./screens/Inicio.tsx";
+import { MiClase } from "./screens/MiClase.tsx";
+import { MisTests } from "./screens/MisTests.tsx";
+import { Pin } from "./screens/Pin.tsx";
+import { Practica } from "./screens/Practica.tsx";
+import { TestPantalla } from "./screens/TestPantalla.tsx";
+import { alumnoPorId, type Alumno } from "./services/clase.ts";
+import { PRESENTACION_BASE, atributosDe, presentacionDe, type Presentacion } from "./services/perfiles.ts";
+import { enlace, esRutaProfesor, leerRuta, rutaPermitida, type Ruta } from "./services/rutas.ts";
 
-// Cada pantalla pesada se carga al entrar en ella.
-const StudentDiagnosticScreen = lazy(() =>
-  import("./screens/StudentDiagnosticScreen.tsx").then((m) => ({ default: m.StudentDiagnosticScreen })),
-);
-const PracticeScreen = lazy(() =>
-  import("./screens/PracticeScreen.tsx").then((m) => ({ default: m.PracticeScreen })),
-);
-const TeacherScreen = lazy(() =>
-  import("./screens/TeacherScreen.tsx").then((m) => ({ default: m.TeacherScreen })),
-);
-const PlansScreen = lazy(() =>
-  import("./screens/PlansScreen.tsx").then((m) => ({ default: m.PlansScreen })),
-);
-const ActivitiesScreen = lazy(() =>
-  import("./screens/ActivitiesScreen.tsx").then((m) => ({ default: m.ActivitiesScreen })),
-);
-const BenchmarkScreen = lazy(() =>
-  import("./screens/BenchmarkScreen.tsx").then((m) => ({ default: m.BenchmarkScreen })),
-);
-
-type Mode = "teacher" | "student";
-
-const ROUTES = [
-  { id: "clase", label: "Mi clase", icon: "class", mode: "teacher", Screen: ClassScreen },
-  { id: "docente", label: "Radar", icon: "radar", mode: "teacher", Screen: TeacherScreen },
-  { id: "planes", label: "Planes", icon: "plans", mode: "teacher", Screen: PlansScreen },
-  { id: "actividades", label: "Actividades", icon: "activities", mode: "teacher", Screen: ActivitiesScreen },
-  { id: "benchmark", label: "Evidencia", icon: "evidence", mode: "teacher", Screen: BenchmarkScreen },
-  { id: "diagnostico", label: "Diagnóstico", icon: "student", mode: "student", Screen: StudentDiagnosticScreen },
-  { id: "practica", label: "Práctica", icon: "practice", mode: "student", Screen: PracticeScreen },
-] as const;
-
-type RouteId = (typeof ROUTES)[number]["id"];
-
-function routeFromHash(): RouteId {
-  const id = window.location.hash.replace(/^#\/?/, "");
-  return ROUTES.find((route) => route.id === id)?.id ?? "clase";
+function useHash(): string {
+  const [hash, setHash] = useState(() => (typeof window === "undefined" ? "" : window.location.hash));
+  useEffect(() => {
+    const cambio = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", cambio);
+    return () => window.removeEventListener("hashchange", cambio);
+  }, []);
+  return hash;
 }
 
-function useRoute(): RouteId {
-  const [route, setRoute] = useState(routeFromHash);
+function Marca() {
+  return (
+    <a className="marca" href="#/" aria-label="RADAR, volver al inicio">
+      <img src={mark} alt="" width="44" height="44" />
+      <span aria-hidden="true">RADAR</span>
+    </a>
+  );
+}
+
+function BarraProfesor({ ruta }: { ruta: Ruta }) {
+  const { bloquear } = useClase();
+  const actual = ruta.nombre === "ajustes" ? "ajustes" : "clase";
+  return (
+    <header className="barra barra-profesor">
+      <Marca />
+      <nav aria-label="Profesor">
+        <a href={enlace("profesor")} aria-current={actual === "clase" ? "page" : undefined}>Mi clase</a>
+        <a href={enlace("profesor", "ajustes")} aria-current={actual === "ajustes" ? "page" : undefined}>Ajustes</a>
+      </nav>
+      <a className="barra-salir" href="#/" onClick={bloquear}><Icon name="exit" /> Salir</a>
+    </header>
+  );
+}
+
+function BarraAlumno({ alumno }: { alumno: Alumno }) {
+  return (
+    <header className="barra barra-alumno">
+      <Marca />
+      <span className="barra-nombre"><Avatar index={alumno.avatar} size={40} /> {alumno.nombre}</span>
+      <a className="barra-salir" href={enlace("alumno")}><Icon name="exit" /> No soy yo</a>
+    </header>
+  );
+}
+
+function Contenido({ ruta, presentacion }: { ruta: Ruta; presentacion: Presentacion }) {
+  switch (ruta.nombre) {
+    case "inicio":
+      return <Inicio />;
+    case "acerca":
+      return <Acerca />;
+    case "alumnos":
+      return <ElegirAlumno />;
+    case "alumno":
+      return <MisTests alumnoId={ruta.alumnoId} presentacion={presentacion} />;
+    case "test":
+      return <TestPantalla alumnoId={ruta.alumnoId} testId={ruta.testId} presentacion={presentacion} />;
+    case "practica":
+      return <Practica alumnoId={ruta.alumnoId} testId={ruta.testId} subId={ruta.subId} presentacion={presentacion} />;
+    case "pin":
+      return <Pin destino={ruta.destino} />;
+    case "profesor":
+      return <MiClase />;
+    case "ajustes":
+      return <Ajustes />;
+    case "detalle":
+      return <DetalleAlumnoPantalla alumnoId={ruta.alumnoId} />;
+  }
+}
+
+function alumnoDeRuta(ruta: Ruta): string | null {
+  return ruta.nombre === "alumno" || ruta.nombre === "test" || ruta.nombre === "practica" ? ruta.alumnoId : null;
+}
+
+// Separada del hash para que los tests puedan pintar cualquier ruta.
+export function Vista({ hash }: { hash: string }) {
+  const { clase, profesorDesbloqueado } = useClase();
+  const ruta = rutaPermitida(leerRuta(hash), profesorDesbloqueado, hash);
+  const alumnoId = alumnoDeRuta(ruta);
+  const alumno = alumnoId === null ? undefined : alumnoPorId(clase, alumnoId);
+  const presentacion = alumno === undefined ? PRESENTACION_BASE : presentacionDe(alumno.ayudas, clase.curso);
+  const enTarea = ruta.nombre === "test" || ruta.nombre === "practica";
+  const mundo = esRutaProfesor(ruta) ? "profesor" : ruta.nombre === "inicio" ? "inicio" : "alumno";
+  const principal = useRef<HTMLElement>(null);
+
+  // Las ayudas del alumno se aplican a toda la página, y se retiran al salir.
+  const atributos = JSON.stringify(atributosDe(presentacion));
   useEffect(() => {
-    const change = () => setRoute(routeFromHash());
-    window.addEventListener("hashchange", change);
-    return () => window.removeEventListener("hashchange", change);
-  }, []);
-  return route;
+    const raiz = document.documentElement;
+    Object.entries(JSON.parse(atributos) as Record<string, string>).forEach(([k, v]) => raiz.setAttribute(k, v));
+  }, [atributos]);
+
+  // Al cambiar de pantalla, el foco va al título: lo que lee un lector de pantalla.
+  useEffect(() => {
+    const titulo = document.getElementById("titulo");
+    titulo?.focus({ preventScroll: true });
+    window.scrollTo(0, 0);
+    document.title = titulo?.textContent !== undefined && titulo.textContent !== null && titulo.textContent !== "" ? `${titulo.textContent} · RADAR` : "RADAR";
+  }, [hash]);
+
+  return (
+    <div className="marco" data-mundo={mundo}>
+      <a className="saltar" href="#principal" onClick={(e) => { e.preventDefault(); principal.current?.focus(); }}>Saltar al contenido</a>
+      {esRutaProfesor(ruta) && <BarraProfesor ruta={ruta} />}
+      {alumno !== undefined && !enTarea && <BarraAlumno alumno={alumno} />}
+      <main id="principal" ref={principal} tabIndex={-1}>
+        <ErrorBoundary key={hash} onReset={() => { window.location.hash = "#/"; }}>
+          <Contenido ruta={ruta} presentacion={presentacion} />
+        </ErrorBoundary>
+      </main>
+    </div>
+  );
 }
 
 export default function App() {
-  const route = useRoute();
-  const { notice, dismissNotice, canPersist, resetAll } = useRadar();
-  const [preferencesOpen, setPreferencesOpen] = useState(false);
-  const current = ROUTES.find((item) => item.id === route) ?? ROUTES[0];
-  const mode: Mode = current.mode;
-  const items = ROUTES.filter((item) => item.mode === mode);
-  const { Screen } = current;
-  const main = useRef<HTMLElement>(null);
-  const firstRender = useRef(true);
-
-  // Al navegar, el foco va al título para que teclado y lector sigan el cambio.
-  useEffect(() => {
-    document.title = `${current.label} · RADAR`;
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
-    window.scrollTo(0, 0);
-    const timer = setTimeout(
-      () => main.current?.querySelector<HTMLElement>("#page-title")?.focus(),
-      60,
-    );
-    return () => clearTimeout(timer);
-  }, [current.label]);
-
-  const links = items.map((item) => (
-    <a
-      key={item.id}
-      href={`#/${item.id}`}
-      className={item.id === route ? "active" : ""}
-      aria-current={item.id === route ? "page" : undefined}
-    >
-      <Icon name={item.icon} /> <span>{item.label}</span>
-    </a>
-  ));
-
-  return (
-    <div className="shell" data-world={mode}>
-      <a
-        className="skip-link"
-        href="#contenido"
-        onClick={(event) => {
-          event.preventDefault();
-          main.current?.focus();
-        }}
-      >
-        Saltar al contenido
-      </a>
-      <header className="topbar">
-        <a className="brand" href="#/clase" aria-label="RADAR, ir a Mi clase">
-          <img className="brand-full" src={logo} alt="" width="86" height="70" />
-          <img className="brand-mark" src={mark} alt="" width="46" height="43" />
-        </a>
-        <nav className="mode-switch" aria-label="Modo">
-          <a href="#/clase" aria-current={mode === "teacher" ? "true" : undefined}>Docente</a>
-          <a href="#/diagnostico" aria-current={mode === "student" ? "true" : undefined}>Alumno</a>
-        </nav>
-        <nav className="main-nav" aria-label="Principal">{links}</nav>
-        <div className="top-actions">
-          <span className="synthetic-tag" title="Todos los alumnos y respuestas de esta demo son ficticios">
-            Datos sintéticos
-          </span>
-          <button type="button" className="btn btn-ghost" aria-label="Accesibilidad" onClick={() => setPreferencesOpen(true)}>
-            <Icon name="access" /> <span>Accesibilidad</span>
-          </button>
-        </div>
-      </header>
-      <main ref={main} id="contenido" tabIndex={-1}>
-        <div className="content">
-          {notice !== null && (
-            <Notice tone="warning">
-              {notice}{" "}
-              <button type="button" className="link" onClick={dismissNotice}>Entendido</button>
-            </Notice>
-          )}
-          {!canPersist && (
-            <Notice tone="warning">
-              Este navegador no permite guardar: el progreso se perderá al recargar.
-            </Notice>
-          )}
-          <ErrorBoundary key={route} onReset={resetAll}>
-            <Suspense fallback={<p role="status" className="loading">Cargando…</p>}>
-              <Screen />
-            </Suspense>
-          </ErrorBoundary>
-        </div>
-        <footer>
-          <span>RADAR · Hack4Edu 2026</span>
-          <span>Prototipo experimental, sin validación educativa. Se ejecuta en tu navegador: sin servidor, cuentas ni IA externa.</span>
-        </footer>
-      </main>
-      <nav className="tabbar" aria-label="Principal móvil">{links}</nav>
-      <PreferencesPanel open={preferencesOpen} onClose={() => setPreferencesOpen(false)} />
-    </div>
-  );
+  return <Vista hash={useHash()} />;
 }

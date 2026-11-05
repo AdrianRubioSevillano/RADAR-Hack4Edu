@@ -8,6 +8,7 @@ export interface Item {
   readonly requiere: readonly number[]; // índices de habilidad, 0 … K−1
   readonly slip: number;
   readonly guess: number;
+  readonly dificultad?: 1 | 2 | 3;
 }
 
 export type Conjunta = readonly number[];

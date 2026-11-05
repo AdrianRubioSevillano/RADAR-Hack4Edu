@@ -1,0 +1,15 @@
+{
+  "name": "RADAR",
+  "short_name": "RADAR",
+  "description": "Detecta qué le cuesta a cada alumno de primaria y le da ejercicios para esa parte. Funciona sin internet.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#dff3fd",
+  "theme_color": "#0b2a52",
+  "icons": [
+    { "src": "icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icono-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

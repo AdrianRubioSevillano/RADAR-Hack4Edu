@@ -1,316 +1,230 @@
-// Prueba extremo a extremo en Chrome real, sobre el build de producción.
+// Recorrido real en Chrome sobre el build de producción.
 // Uso: npm run build && npm run preview, y en otra terminal: npm run e2e
 import { writeFileSync } from "node:fs";
-import { RADAR_QUESTION_BANK } from "../src/services/engine.ts";
+import { ejerciciosDe, miniTestDe, practicasPendientes, recomendacionDe, type Clase } from "../src/services/clase.ts";
+import { CLAVE_CLASE } from "../src/services/almacen.ts";
+import { clase, entrarProfesor, hacerTest, ir, PIN, pulsar, responderPantalla, siguiente } from "./apoyo-chrome.ts";
 import { withChrome, type Page } from "./cdp.ts";
 
 const BASE = process.argv[2] ?? "http://127.0.0.1:4173/";
-const results: { name: string; ok: boolean; detail?: string }[] = [];
+const resultados: { nombre: string; ok: boolean; detalle?: string }[] = [];
 
-function check(name: string, ok: boolean, detail?: unknown) {
-  const info = String(detail).slice(0, 300);
-  results.push({ name, ok, ...(ok ? {} : { detail: info }) });
-  console.log(`${ok ? "ok  " : "FALLA"} ${name}${ok ? "" : ` -> ${info}`}`);
+function comprobar(nombre: string, ok: boolean, detalle?: unknown) {
+  const info = String(detalle).slice(0, 300);
+  resultados.push({ nombre, ok, ...(ok ? {} : { detalle: info }) });
+  console.log(`${ok ? "ok   " : "FALLA"} ${nombre}${ok ? "" : ` -> ${info}`}`);
 }
 
-const SET_VALUE = `(el, v) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, v); el.dispatchEvent(new Event('input',{bubbles:true})); }`;
+const idDe = (c: Clase, nombre: string) => c.alumnos.find((a) => a.nombre === nombre)?.id as string;
 
 await withChrome(async (page: Page) => {
   page.base = BASE;
-  const text = async () => String(await page.evaluate("document.querySelector('main').innerText"));
-  const q = async (selector: string) => Number(await page.evaluate(`document.querySelectorAll(${JSON.stringify(selector)}).length`));
-  const clickText = async (selector: string, label: string) =>
-    page.evaluate(`(() => { const el=[...document.querySelectorAll(${JSON.stringify(selector)})].find(e=>e.innerText.includes(${JSON.stringify(label)})); if(!el) throw new Error('sin ' + ${JSON.stringify(label)}); el.click(); })()`);
-  const nav = async (hash: string) => {
-    await page.evaluate(`location.hash = '#/${hash}'`);
-    await page.wait(500);
-  };
-  const stored = async () => JSON.parse(String(await page.evaluate("localStorage.getItem('radar.session.v1')"))) as {
-    states: Record<string, { responses: unknown[] }>;
-    origins: Record<string, { manual: number; simulated: number }>;
-    practice: Record<string, unknown>;
-  };
-  const press = async (key: string, code = key, vk = 0, text?: string) => {
+  const texto = async () => String(await page.evaluate("document.body.innerText"));
+  const atributo = async (nombre: string) => String(await page.evaluate(`document.documentElement.getAttribute(${JSON.stringify(nombre)})`));
+  const celda = async (alumno: string, columna: number) => String(await page.evaluate(`(() => {
+    const fila = [...document.querySelectorAll('.cuadricula tbody tr')].find((f) => f.querySelector('th').innerText.includes(${JSON.stringify(alumno)}));
+    return fila.querySelectorAll('td')[${columna}].innerText.trim().replace(/\\s+/g, ' ');
+  })()`));
+
+  const errores: string[] = [];
+  const peticiones: string[] = [];
+  page.onEvent((metodo, datos) => {
+    if (metodo === "Runtime.exceptionThrown") errores.push(JSON.stringify(datos).slice(0, 240));
+    if (metodo === "Runtime.consoleAPICalled" && (datos as { type?: string }).type === "error") errores.push(JSON.stringify(datos).slice(0, 240));
+    if (metodo === "Network.requestWillBeSent") peticiones.push((datos as { request: { url: string } }).request.url);
+  });
+  await page.send("Network.enable");
+
+  await page.viewport(1280, 800, false);
+  await page.go("");
+  await page.evaluate("localStorage.clear()");
+  await page.go("");
+  await page.wait(600);
+
+  // --- Inicio y roles ---
+  comprobar("inicio: Soy alumno y Soy profesor", (await texto()).includes("Soy alumno") && (await texto()).includes("Soy profesor"));
+  await ir(page, "#/profesor/ajustes");
+  comprobar("sin PIN no se abren los ajustes", (await texto()).includes("Crea tu PIN") && !(await texto()).includes("Alumnos y ayudas"));
+
+  // --- Profesor crea el PIN y asigna un test ---
+  await entrarProfesor(page);
+  comprobar("el profesor crea el PIN y entra", (await texto()).includes("Mañana explica primero"));
+  const pinHash = (await clase(page)).pinHash ?? "";
+  comprobar("el PIN se guarda con hash", pinHash.length === 64 && !pinHash.includes(PIN), pinHash);
+  const inicial = recomendacionDe(await clase(page));
+  comprobar("demo: recomienda Cambio sencillo", (await texto()).includes("Cambio sencillo"), inicial.subhabilidad);
+  await ir(page, "#/profesor/ajustes");
+  await pulsar(page, ".casilla", "Multiplicar como suma repetida");
+  await page.wait(200);
+  comprobar("el profesor asigna un test", (await clase(page)).asignados.includes("NUM2-T5"));
+  await pulsar(page, ".barra-salir");
+  await page.wait(300);
+
+  // --- Lucía hace el test asignado fallando una subhabilidad ---
+  const c0 = await clase(page);
+  const lucia = idDe(c0, "Lucía");
+  await ir(page, "#/alumno");
+  await pulsar(page, "a.nombre", "Lucía");
+  await page.wait(300);
+  comprobar("Lucía ve sus tests asignados", (await texto()).includes("Multiplicar como suma repetida"));
+  await pulsar(page, "a.tarjeta", "Multiplicar como suma repetida");
+  await page.wait(400);
+  const hechas = await hacerTest(page, lucia, "NUM2-T5", (p) => p.subhabilidad !== "NUM2-T5-c");
+  comprobar("el test tiene 10 preguntas", hechas === 10, hechas);
+  comprobar("mensaje final sin nota", (await texto()).includes("¡Has terminado") && !/\d+\s*(de|\/)\s*10/.test(await texto()), await texto());
+  comprobar("ofrece practicar", (await texto()).includes("Practicar"));
+
+  // --- Amina (dislexia) falla Cambio sencillo ---
+  const amina = idDe(c0, "Amina");
+  await ir(page, `#/alumno/${amina}`);
+  comprobar("dislexia: letra grande", (await atributo("data-letra")) === "grande");
+  await pulsar(page, "a.tarjeta", "Dinero");
+  await page.wait(400);
+  let facilOk = true;
+  await hacerTest(page, amina, "NUM2-T3", (p) => p.subhabilidad !== "NUM2-T3-c", async (p) => {
+    if (!(await texto()).includes(p.enunciadoFacil)) facilOk = false;
+  });
+  comprobar("dislexia: todas las preguntas con enunciadoFacil", facilOk);
+
+  // --- Omar (baja visión) ---
+  const omar = idDe(c0, "Omar");
+  await ir(page, `#/alumno/${omar}`);
+  comprobar("baja visión: alto contraste y letra al 150 %", (await atributo("data-contraste")) === "alto" && (await atributo("data-letra")) === "muyGrande");
+  const tamano = Number(await page.evaluate("parseFloat(getComputedStyle(document.documentElement).fontSize)"));
+  comprobar("baja visión: la letra base es 1,5 veces la normal", Math.abs(tamano / 18 - 1.5) < 0.01, tamano);
+  await pulsar(page, "a.tarjeta", "Dinero");
+  await page.wait(400);
+  await hacerTest(page, omar, "NUM2-T3", (p) => p.subhabilidad !== "NUM2-T3-b");
+  await ir(page, "#/");
+  await page.wait(150);
+  comprobar("al salir del alumno se retiran sus ayudas", (await atributo("data-contraste")) === "normal");
+
+  // --- El profesor ve el rojo y la recomendación ---
+  await entrarProfesor(page);
+  const tras = recomendacionDe(await clase(page));
+  comprobar("el profesor vuelve a entrar con su PIN", (await texto()).includes("Mañana explica primero"));
+  comprobar("la recomendación sigue a la subhabilidad con más rojos", tras.subhabilidad === "NUM2-T3-c" && tras.rojos > inicial.rojos && (await texto()).includes(`${tras.rojos} de los ${tras.evaluados}`), JSON.stringify(tras).slice(0, 200));
+  comprobar("Amina aparece en rojo en Cambio sencillo", (await celda("Amina", 2)).includes("Necesita refuerzo"), await celda("Amina", 2));
+  comprobar("Amina en verde en Contar monedas", (await celda("Amina", 0)).includes("Lo domina"), await celda("Amina", 0));
+  await pulsar(page, ".cuadricula tbody a", "Amina");
+  await page.wait(300);
+  comprobar("el detalle del alumno muestra sus ayudas", (await texto()).includes("Dislexia") && (await texto()).includes("Necesita refuerzo"));
+  await pulsar(page, ".barra-salir");
+  await page.wait(300);
+
+  // --- Amina practica y hace el reto ---
+  await ir(page, `#/alumno/${amina}`);
+  comprobar("Amina ve sus ejercicios", (await texto()).includes("Tus ejercicios para practicar") && (await texto()).includes("Cambio sencillo"));
+  await pulsar(page, "a.tarjeta-practica", "Cambio sencillo");
+  await page.wait(400);
+  const antes = await clase(page);
+  const ejercicios = ejerciciosDe(antes, amina, "NUM2-T3", "NUM2-T3-c");
+  comprobar("6 ejercicios de fácil a difícil", ejercicios.map((e) => e.dificultad).join() === "1,1,2,2,3,3");
+  await pulsar(page, "button.boton-suave", "Necesito una pista");
+  comprobar("la pista aparece", (await texto()).includes(ejercicios[0]?.pista ?? "§"));
+  for (const e of ejercicios) {
+    await responderPantalla(page, e, true);
+    await siguiente(page);
+  }
+  comprobar("tras los ejercicios viene el reto", (await texto()).includes("reto de 3 preguntas"));
+  await pulsar(page, "button.boton-principal", "Empezar el reto");
+  await page.wait(300);
+  for (const p of miniTestDe(antes, amina, "NUM2-T3", "NUM2-T3-c")) {
+    await responderPantalla(page, p, true);
+    await siguiente(page);
+  }
+  comprobar("mensaje de logro al superar el reto", (await texto()).includes("¡Lo has conseguido!"));
+  comprobar("ya no tiene esa práctica pendiente", practicasPendientes(await clase(page), amina).length === 0);
+  await ir(page, "#/");
+
+  // --- El semáforo se ha actualizado ---
+  await entrarProfesor(page);
+  comprobar("el semáforo de Amina ya no está en rojo", !(await celda("Amina", 2)).includes("Necesita refuerzo"), await celda("Amina", 2));
+  const final = recomendacionDe(await clase(page));
+  comprobar("la recomendación descuenta a Amina", final.rojos === tras.rojos - 1 || final.subhabilidad !== tras.subhabilidad, JSON.stringify(final).slice(0, 200));
+
+  // --- Restablecer demo ---
+  await ir(page, "#/profesor/ajustes");
+  await pulsar(page, ".boton-suave", "Restablecer demo");
+  await pulsar(page, ".boton-suave", "Sí, restablecer");
+  await page.wait(500);
+  const restablecida = await clase(page);
+  comprobar("Restablecer demo conserva el PIN y limpia lo demás", restablecida.pinHash === pinHash && restablecida.intentos[amina] === undefined);
+  await pulsar(page, ".barra-salir");
+  await page.wait(300);
+
+  // --- Teclado ---
+  const pulsarTecla = async (key: string, code: string, vk: number, text?: string) => {
     await page.send("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, ...(text === undefined ? {} : { text }) });
     await page.send("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk });
-    await page.wait(70);
+    await page.wait(60);
   };
-  const tab = () => press("Tab", "Tab", 9);
-  const enter = () => press("Enter", "Enter", 13, "\r");
-  const space = () => press(" ", "Space", 32, " ");
-  const active = async () => String(await page.evaluate("(document.activeElement?.tagName||'') + '|' + (document.activeElement?.className||'') + '|' + (document.activeElement?.innerText||'').slice(0,40)"));
-
-  const errors: string[] = [];
-  page.onEvent((method, params) => {
-    if (method === "Runtime.exceptionThrown") errors.push(JSON.stringify(params).slice(0, 200));
-    if (method === "Runtime.consoleAPICalled" && (params as { type?: string }).type === "error") errors.push(JSON.stringify(params).slice(0, 200));
-  });
-
-  await page.viewport(1440, 900, false);
-  await page.go("clase");
-  await page.evaluate("localStorage.clear()");
-  await page.go("clase");
-
-  // --- Sin respuestas ---
-  check("arranque: 30 pupitres sintéticos", (await q(".seat")) === 30);
-  check("arranque: marca de datos sintéticos visible", (await text()).includes("Todos los datos son sintéticos"));
-  await nav("docente");
-  check("sin respuestas: el radar no muestra el prior", (await text()).includes("Aún no hay evidencia") && !(await text()).includes("50 %"));
-  await nav("planes");
-  check("sin respuestas: ranking hipotético y planes vacíos", (await text()).includes("Cálculo hipotético") && (await text()).includes("Ninguna competencia programada"));
-  await nav("actividades");
-  check("sin respuestas: no hay actividades", (await text()).includes("no tiene competencias"));
-  await nav("practica");
-  check("sin respuestas: la práctica pide diagnóstico", (await text()).includes("primero hace falta el diagnóstico"));
-  check("el informe del benchmark no se ha descargado todavía", !(await page.evaluate("performance.getEntriesByType('resource').some(r=>r.name.includes('RESULTADOS'))")));
-
-  // --- Simulación ---
-  await nav("clase");
-  await clickText("button", "Simular respuestas");
-  await page.wait(120);
-  const responsive = await page.evaluate("new Promise(r => { const t=performance.now(); setTimeout(()=>r(performance.now()-t), 0); })");
-  check("simulación: la interfaz sigue respondiendo", Number(responsive) < 400, responsive);
-  for (let i = 0; i < 60 && (await q("progress")) > 0; i++) await page.wait(200);
-  const afterSim = await stored();
-  check("simulación: 30 alumnos con 9 respuestas", Object.values(afterSim.states).every((s) => s.responses.length === 9));
-
-  // --- Radar y teclado ---
-  await nav("docente");
-  check("radar: 30 alumnos dibujados", (await q(".blip")) === 30);
-  check("radar: seis sectores manejables", (await q("button.sector-tag")) === 6);
-  check("radar: los puntos no atrapan el tabulador", (await q('.blip[tabindex="-1"]')) === 30);
-  const firstHeading = String(await page.evaluate("document.querySelector('.radar-side h3').innerText"));
-  await page.evaluate("[...document.querySelectorAll('button.sector-tag')].find(b=>!b.classList.contains('active')).focus()");
+  const tab = () => pulsarTecla("Tab", "Tab", 9);
+  const enter = () => pulsarTecla("Enter", "Enter", 13, "\r");
+  const activo = async () => String(await page.evaluate("(document.activeElement?.innerText || document.activeElement?.getAttribute('aria-label') || '').trim().slice(0, 40)"));
+  const tabHasta = async (buscado: string) => {
+    for (let i = 0; i < 60; i += 1) {
+      await tab();
+      if ((await activo()).includes(buscado)) return true;
+    }
+    return false;
+  };
+  await page.go("");
+  await page.wait(500);
+  comprobar("teclado: se llega a Soy alumno", await tabHasta("Soy alumno"));
   await enter();
-  await page.wait(120);
-  check("radar: un sector se selecciona con teclado", String(await page.evaluate("document.querySelector('.radar-side h3').innerText")) !== firstHeading);
-
-  // --- Planes ---
-  await nav("planes");
-  const planText = await text();
-  check("planes: ambos planes y la matriz por alumno", planText.includes("Plan colectivo") && planText.includes("Plan por necesidad pendiente") && (await q(".matrix tbody tr")) === 30);
-  const seen = new Set<string>();
-  for (const minutes of ["15", "30", "45", "60", "90"]) {
-    await clickText("button.preset", minutes);
-    await page.wait(160);
-    const relation = String(await page.evaluate("document.querySelector('.route-relation').innerText"));
-    seen.add(relation);
-  }
-  check("planes: hay presupuestos con planes distintos e iguales", seen.has("≠") && seen.has("="), [...seen]);
-  await clickText("button.preset", "30");
-  await page.wait(160);
-  const colBefore = String(await page.evaluate("[...document.querySelectorAll('.matrix thead th.col-on')].map(t=>t.title).join()"));
-  await page.evaluate("document.querySelectorAll('input[name=active-plan]')[1].click()");
-  await page.wait(200);
-  check("planes: cambiar el plan activo cambia lo pendiente", String(await page.evaluate("[...document.querySelectorAll('.matrix thead th.col-on')].map(t=>t.title).join()")) !== colBefore);
-  check("planes: el plan B queda guardado", String(await page.evaluate("JSON.parse(localStorage.getItem('radar.session.v1')).activePlan")) === "pendingNeed");
-  await page.evaluate(`(${SET_VALUE})(document.querySelector('.budget-number input'), 'abc')`);
-  await page.wait(120);
-  check("planes: un presupuesto que no es un número se explica", (await text()).includes("Escribe los minutos disponibles"));
-  await page.evaluate(`(${SET_VALUE})(document.querySelector('.budget-number input'), '0.01')`);
-  await page.wait(200);
-  check("planes: un presupuesto no representable se explica sin romper", (await text()).includes("No se puede calcular"));
-  await page.evaluate(`(${SET_VALUE})(document.querySelector('.budget-number input'), '30')`);
-  await page.wait(200);
-  check("planes: se recupera al corregir el presupuesto", (await q(".route-card")) === 2);
-
-  // --- Actividades ---
-  await nav("actividades");
-  check("actividades: dos bloques con 30 minutos", (await q(".agenda > li")) === 2);
-  check("actividades: avisa de la falta de revisión docente", (await text()).includes("sin revisión docente"));
-
-  // --- Diagnóstico manual ---
-  await page.evaluate("location.hash='#/clase'");
-  await page.wait(400);
-  await page.evaluate("document.querySelector('.seat').click()");
-  await page.wait(700);
-  await clickText("button", "Reiniciar");
-  await page.wait(60);
-  await page.evaluate("[...document.querySelectorAll('button')].find(b=>b.innerText.includes('Seguro')).click()");
-  await page.wait(300);
-  check("diagnóstico: reiniciar deja al alumno sin respuestas", (await stored()).states.S01?.responses.length === 0);
-  const bankText = (id: string) => RADAR_QUESTION_BANK.questions.find((item) => item.statement === id);
-  let leak = false;
-  let invalidShown = false;
-  let keyboardRound = false;
-  for (let i = 0; i < 8; i++) {
-    const statement = String(await page.evaluate("document.querySelector('.statement').innerText"));
-    const item = bankText(statement);
-    if (item === undefined) throw new Error(`Enunciado desconocido: ${statement}`);
-    const html = String(await page.evaluate("document.querySelector('main').innerHTML"));
-    if (html.includes(item.explanation)) leak = true;
-    if (item.format === "numeric") {
-      await page.evaluate("document.querySelector('#numeric-answer').focus()");
-      if (!invalidShown) {
-        for (const ch of "1,5") await press(ch, ch, 0, ch);
-        await enter();
-        await page.wait(100);
-        invalidShown = (await text()).includes("Escribe un entero o una fracción");
-        check("diagnóstico: entrada no válida con mensaje y sin perder estado", invalidShown && (await stored()).states.S01?.responses.length === i);
-        await page.evaluate(`(${SET_VALUE})(document.querySelector('#numeric-answer'), '')`);
+  await page.wait(350);
+  comprobar("teclado: el foco va al título", String(await page.evaluate("document.activeElement?.id")) === "titulo");
+  comprobar("teclado: se elige un nombre", await tabHasta("Lucía"));
+  await enter();
+  await page.wait(350);
+  comprobar("teclado: se abre un test", await tabHasta("Dinero"));
+  await enter();
+  await page.wait(500);
+  const esOpcion = Number(await page.evaluate("document.querySelectorAll('button.opcion').length")) > 0;
+  if (esOpcion) {
+    comprobar("teclado: se llega a una opción", await (async () => {
+      for (let i = 0; i < 12; i += 1) {
+        await tab();
+        if (String(await page.evaluate("document.activeElement?.className ?? ''")).includes("opcion")) return true;
       }
-      const answer = item.correctAnswer.replace(/\/1$/, "");
-      for (const ch of answer) await press(ch, ch, 0, ch);
-      await enter();
-    } else if (!keyboardRound) {
-      // Recorrido completo solo con teclado: foco en la opción, espacio y enviar.
-      await page.evaluate("document.querySelector('.statement').focus()");
-      await tab();
-      const first = await active();
-      await space();
-      await page.wait(80);
-      const chosen = await q(".choice.on");
-      await tab();
-      const onSend = await active();
-      await enter();
-      await page.wait(200);
-      keyboardRound = true;
-      check("teclado: opción con tabulador y espacio", first.startsWith("INPUT") && chosen === 1, `${first} ${chosen}`);
-      check("teclado: el envío es el siguiente foco", onSend.includes("Enviar"), onSend);
-    } else {
-      await page.evaluate("document.querySelector('.choice input').click()");
-      await page.wait(50);
-      await page.evaluate("document.querySelector('form button.btn-primary').click()");
-    }
-    await page.wait(220);
-    const feedback = await active();
-    if (i === 0 || feedback.includes("Siguiente") === false) check(`corrección ${i}: el botón siguiente recibe el foco`, feedback.includes("Siguiente"), feedback);
+      return false;
+    })());
+  } else {
+    comprobar("teclado: se escribe el número", await tabHasta("1"));
     await enter();
-    await page.wait(180);
-    const focused = await active();
-    if (!focused.includes("statement")) check(`siguiente ${i}: el foco va a la pregunta`, false, focused);
+    await tabHasta("Comprobar");
   }
-  check("diagnóstico: no hay explicación visible antes de responder", !leak);
-  const manual = await stored();
-  check("diagnóstico: 8 respuestas manuales sin repetición", manual.origins.S01?.manual === 8 && manual.states.S01?.responses.length === 8);
-
-  // --- Práctica ---
-  await nav("practica");
-  check("práctica: sin necesidad medida no se inventan ejercicios", (await text()).includes("No se asignan ejercicios"));
-  const practiceStudent = await page.evaluate(`(async () => {
-    const select = document.querySelector('.field select');
-    for (const option of [...select.options].slice(1)) {
-      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select, option.value);
-      select.dispatchEvent(new Event('change',{bubbles:true}));
-      await new Promise(r => setTimeout(r, 120));
-      if (document.querySelector('form .statement')) return option.value;
-    }
-    return null;
-  })()`);
-  const statesBefore = JSON.stringify((await stored()).states);
-  check("práctica: propone un ejercicio a quien lo necesita", practiceStudent !== null);
-  await clickText("button", "Pedir pista");
-  await page.wait(120);
-  check("práctica: la pista aparece", (await q(".hints li")) === 1);
-  const practiceStatement = String(await page.evaluate("document.querySelector('.statement').innerText"));
-  await clickText("button", "Ver solución");
-  await page.wait(150);
-  check("práctica: la solución solo sale a petición", (await text()).includes("Solución:"));
-  await clickText("button", "Siguiente ejercicio");
-  await page.wait(250);
-  check("práctica: pistas y soluciones no tocan el diagnóstico", JSON.stringify((await stored()).states) === statesBefore);
-  check("práctica: queda registro separado", (await stored()).practice[String(practiceStudent)] !== undefined, practiceStatement);
-
-  // --- Banco agotado ---
-  await nav("clase");
-  await page.evaluate(`(() => { const s=document.querySelector('select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(s,'30'); s.dispatchEvent(new Event('change',{bubbles:true})); })()`);
-  await page.wait(100);
-  await clickText("button", "Simular respuestas");
-  await page.wait(300);
-  for (let i = 0; i < 150 && (await q("progress")) > 0; i++) await page.wait(200);
-  await nav("diagnostico");
-  check("banco agotado: fin sin error ni pregunta", (await text()).includes("Ya no quedan preguntas") && (await q("form .statement")) === 0);
-  await nav("benchmark");
-  await page.wait(900);
-
-  // --- Benchmark ---
-  check("benchmark: se descarga solo al entrar", Boolean(await page.evaluate("performance.getEntriesByType('resource').some(r=>r.name.includes('RESULTADOS_BENCHMARK'))")));
-  check("benchmark: tres escenarios en el mosaico", (await q(".mosaic")) === 3);
-  check("benchmark: pérdidas y empates visibles", (await q(".mosaic .cell-favorsA")) > 0 && (await q(".mosaic .cell-includesZero")) > 0);
-  const bench = await text();
-  check("benchmark: procedencia y límites", bench.includes("docs/engine/RESULTADOS_BENCHMARK.json") && bench.includes("no demuestra equivalencia") && bench.includes("No valida planes"));
-
-  // --- Persistencia y datos corruptos ---
-  await page.go("diagnostico");
-  check("persistencia: recargar conserva las respuestas", (await text()).includes("Ya no quedan preguntas"));
-  await page.evaluate("localStorage.setItem('radar.session.v1','{roto')");
-  await page.go("clase");
-  check("datos corruptos: aviso y demo limpia", (await text()).includes("no eran válidos") && (await stored()).states.S01?.responses.length === 0);
-
-  // --- Clase vacía ---
-  await clickText("button", "Probar con clase vacía");
-  await page.wait(200);
-  for (const route of ["docente", "planes", "actividades", "diagnostico", "practica"]) {
-    await nav(route);
-    check(`clase vacía: ${route} lo explica`, (await text()).includes("No hay alumnos"), await text());
-  }
-  await nav("clase");
-  await clickText("button", "Restaurar los 30 alumnos");
-  await page.wait(200);
-  check("clase vacía: se restaura", (await q(".seat")) === 30);
-
-  // --- Preferencias ---
-  await page.evaluate("document.querySelector('.top-actions .btn').focus()");
   await enter();
-  await page.wait(200);
-  check("preferencias: se abren con teclado como diálogo modal", Boolean(await page.evaluate("document.querySelector('dialog').open")));
-  await page.evaluate("[...document.querySelectorAll('dialog label')].find(l=>l.innerText.includes('Muy grande')).querySelector('input').click()");
-  await page.evaluate("[...document.querySelectorAll('dialog label')].find(l=>l.innerText==='Alto').querySelector('input').click()");
-  await page.evaluate("[...document.querySelectorAll('dialog label')].find(l=>l.innerText.includes('Una pregunta por pantalla')).querySelector('input').click()");
-  await page.evaluate("[...document.querySelectorAll('dialog label')].find(l=>l.innerText.includes('Reducir distracciones')).querySelector('input').click()");
-  await page.evaluate("[...document.querySelectorAll('dialog label')].find(l=>l.innerText.includes('Lectura en voz alta')).querySelector('input').click()");
-  await page.wait(150);
-  check("preferencias: tamaño y contraste se aplican", String(await page.evaluate("document.documentElement.dataset.text + document.documentElement.dataset.contrast")) === "xlargehigh");
-  await press("Escape", "Escape", 27);
-  await page.wait(200);
-  check("preferencias: Escape cierra y el foco vuelve al botón", !(await page.evaluate("document.querySelector('dialog').open")) && (await active()).includes("btn"), await active());
-  await page.evaluate("document.querySelector('.seat').click()");
-  await page.wait(700);
-  check("una pregunta por pantalla: sin paneles alrededor", (await q(".teacher-peek")) === 0 && (await q(".quest-stage")) === 1);
-  check("reducir distracciones: sin mascota", String(await page.evaluate("getComputedStyle(document.querySelector('.mascot')).display")) === "none");
-  await page.evaluate("Object.defineProperty(window,'speechSynthesis',{value:undefined,configurable:true}); 0");
-  await clickText("button", "Leer en voz alta");
-  await page.wait(150);
-  check("voz: sin síntesis hay alternativa y el texto sigue", (await text()).includes("no está disponible"));
-  await page.evaluate("localStorage.removeItem('radar.preferences.v1')");
+  await page.wait(350);
+  comprobar("teclado: la respuesta recibe el foco", String(await page.evaluate("document.activeElement?.tagName")) === "H2", await page.evaluate("document.activeElement?.tagName"));
+  comprobar("teclado: se llega a Siguiente", await tabHasta("Siguiente"));
+  const anilloFoco = String(await page.evaluate("getComputedStyle(document.activeElement).outlineStyle"));
+  comprobar("teclado: foco visible", anilloFoco !== "none", anilloFoco);
 
-  // --- Reinicio total ---
-  await page.go("clase");
-  await clickText("button", "Reiniciar la demo");
-  await page.wait(60);
-  await page.evaluate("[...document.querySelectorAll('button')].find(b=>b.innerText.includes('Seguro')).click()");
-  await page.wait(300);
-  check("reinicio: la demo vuelve al inicio", Object.values((await stored()).states).every((s) => s.responses.length === 0));
+  // --- Red ---
+  const externas = peticiones.filter((u) => !u.startsWith(BASE) && !u.startsWith("data:") && !u.startsWith("blob:"));
+  comprobar("ninguna petición fuera de la propia app", externas.length === 0, externas.join(" "));
+  peticiones.length = 0;
+  await ir(page, "#/alumno");
+  await pulsar(page, "a.nombre", "Bruno");
+  await page.wait(500);
+  comprobar("en ejecución no se hace ninguna petición de red", peticiones.filter((u) => !u.startsWith("data:")).length === 0, peticiones.join(" "));
 
-  // --- Adaptación ---
-  const seed = String(await page.evaluate("localStorage.getItem('radar.session.v1')"));
-  await clickText("button", "Simular respuestas");
-  await page.wait(300);
-  for (let i = 0; i < 60 && (await q("progress")) > 0; i++) await page.wait(200);
-  void seed;
-  for (const [label, width, height, mobile] of [["móvil 390", 390, 844, true], ["móvil 320", 320, 640, true], ["tableta 768", 768, 1024, true]] as const) {
-    await page.viewport(width, height, mobile);
-    for (const route of ["clase", "docente", "planes", "actividades", "benchmark", "diagnostico", "practica"]) {
-      await page.go(route);
-      const overflow = Number(await page.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth"));
-      check(`${label}: ${route} sin desbordamiento horizontal`, overflow <= 0, overflow);
-    }
-    check(`${label}: barra inferior visible`, String(await page.evaluate("getComputedStyle(document.querySelector('.tabbar')).display")) !== "none");
-    const small = String(await page.evaluate("[...document.querySelectorAll('.tabbar a,.btn,.preset')].filter(e=>e.offsetParent&&e.getBoundingClientRect().height<44).map(e=>e.innerText).join('|')"));
-    check(`${label}: controles de al menos 44 px`, small === "", small);
-  }
-  await page.viewport(1280, 800, false);
-  await page.evaluate("localStorage.setItem('radar.preferences.v1', JSON.stringify({textSize:'xlarge',spacing:'wide',contrast:'standard',legibleFont:true,onePerScreen:false,reduceDistractions:false,readAloud:false}))");
-  for (const route of ["clase", "docente", "planes", "diagnostico"]) {
-    await page.go(route);
-    const overflow = Number(await page.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth"));
-    check(`texto muy grande y espaciado: ${route} sin desbordar`, overflow <= 0, overflow);
-  }
-  await page.evaluate("localStorage.clear()");
-  check("sin errores en la consola durante toda la prueba", errors.length === 0, errors.slice(0, 3).join(" || "));
+  // --- Sin conexión ---
+  await page.wait(800);
+  await page.evaluate("navigator.serviceWorker.ready.then(() => true)");
+  await page.send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+  await page.go("");
+  await page.wait(800);
+  comprobar("sin conexión la app sigue funcionando", (await texto()).includes("Soy alumno"), await texto());
+  await page.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+
+  comprobar("sin errores en la consola", errores.filter((e) => !e.includes("ERR_INTERNET_DISCONNECTED")).length === 0, errores.join("\n"));
+  await page.evaluate(`localStorage.removeItem(${JSON.stringify(CLAVE_CLASE)})`);
 });
 
-const failed = results.filter((r) => !r.ok);
-writeFileSync("docs/app/E2E.json", `${JSON.stringify({ total: results.length, failed: failed.length, results }, null, 2)}\n`);
-console.log(`\n${results.length - failed.length} de ${results.length} comprobaciones superadas`);
-process.exit(failed.length === 0 ? 0 : 1);
+writeFileSync("docs/E2E_V2.json", `${JSON.stringify(resultados, null, 1)}\n`);
+const fallos = resultados.filter((r) => !r.ok);
+console.log(`\n${resultados.length - fallos.length} de ${resultados.length} comprobaciones superadas`);
+if (fallos.length > 0) process.exitCode = 1;

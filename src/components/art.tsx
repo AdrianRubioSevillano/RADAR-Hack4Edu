@@ -1,5 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
-import { skillTheme } from "./theme.ts";
+import type { ReactNode } from "react";
 
 export type MascotMood = "hello" | "think" | "cheer" | "try";
 
@@ -107,15 +106,6 @@ export function Avatar({ index, size = 44 }: { index: number; size?: number }) {
   );
 }
 
-export function SkillBadge({ id, size = "md" }: { id: string; size?: "sm" | "md" | "lg" }) {
-  const theme = skillTheme(id);
-  return (
-    <span className={`skill-badge skill-badge-${size}`} style={{ "--skill": theme.color } as CSSProperties} aria-hidden="true">
-      {theme.glyph}
-    </span>
-  );
-}
-
 const ICONS: Readonly<Record<string, ReactNode>> = {
   class: <><path d="M3 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" /><circle cx="10" cy="7" r="4" /><path d="M17 3.3a4 4 0 0 1 0 7.4M21 21v-2a5 5 0 0 0-3-4.5" /></>,
   radar: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.5" /><path d="M12 12 18.4 5.6" /></>,
@@ -132,6 +122,13 @@ const ICONS: Readonly<Record<string, ReactNode>> = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.100" /></>,
   alert: <><path d="M12 3.5 2.5 20.5h19Z" /><path d="M12 10v5M12 17.5v.100" /></>,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  back: <path d="M20 12H5m6-6-6 6 6 6" />,
+  settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.900 2.900l-.1-.1a1.7 1.7 0 0 0-2.800 1.200V21a2 2 0 1 1-4 0v-.100a1.7 1.7 0 0 0-2.800-1.200l-.1.1a2 2 0 1 1-2.900-2.900l.1-.1a1.7 1.700 0 0 0-1.200-2.800H3a2 2 0 1 1 0-4h.100a1.700 1.700 0 0 0 1.200-2.800l-.1-.1a2 2 0 1 1 2.900-2.900l.1.1a1.700 1.700 0 0 0 2.800-1.200V3a2 2 0 1 1 4 0v.100a1.700 1.700 0 0 0 2.800 1.200l.1-.1a2 2 0 1 1 2.900 2.900l-.1.1a1.700 1.700 0 0 0 1.200 2.800h.100a2 2 0 1 1 0 4h-.100a1.700 1.700 0 0 0-1.500 1Z" /></>,
+  exit: <><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" /><path d="M16 16l4-4-4-4M20 12H10" /></>,
+  erase: <><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1Z" /><path d="m12 9 6 6m0-6-6 6" /></>,
+  star: <path d="m12 3 2.700 5.800 6.300.800-4.600 4.300 1.200 6.300L12 17l-5.600 3.200 1.200-6.300L3 9.600l6.300-.800Z" />,
+  pause: <path d="M8 5v14M16 5v14" />,
+  lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,
 };
 
 export function Icon({ name, size = 22 }: { name: string; size?: number }) {

@@ -27,11 +27,12 @@
     "src/services",
     "src/components",
     "src/screens",
+    "src/core",
+    "src/content",
     "tests/app",
-    "tests/diagnostic.test.ts",
+    "tests/core",
+    "tests/content",
     "vite.config.ts",
-    "scripts/cdp.ts",
-    "scripts/capturas.ts",
-    "scripts/e2e.ts"
+    "scripts"
   ]
 }

@@ -31,6 +31,17 @@ export function mathToSpeech(text: string): string {
     .trim();
 }
 
+// Voz local en español. Sin internet no sirven las voces remotas, y una voz de otro
+// idioma leería mal: en esos casos el botón no aparece.
+export function vozEspanol(port: SpeechPort | null = speechPort()): SpeechSynthesisVoice | null {
+  try {
+    const voces = port?.getVoices() ?? [];
+    return voces.find((v) => v.lang.toLowerCase().startsWith("es") && v.localService) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export type SpeechOutcome =
   | { readonly status: "started" }
   | { readonly status: "unavailable"; readonly message: string };
@@ -47,7 +58,10 @@ export function speak(
   try {
     port.cancel();
     const utterance = new SpeechSynthesisUtterance(mathToSpeech(text));
-    utterance.lang = "es-ES";
+    const voz = vozEspanol(port);
+    utterance.lang = voz?.lang ?? "es-ES";
+    if (voz !== null) utterance.voice = voz;
+    utterance.rate = 0.92;
     utterance.onerror = (event) => {
       // Cancelar una lectura en curso no es un fallo.
       if (event.error !== "canceled" && event.error !== "interrupted")

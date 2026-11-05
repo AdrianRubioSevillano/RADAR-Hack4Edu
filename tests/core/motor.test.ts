@@ -160,6 +160,19 @@ describe("test adaptativo", () => {
     }
   });
 
+  it("la escalera sube con los aciertos, baja con los fallos y no sale de 1–3", () => {
+    const lista: Item[] = [1, 2, 3].flatMap((d) => Array.from({ length: 12 }, (_, i) => ({ ...item(`d${d}-${String(i).padStart(2, "0")}`, 0), dificultad: d as 1 | 2 | 3 })));
+    let estado = iniciarTest({ k: 1, totalPreguntas: 9 });
+    const niveles: (number | undefined)[] = [];
+    for (const acierto of [true, true, true, false, false, false, false, true]) {
+      const q = siguienteItem(estado, lista);
+      if (q === null) throw new Error("sin pregunta");
+      niveles.push(q.dificultad);
+      estado = responder(estado, q, acierto);
+    }
+    expect(niveles).toEqual([1, 2, 3, 3, 2, 1, 1, 1]);
+  });
+
   it("un alumno que falla solo la última habilidad queda en rojo solo ahí", () => {
     let estado = iniciarTest({ k: 3, totalPreguntas: 10 });
     while (!testTerminado(estado)) {

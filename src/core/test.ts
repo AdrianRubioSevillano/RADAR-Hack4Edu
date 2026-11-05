@@ -56,8 +56,30 @@ export function testTerminado(estado: EstadoTest): boolean {
   return estado.respuestas.length >= estado.totalPreguntas;
 }
 
-// Elige por EIG entre las no respondidas. Si las preguntas restantes apenas alcanzan
-// para cumplir el mínimo por habilidad, se restringe a las habilidades que lo necesitan.
+// Escalera por habilidad: empieza en fácil, sube con cada acierto y baja con cada
+// fallo. Sin ella la EIG preferiría siempre las fáciles, que tienen menos slip.
+export function dificultadObjetivo(estado: EstadoTest, habilidad: number): 1 | 2 | 3 {
+  const nivel = respuestasDe(estado, habilidad).reduce((n, r) => Math.min(3, Math.max(1, n + (r.acierto ? 1 : -1))), 1);
+  return nivel as 1 | 2 | 3;
+}
+
+// Por cada habilidad deja solo los items de la dificultad más cercana a su objetivo.
+function filtrarPorEscalera<T extends Item>(estado: EstadoTest, items: readonly T[]): readonly T[] {
+  const distancia = (item: T): number => {
+    const habilidad = item.requiere[0] ?? 0;
+    return item.dificultad === undefined ? 0 : Math.abs(item.dificultad - dificultadObjetivo(estado, habilidad));
+  };
+  const mejor = new Map<number, number>();
+  for (const item of items) {
+    const habilidad = item.requiere[0] ?? 0;
+    mejor.set(habilidad, Math.min(mejor.get(habilidad) ?? Infinity, distancia(item)));
+  }
+  return items.filter((item) => distancia(item) === mejor.get(item.requiere[0] ?? 0));
+}
+
+// La EIG decide qué habilidad explorar entre las no respondidas, con la dificultad que
+// marca la escalera. Si las preguntas restantes apenas alcanzan para cumplir el mínimo
+// por habilidad, se restringe a las habilidades que lo necesitan.
 export function siguienteItem<T extends Item>(estado: EstadoTest, candidatos: readonly T[]): T | null {
   if (testTerminado(estado)) return null;
   const respondidas = new Set(estado.respuestas.map((r) => r.itemId));
@@ -70,7 +92,7 @@ export function siguienteItem<T extends Item>(estado: EstadoTest, candidatos: re
   const pendientes = [...deficit.values()].reduce((suma, falta) => suma + falta, 0);
   const restantes = estado.totalPreguntas - estado.respuestas.length;
   const permitidos = restantes <= pendientes ? libres.filter((item) => item.requiere.some((h) => deficit.has(h))) : libres;
-  return mejorItem(estado.conjunta, permitidos);
+  return mejorItem(estado.conjunta, filtrarPorEscalera(estado, permitidos));
 }
 
 export function responder(estado: EstadoTest, item: Item, acierto: boolean): EstadoTest {
